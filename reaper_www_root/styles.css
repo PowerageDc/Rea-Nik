@@ -1,0 +1,86 @@
+    
+    html, body {
+        height: 100%;
+        }
+    body {
+        background-color:#333333;
+        color:#A9ABAB;
+        font-family: 'Open Sans',sans-serif;
+        font-size: 0.9em;
+        margin:0px;
+        user-select: none;
+        cursor: default;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+        }
+    
+    #colWrap {
+        display:flex;
+        flex-direction: column;
+        flex-grow: 1;
+        flex-shrink: 1;
+        min-height: 0;
+        }
+    #col1 {
+            flex-grow: 0;
+            flex-shrink: 0;
+            flex-basis: auto;
+        }
+    #tracks {
+            flex-grow: 1;
+            flex-shrink: 1;
+            flex-basis: 0;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            }
+    @media only screen 
+      and (min-device-width: 768px) 
+      and (orientation: landscape) 
+      and (-webkit-min-device-pixel-ratio: 1) {
+        #colWrap {
+            flex-direction: row;
+            }  
+        #col1 {
+            flex-basis:50%;
+            }
+        #tracks {
+            flex-basis:50%;
+            border-left-style:solid;
+            border-left-color: #1A1A1A;
+            }
+        }
+    
+    #optionsBar {overflow-y: hidden;-webkit-transition: all 0.2s ease-out;-o-transition: all 0.2s ease-out;transition: all 0.2s ease-out;}
+    
+    .trackRow1{
+        will-change: transform;
+        }
+    .trackRow2{
+        will-change: transform;
+        }
+    
+    .optionsBar {
+        height : 0px;
+        
+        }
+    .button:hover .mouseover {
+        visibility:visible;
+        }
+    .button:active .mouseover {
+        visibility:hidden;
+        pointer-events:all;
+        }
+    .button:active .shadow {
+        visibility: hidden;
+        }
+    .button:active .gloss {
+        visibility: hidden;
+        }
+    .button:active .active {
+        visibility: visible;
+        }
+

@@ -18,94 +18,8 @@
     navigator.serviceWorker.register('./sw.js');
   }
 </script>
-<style type="text/css">
-    
-    html, body {
-        height: 100%;
-        }
-    body {
-        background-color:#333333;
-        color:#A9ABAB;
-        font-family: 'Open Sans',sans-serif;
-        font-size: 0.9em;
-        margin:0px;
-        user-select: none;
-        cursor: default;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        height: 100dvh;
-        overflow: hidden;
-        }
-    
-    #colWrap {
-        display:flex;
-        flex-direction: column;
-        flex-grow: 1;
-        flex-shrink: 1;
-        min-height: 0;
-        }
-    #col1 {
-            flex-grow: 0;
-            flex-shrink: 0;
-            flex-basis: auto;
-        }
-    #tracks {
-            flex-grow: 1;
-            flex-shrink: 1;
-            flex-basis: 0;
-            min-height: 0;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            }
-    @media only screen 
-      and (min-device-width: 768px) 
-      and (orientation: landscape) 
-      and (-webkit-min-device-pixel-ratio: 1) {
-        #colWrap {
-            flex-direction: row;
-            }  
-        #col1 {
-            flex-basis:50%;
-            }
-        #tracks {
-            flex-basis:50%;
-            border-left-style:solid;
-            border-left-color: #1A1A1A;
-            }
-        }
-    
-    #optionsBar {overflow-y: hidden;-webkit-transition: all 0.2s ease-out;-o-transition: all 0.2s ease-out;transition: all 0.2s ease-out;}
-    
-    .trackRow1{
-        will-change: transform;
-        }
-    .trackRow2{
-        will-change: transform;
-        }
-    
-    .optionsBar {
-        height : 0px;
-        
-        }
-    .button:hover .mouseover {
-        visibility:visible;
-        }
-    .button:active .mouseover {
-        visibility:hidden;
-        pointer-events:all;
-        }
-    .button:active .shadow {
-        visibility: hidden;
-        }
-    .button:active .gloss {
-        visibility: hidden;
-        }
-    .button:active .active {
-        visibility: visible;
-        }
-
-</style>
+<link rel="stylesheet" href="styles.css">
+<script src="config.js"></script>
 
 <script type="text/javascript">
             
@@ -118,28 +32,8 @@ var last_transport_state = -1, mouseDown = 0, last_time_str = "",
     trackFlagsAr = [], trackSendCntAr = [], trackRcvCntAr = [], trackHwOutCntAr = [], trackSendHwCntAr = [], trackPeakAr = [], trackMeterAr = [], faderConAr = [],
     hereCss = document.styleSheets[1], transitions = 1, nikTracksVisSnapshot = {};    
 
-// ==== Nik: Diccionario de colores de markers por seccion (editable) ====
-// "words"  : formas completas (cualquier mayus/minus, con o sin numero pegado/con espacio)
-//            -> solo cambian el color. El texto del marker no se toca.
-// "abbrev" : formas abreviadas -> cambian el color Y ADEMAS traducen el texto mostrado
-//            al label completo (+ numero si lo tenia). Match siempre EXACTO (nombre entero).
-var NIK_MARKER_COLOR_MAP = [
-    { label: "Intro",        color: "#a07e21", tint: "#f2ecd1", words: ["intro"],        abbrev: ["in"] },
-    { label: "Verso",        color: "#4884d3", tint: "#e8edf3", words: ["verso"],        abbrev: ["v"] },
-    { label: "Precoro",      color: "#c6608a", tint: "#f2e3ea", words: ["precoro"],      abbrev: ["pc"] },
-    { label: "Coro",         color: "#cb6a10", tint: "#f0ddb8", words: ["coro", "estribillo"], abbrev: ["c", "e", "estribo"] },
-    { label: "Puente",       color: "#9571ce", tint: "#eae3f2", words: ["puente"],       abbrev: ["p"] },
-    { label: "Solo",         color: "#e74b4b", tint: "#f4d9d9", words: ["solo"],         abbrev: ["s"] },
-    { label: "Instrumental", color: "#82829f", tint: "#e2e2e6", words: ["instrumental"], abbrev: ["instr", "instr.", "instrum", "instrum."] },
-    { label: "Interludio",   color: "#82829f", tint: "#e2e2e6", words: ["interludio"],   abbrev: ["inter", "interl"] },
-    { label: "Outro",        color: "#129485", tint: "#e3f1ee", words: ["outro"],        abbrev: ["o", "out"] },
-    { label: "Coda",         color: "#10947e", tint: "#c9ecdf", words: ["coda"],         abbrev: [] },
-    { label: "Final",        color: "#7c7ccb", tint: "#d9d9e6", words: ["final"],        abbrev: ["fin"] }
-    ];
-
-// Cadena x2, x3, x4... hereda el color del marker anterior, aclarando hacia blanco un paso por eslabon
-var NIK_MARKER_CHAIN_PATTERN = /^x\d+$/;
-var NIK_MARKER_CHAIN_STEP = 0.18;
+// NIK_MARKER_COLOR_MAP, NIK_MARKER_CHAIN_PATTERN y NIK_MARKER_CHAIN_STEP
+// viven ahora en config.js — editar ahí para sumar/ajustar categorías.
 
 function nikNormalizeMarkerName(name) {
     if (!name) return "";
@@ -200,39 +94,14 @@ function nikMatchMarkerCategory(normalized) {
     return null;
     }    
 
-// --- NikRemote_ReaPitch: Command IDs (cambian por PC, re-registrar en la sala de ensayo) ---
-var REAPITCH_CMD_SET    = "_RS69b0d0e40546eb776731c126893ea732568ba5f1";
-var REAPITCH_CMD_TOGGLE = "_RSdbe069eef00ee928d32efbc9fa40ebe5959d1a58";
+// Command IDs, NIK_SLOW_POLL/NIK_ONDEMAND_READS y flags de estado runtime
+// para ReaPitch/Playrate/ProjectTabs viven ahora en config.js
+// (NIK_LUA_COMMANDS) — cargado antes que este script.
 var nikReaPitchDragging = false;
-
-// --- NikRemote_PlayRate: Command IDs (cambian por PC, re-registrar en la sala de ensayo) ---
-var PLAYRATE_CMD_SET       = "_RS35ee59851e32d4035c0c1914625876598a00a56f";
-var PLAYRATE_CMD_TOGGLE_PP = "_RSd4dafe70c206819a3c906a669bfa32c9cb243f6b";
-
-// --- Nik_TrackVis_Refresh: Command ID (cambia por PC, re-registrar en la sala de ensayo) ---
-// COMPLETAR con el Command ID real al registrar Nik_TrackVis_Refresh.lua en el Action List.
-var TRACKVIS_CMD_REFRESH = "_RSd4ca4185e84293eb4a275e830d4a8f2d49e6ff1c";
-
-// --- Nik_RemoteState_Poll: lectura consolidada (proyecto/playrate/reapitch en un solo script) ---
-// COMPLETAR con el Command ID real al registrar Nik_RemoteState_Poll.lua en el Action List.
-var STATE_POLL_CMD = "_RS19b96a416380cfbddafb6cbe4286d672c2164d1f";
-
-var NIK_SLOW_POLL = STATE_POLL_CMD +
-    ";GET/EXTSTATE/NikRemote/active_project_name;GET/EXTSTATE/NikRemote/playrate;GET/EXTSTATE/NikRemote/preservepitch;GET/EXTSTATE/NikRemote/reapitch_semitone;GET/EXTSTATE/NikRemote/reapitch_enabled;GET/EXTSTATE/NikRemote/marker_bars";
-
-var NIK_ONDEMAND_READS = NIK_SLOW_POLL;
-
 var nikPlayrateDragging = false;
 var nikPreservePitchServerState = null;
 var nikReaPitchLastSemitone = null;
 var nikReaPitchLastEnabled = null;
-// --- Nik_ProjectTabs_Read / Nik_ProjectTabs_Select: Command IDs (cambian por PC, re-registrar en la sala de ensayo) ---
-// Lectura on-demand (solo al abrir el popup, NO forma parte del poll de fondo NIK_SLOW_POLL
-// — decision deliberada, ver remote_control.md, sección "Selector de proyectos (tabs)").
-// COMPLETAR con los Command IDs reales al registrar Nik_ProjectTabs_Read.lua y
-// Nik_ProjectTabs_Select.lua en el Action List.
-var PROJECTTABS_CMD_READ   = "_RSfcdb45e82a335b4d78adcca0497fd3542c4a53d5";
-var PROJECTTABS_CMD_SELECT = "_RS4f0dfe650a14d8d7a0d02bd40e4c59df0c1bed89";
 
 var nikMarkerBarsMap = {};
 
@@ -307,7 +176,7 @@ function nikPlayrateSliderInput(val) {
     document.getElementById("nikPlayrateValue").textContent = val + "%";
     }
 function nikPlayrateSliderCommit(val) {
-    wwr_req("SET/EXTSTATE/NikRemote/playrate_target/" + val + ";" + PLAYRATE_CMD_SET + ";" + NIK_ONDEMAND_READS);
+    wwr_req("SET/EXTSTATE/NikRemote/playrate_target/" + val + ";" + NIK_LUA_COMMANDS.playrateSet.commandId + ";" + NIK_ONDEMAND_READS);
     window.setTimeout(function(){ nikPlayrateDragging = false; }, 400);
     }
 function nikPlayrateReset() {
@@ -318,7 +187,7 @@ function nikPlayrateReset() {
 function nikPlayratePreservePitchChange(checked) {
     var isOn = (nikPreservePitchServerState == "on");
     if (checked != isOn) {
-        wwr_req(PLAYRATE_CMD_TOGGLE_PP);
+        wwr_req(NIK_LUA_COMMANDS.playrateTogglePreservePitch.commandId);
         }
     }
 
@@ -372,7 +241,7 @@ function nikReaPitchSliderInput(val) {
     document.getElementById("nikReaPitchValue").textContent = (val > 0 ? "+" + val : val);
     }
 function nikReaPitchSliderCommit(val) {
-    wwr_req("SET/EXTSTATE/NikRemote/reapitch_semitone_target/" + val + ";" + REAPITCH_CMD_SET + ";" + NIK_ONDEMAND_READS);
+    wwr_req("SET/EXTSTATE/NikRemote/reapitch_semitone_target/" + val + ";" + NIK_LUA_COMMANDS.reaPitchSet.commandId + ";" + NIK_ONDEMAND_READS);
     window.setTimeout(function(){ nikReaPitchDragging = false; }, 400);
     }
 function nikReaPitchReset() {
@@ -382,7 +251,7 @@ function nikReaPitchReset() {
     }
 
 function nikReaPitchToggleEnable() {
-    wwr_req(REAPITCH_CMD_TOGGLE);
+    wwr_req(NIK_LUA_COMMANDS.reaPitchToggle.commandId);
     }
 
 function nikOpenTracksVisModal() {
@@ -445,7 +314,7 @@ function nikApplyTracksVis() {
         }
     if (cmds != "") {
         cmds += "SET/UNDO/" + encodeURIComponent("Mostrar/ocultar tracks (remoto)") + ";";
-        cmds += TRACKVIS_CMD_REFRESH + ";";
+        cmds += NIK_LUA_COMMANDS.trackVisRefresh.commandId + ";";
         wwr_req(cmds);
         }
     nikCloseTracksVisModal();
@@ -506,7 +375,7 @@ function nikCloseMarkerBrowser() {
     }
 
 function nikOpenProjectTabsModal() {
-    wwr_req(PROJECTTABS_CMD_READ + ";GET/EXTSTATE/NikRemote/project_tabs");
+    wwr_req(NIK_LUA_COMMANDS.projectTabsRead.commandId + ";GET/EXTSTATE/NikRemote/project_tabs");
     document.getElementById("nikProjectTabsOverlay").style.display = "flex";
     }
 
@@ -536,7 +405,7 @@ function nikRenderProjectTabsList(str) {
         item.setAttribute("data-active", tab.active ? "1" : "0");
         item.onclick = function(){
             if (this.getAttribute("data-active") == "1") { nikCloseProjectTabsModal(); return; }
-            wwr_req("SET/EXTSTATE/NikRemote/project_tabs_target_idx/" + this.getAttribute("data-idx") + ";" + PROJECTTABS_CMD_SELECT + ";" + NIK_ONDEMAND_READS);
+            wwr_req("SET/EXTSTATE/NikRemote/project_tabs_target_idx/" + this.getAttribute("data-idx") + ";" + NIK_LUA_COMMANDS.projectTabsSelect.commandId + ";" + NIK_ONDEMAND_READS);
             nikCloseProjectTabsModal();
             };
         list.appendChild(item);
@@ -642,7 +511,7 @@ function sendMouseMoveHandler(event){
     }
     
 var faderLastTapAr = [];
-var FADER_DBLTAP_MS = 300;
+// NIK_FADER_DBLTAP_MS vive en config.js
 
 function faderResetToUnity(content, thumb){
     var vteMove = "translate(194.68 0)";
@@ -656,7 +525,7 @@ function faderCheckDoubleTap(content, thumb){
     var now = (new Date).getTime();
     var key = content.id;
     var last = faderLastTapAr[key] || 0;
-    if ((now - last) < FADER_DBLTAP_MS) {
+    if ((now - last) < NIK_FADER_DBLTAP_MS) {
         faderLastTapAr[key] = 0;
         faderResetToUnity(content, thumb);
         return true;
@@ -1457,7 +1326,7 @@ function prompt_seek() {
 }    
     
 var scaleFactor = 1, optionsOpen =0;
-var NIK_TRANSPORT_SCALE = 0.55; // 1 = tamano original; <1 achica todo el bloque play/pause/stop por igual, sin deformar
+// NIK_TRANSPORT_SCALE vive en config.js
 
 function calculateScale(event) {
     var a = document.getElementById("transport_r2");
@@ -1582,9 +1451,12 @@ function init() {
 </head>
 <body onLoad="init();calculateScale()">
 <div id="nikTabBar" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 4px; background-color:#1a1a1a; color:#A9ABAB; font-family:'Open Sans',sans-serif; flex-shrink:0;">
-    <button onclick="wwr_req('40667;_RS6acff9912f9ff42bc863923681cc5b9ffcff568a;'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">⏮ Tab</button>
-    <span id="nikActiveProjectName" onclick="nikOpenProjectTabsModal()" style="min-width:120px; text-align:center; cursor:pointer;">-</span>
-    <button onclick="wwr_req('40667;_RSe7e6a21b05170da8e39895ffee19150db1ae89ee;'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">Tab ⏭</button>
+    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabPrev.commandId+';'+NIK_ONDEMAND_READS)"
+        style="padding:10px 16px; font-size:1em;">⏮ Tab</button>
+    <span id="nikActiveProjectName" onclick="nikOpenProjectTabsModal()"
+        style="min-width:120px; text-align:center; cursor:pointer;">-</span>
+    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabNext.commandId+';'+NIK_ONDEMAND_READS)"
+        style="padding:10px 16px; font-size:1em;">Tab ⏭</button>
 </div>
 <div id="nikMarkerBrowserOverlay" onclick="nikCloseMarkerBrowser()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
     <div id="nikMarkerBrowserPanel" onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:15%; max-height:70vh; width:85%; max-width:400px; overflow-y:auto; border-radius:8px; padding:0 8px 8px 8px; box-sizing:border-box;">
