@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "dldiff",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "C:\\Scripts\\dldiff.ps1",
+                "${file}"
+            ],
+            "presentation": {
+                "reveal": "never",
+                "close": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
