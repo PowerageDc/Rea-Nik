@@ -164,95 +164,15 @@ function nikCheckProjectNameWatchdog() {
         }
     }
 
-function nikOpenPlayrateModal() {
-    wwr_req(NIK_ONDEMAND_READS);
-    document.getElementById("nikPlayrateOverlay").style.display = "flex";
-    }
-function nikClosePlayrateModal() {
-    document.getElementById("nikPlayrateOverlay").style.display = "none";
-    }
-function nikPlayrateSliderInput(val) {
-    nikPlayrateDragging = true;
-    document.getElementById("nikPlayrateValue").textContent = val + "%";
-    }
-function nikPlayrateSliderCommit(val) {
-    wwr_req("SET/EXTSTATE/NikRemote/playrate_target/" + val + ";" + NIK_LUA_COMMANDS.playrateSet.commandId + ";" + NIK_ONDEMAND_READS);
-    window.setTimeout(function(){ nikPlayrateDragging = false; }, 400);
-    }
-function nikPlayrateReset() {
-    document.getElementById("nikPlayrateSlider").value = 100;
-    document.getElementById("nikPlayrateValue").textContent = "100%";
-    nikPlayrateSliderCommit(100);
-    }
-function nikPlayratePreservePitchChange(checked) {
-    var isOn = (nikPreservePitchServerState == "on");
-    if (checked != isOn) {
-        wwr_req(NIK_LUA_COMMANDS.playrateTogglePreservePitch.commandId);
-        }
-    }
+// nikOpenPlayrateModal / nikClosePlayrateModal / nikPlayrateSliderInput /
+// nikPlayrateSliderCommit / nikPlayrateReset / nikPlayratePreservePitchChange
+// viven ahora en modals/playrate/playrate.js
 
-function nikReaPitchUpdateSemitoneDisplay(val) {
-    var readout = document.getElementById("nikReaPitchReadout");
-    var numVal = (val == "none" || val == "mixed") ? 0 : val;
-    if (readout) readout.textContent = (val == "none") ? "—" : (val == "mixed") ? "mix" : (numVal > 0 ? "+" + numVal : "" + numVal);
-    nikReaPitchLastSemitone = (val == "none" || val == "mixed") ? val : numVal;
-    nikRefreshReaPitchReadoutColor();
-    if (!nikReaPitchDragging) {
-        var slider = document.getElementById("nikReaPitchSlider");
-        var valueLabel = document.getElementById("nikReaPitchValue");
-        if (slider) slider.value = numVal;
-        if (valueLabel) valueLabel.textContent = (val == "none") ? "—" : (val == "mixed") ? "mixed" : (numVal > 0 ? "+" + numVal : "" + numVal);
-        }
-    }
-
-function nikReaPitchUpdateEnabledDisplay(val) {
-    var btn = document.getElementById("nikReaPitchEnableToggle");
-    if (btn) {
-        var label = (val == "on") ? "ReaPitch: ON" : (val == "off") ? "ReaPitch: OFF" : (val == "mixed") ? "ReaPitch: mixed" : "ReaPitch: —";
-        btn.textContent = label;
-        btn.style.color = (val == "on") ? "#00D0FF" : (val == "off") ? "#5A5A5A" : "#A8A8A8";
-        }
-    nikReaPitchLastEnabled = val;
-    nikRefreshReaPitchReadoutColor();
-    }
-
-// Color final del readout de semitonos: gris si esta apagado/mixto, si no, por desviacion del 0
-function nikRefreshReaPitchReadoutColor() {
-    var readout = document.getElementById("nikReaPitchReadout");
-    if (!readout) return;
-    if (nikReaPitchLastEnabled == "off") { readout.style.color = "#5A5A5A"; return; }
-    if (nikReaPitchLastEnabled != "on" || nikReaPitchLastSemitone == null ||
-        nikReaPitchLastSemitone == "none" || nikReaPitchLastSemitone == "mixed") {
-        readout.style.color = "#A8A8A8";
-        return;
-        }
-    readout.style.color = nikDeviationColor(nikReaPitchLastSemitone, 0, -12, 12);
-    }
-
-function nikOpenReaPitchModal() {
-    wwr_req(NIK_ONDEMAND_READS);
-    document.getElementById("nikReaPitchOverlay").style.display = "flex";
-    }
-function nikCloseReaPitchModal() {
-    document.getElementById("nikReaPitchOverlay").style.display = "none";
-    }
-function nikReaPitchSliderInput(val) {
-    nikReaPitchDragging = true;
-    document.getElementById("nikReaPitchValue").textContent = (val > 0 ? "+" + val : val);
-    }
-function nikReaPitchSliderCommit(val) {
-    wwr_req("SET/EXTSTATE/NikRemote/reapitch_semitone_target/" + val + ";" + NIK_LUA_COMMANDS.reaPitchSet.commandId + ";" + NIK_ONDEMAND_READS);
-    window.setTimeout(function(){ nikReaPitchDragging = false; }, 400);
-    }
-function nikReaPitchReset() {
-    document.getElementById("nikReaPitchSlider").value = 0;
-    document.getElementById("nikReaPitchValue").textContent = "0";
-    nikReaPitchSliderCommit(0);
-    }
-
-function nikReaPitchToggleEnable() {
-    wwr_req(NIK_LUA_COMMANDS.reaPitchToggle.commandId);
-    }
+// nikReaPitchUpdateSemitoneDisplay / nikReaPitchUpdateEnabledDisplay /
+// nikRefreshReaPitchReadoutColor / nikOpenReaPitchModal / nikCloseReaPitchModal /
+// nikReaPitchSliderInput / nikReaPitchSliderCommit / nikReaPitchReset /
+// nikReaPitchToggleEnable viven ahora en modals/reapitch/reapitch.js
+// (llamadas desde wwr_onreply más abajo, resueltas en runtime vía window)
 
 function nikOpenTracksVisModal() {
     var list = document.getElementById("nikTracksVisList");
@@ -1451,12 +1371,9 @@ function init() {
 </head>
 <body onLoad="init();calculateScale()">
 <div id="nikTabBar" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 4px; background-color:#1a1a1a; color:#A9ABAB; font-family:'Open Sans',sans-serif; flex-shrink:0;">
-    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabPrev.commandId+';'+NIK_ONDEMAND_READS)"
-        style="padding:10px 16px; font-size:1em;">⏮ Tab</button>
-    <span id="nikActiveProjectName" onclick="nikOpenProjectTabsModal()"
-        style="min-width:120px; text-align:center; cursor:pointer;">-</span>
-    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabNext.commandId+';'+NIK_ONDEMAND_READS)"
-        style="padding:10px 16px; font-size:1em;">Tab ⏭</button>
+    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabPrev.commandId+';'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">⏮ Tab</button>
+    <span id="nikActiveProjectName" onclick="nikOpenProjectTabsModal()" style="min-width:120px; text-align:center; cursor:pointer;">-</span>
+    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabNext.commandId+';'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">Tab ⏭</button>
 </div>
 <div id="nikMarkerBrowserOverlay" onclick="nikCloseMarkerBrowser()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
     <div id="nikMarkerBrowserPanel" onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:15%; max-height:70vh; width:85%; max-width:400px; overflow-y:auto; border-radius:8px; padding:0 8px 8px 8px; box-sizing:border-box;">
@@ -1470,35 +1387,8 @@ function init() {
         <div id="nikProjectTabsList"></div>
     </div>
 </div>
-<div id="nikPlayrateOverlay" onclick="nikClosePlayrateModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
-    <div onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:15%; width:85%; max-width:400px; border-radius:8px; padding:16px; box-sizing:border-box;">
-        <div style="color:#00D0FF; font-family:'Open Sans',sans-serif; font-size:0.85em; font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; padding-bottom:10px; border-bottom:2px solid #00D0FF; margin-bottom:12px;">Playrate</div>
-        <div style="display:flex; justify-content:center; margin-bottom:8px;">
-            <span id="nikPlayrateValue" style="color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.6em;">100%</span>
-        </div>
-        <input id="nikPlayrateSlider" type="range" min="40" max="150" value="100" step="1" oninput="nikPlayrateSliderInput(this.value)" onchange="nikPlayrateSliderCommit(this.value)" style="width:100%; margin-bottom:16px;">
-        <div style="display:flex; gap:8px; margin-bottom:16px;">
-            <button onclick="nikPlayrateReset();" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:10px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">Reset 100%</button>
-        </div>
-        <label style="display:flex; align-items:center; gap:8px; color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:0.9em;">
-            <input id="nikPreservePitchCheckbox" type="checkbox" checked onchange="nikPlayratePreservePitchChange(this.checked)">
-            Preserve pitch al cambiar playrate
-        </label>
-    </div>
-</div>
-<div id="nikReaPitchOverlay" onclick="nikCloseReaPitchModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
-    <div onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:15%; width:85%; max-width:400px; border-radius:8px; padding:16px; box-sizing:border-box;">
-        <div style="color:#00D0FF; font-family:'Open Sans',sans-serif; font-size:0.85em; font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; padding-bottom:10px; border-bottom:2px solid #00D0FF; margin-bottom:12px;">Semitonos (Stem Bus)</div>
-        <div style="display:flex; justify-content:center; margin-bottom:8px;">
-            <span id="nikReaPitchValue" style="color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.6em;">0</span>
-        </div>
-        <input id="nikReaPitchSlider" type="range" min="-12" max="12" value="0" step="1" oninput="nikReaPitchSliderInput(this.value)" onchange="nikReaPitchSliderCommit(this.value)" style="width:100%; margin-bottom:16px;">
-        <div style="display:flex; gap:8px;">
-            <button onclick="nikReaPitchReset();" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:10px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">Reset 0</button>
-            <button id="nikReaPitchEnableToggle" onclick="nikReaPitchToggleEnable();" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:10px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">ReaPitch: —</button>
-        </div>
-    </div>
-</div>
+<!-- nikPlayrateOverlay vive ahora en modals/playrate/playrate.html, inyectado por modal-loader.js en #modalsRoot -->
+<!-- nikReaPitchOverlay vive ahora en modals/reapitch/reapitch.html, inyectado por modal-loader.js en #modalsRoot -->
 <div id="nikTracksVisOverlay" onclick="nikCloseTracksVisModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
     <div id="nikTracksVisPanel" onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:6%; max-height:88vh; width:85%; max-width:400px; overflow-y:auto; border-radius:8px; padding:0 8px 8px 8px; box-sizing:border-box;">
         <div style="position:sticky; top:0; z-index:1; background:#1a1a1a; color:#00D0FF; font-family:'Open Sans',sans-serif; font-size:0.85em; font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; padding:10px 8px 6px 8px; border-bottom:2px solid #00D0FF;">Visibilidad de tracks (TCP)</div>
@@ -2295,6 +2185,12 @@ function easeInOutCubic(t, b, c, d) {
     else{return c/2*((t-=2)*t*t + 2) + b;}
     };
   
-</script>    
+</script>
+
+<!-- Contenedor donde modal-loader.js inyecta el HTML de cada modals/*/*.html -->
+<div id="modalsRoot"></div>
+<script src="modal-loader.js"></script>
+<script src="modals/playrate/playrate.js"></script>
+<script src="modals/reapitch/reapitch.js"></script>
 </body>
 </html>
