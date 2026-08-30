@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<index version="1" name="reaper-nik" commit="eb47fd655909ce05d31df202ed3a1b857098e3c5">
+  <category name="Scripts/Custom/AutoColor">
+    <reapack name="reaper_autocolor_live.lua" type="script" desc="REAPER Auto Color por instrumento — VERSIÓN LIVE (background)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 Corre en background y reaplica colores solo cuando detecta cambios reales en las pistas (nombre, cantidad, folder). Usa throttle (chequea cada CHECK_INTERVAL segundos) + hash de estado para evitar trabajo innecesario en cada tick de UI.\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 Instalaci\u243 ?n: Actions List > New Action... > Load ReaScript... Asignale un bot\u243 ?n de toolbar o shortcut para poder activarlo/desactivarlo f\u225 ?cilmente (toggle). Al volver a correrlo, REAPER pregunta si quer\u233 ?s terminar la instancia anterior (comportamiento est\u225 ?ndar de scripts con reaper.defer).\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="Nik" time="2026-08-30T13:24:24Z">
+        <source main="main">https://github.com/PowerageDc/reaper-nik/raw/eb47fd655909ce05d31df202ed3a1b857098e3c5/Scripts/Custom/AutoColor/reaper_autocolor_live.lua</source>
+      </version>
+    </reapack>
+  </category>
+</index>
