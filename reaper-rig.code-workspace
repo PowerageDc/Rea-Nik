@@ -1,0 +1,7 @@
+{
+  "folders": [
+    { "name": "Scripts (Lua)", "path": "Scripts/Custom" },
+    { "name": "Remote Control (Web)", "path": "reaper_www_root" }
+  ],
+  "settings": {}
+}
