@@ -4,7 +4,7 @@
 -- encontradas en los hijos del Stem Bus.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
-local ReaPitchBus = dofile(script_dir .. "ReaPitchBus_common_logic.lua")
+local ReaPitchBus = dofile(script_dir .. "../_Shared/ReaPitchBus_common_logic.lua")
 
 local target_str = reaper.GetExtState("NikRemote", "reapitch_semitone_target")
 if target_str == "" then return end

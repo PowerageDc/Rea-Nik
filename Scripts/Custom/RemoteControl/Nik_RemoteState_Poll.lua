@@ -11,7 +11,7 @@
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local ActiveProject = dofile(script_dir .. "ActiveProject_common_logic.lua")
-local ReaPitchBus   = dofile(script_dir .. "ReaPitchBus_common_logic.lua")
+local ReaPitchBus   = dofile(script_dir .. "../_Shared/ReaPitchBus_common_logic.lua")
 local MarkerBars    = dofile(script_dir .. "MarkerBars_common_logic.lua")
 
 local PRESERVEPITCH_CMD = 40671

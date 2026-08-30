@@ -4,6 +4,6 @@
 -- (Action List, footswitch), fuera del poll consolidado del remoto.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
-local ReaPitchBus = dofile(script_dir .. "ReaPitchBus_common_logic.lua")
+local ReaPitchBus = dofile(script_dir .. "../_Shared/ReaPitchBus_common_logic.lua")
 
 ReaPitchBus.write_aggregated_state()

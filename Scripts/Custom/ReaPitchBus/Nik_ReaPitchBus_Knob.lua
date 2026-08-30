@@ -3,7 +3,7 @@
 -- instancias de ReaPitch en los hijos del Stem Bus, + reset + toggle ON/OFF.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
-local ReaPitchBus = dofile(script_dir .. "ReaPitchBus_common_logic.lua")
+local ReaPitchBus = dofile(script_dir .. "../_Shared/ReaPitchBus_common_logic.lua")
 
 -- === Config ===
 local SEMITONE_MIN = -12

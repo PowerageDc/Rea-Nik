@@ -4,7 +4,7 @@
 -- apaga todas. Sin parámetros de entrada.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
-local ReaPitchBus = dofile(script_dir .. "ReaPitchBus_common_logic.lua")
+local ReaPitchBus = dofile(script_dir .. "../_Shared/ReaPitchBus_common_logic.lua")
 
 local instances = ReaPitchBus.find_all_instances()
 if #instances == 0 then return end

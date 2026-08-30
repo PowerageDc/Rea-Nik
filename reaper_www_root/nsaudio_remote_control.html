@@ -201,21 +201,21 @@ function nikMatchMarkerCategory(normalized) {
     }    
 
 // --- NikRemote_ReaPitch: Command IDs (cambian por PC, re-registrar en la sala de ensayo) ---
-var REAPITCH_CMD_SET    = "_RSebbc91f2727d91cc3a3804c218ac7f7c29ada315";
-var REAPITCH_CMD_TOGGLE = "_RS71fb33c34fdc4609d8a62a6a46e821fc8e9ce14c";
+var REAPITCH_CMD_SET    = "_RS69b0d0e40546eb776731c126893ea732568ba5f1";
+var REAPITCH_CMD_TOGGLE = "_RSdbe069eef00ee928d32efbc9fa40ebe5959d1a58";
 var nikReaPitchDragging = false;
 
 // --- NikRemote_PlayRate: Command IDs (cambian por PC, re-registrar en la sala de ensayo) ---
-var PLAYRATE_CMD_SET       = "_RS9d0a996becf3e4fe543876957e6942e99f1c6562";
-var PLAYRATE_CMD_TOGGLE_PP = "_RScdf1f18e2383b33167a1c8ebf73a8d3a6d09e5b4";
+var PLAYRATE_CMD_SET       = "_RS35ee59851e32d4035c0c1914625876598a00a56f";
+var PLAYRATE_CMD_TOGGLE_PP = "_RSd4dafe70c206819a3c906a669bfa32c9cb243f6b";
 
 // --- Nik_TrackVis_Refresh: Command ID (cambia por PC, re-registrar en la sala de ensayo) ---
 // COMPLETAR con el Command ID real al registrar Nik_TrackVis_Refresh.lua en el Action List.
-var TRACKVIS_CMD_REFRESH = "_RS267a7a6c3b16af2c5bf09eaef145e8b258f3abee";
+var TRACKVIS_CMD_REFRESH = "_RSd4ca4185e84293eb4a275e830d4a8f2d49e6ff1c";
 
 // --- Nik_RemoteState_Poll: lectura consolidada (proyecto/playrate/reapitch en un solo script) ---
 // COMPLETAR con el Command ID real al registrar Nik_RemoteState_Poll.lua en el Action List.
-var STATE_POLL_CMD = "_RS0fe4e0edda472c16a66d4517f8a598d4671a29ed";
+var STATE_POLL_CMD = "_RS19b96a416380cfbddafb6cbe4286d672c2164d1f";
 
 var NIK_SLOW_POLL = STATE_POLL_CMD +
     ";GET/EXTSTATE/NikRemote/active_project_name;GET/EXTSTATE/NikRemote/playrate;GET/EXTSTATE/NikRemote/preservepitch;GET/EXTSTATE/NikRemote/reapitch_semitone;GET/EXTSTATE/NikRemote/reapitch_enabled;GET/EXTSTATE/NikRemote/marker_bars";
@@ -231,8 +231,8 @@ var nikReaPitchLastEnabled = null;
 // — decision deliberada, ver remote_control.md, sección "Selector de proyectos (tabs)").
 // COMPLETAR con los Command IDs reales al registrar Nik_ProjectTabs_Read.lua y
 // Nik_ProjectTabs_Select.lua en el Action List.
-var PROJECTTABS_CMD_READ   = "_RSa2d324d3b31cb68f53060b57d89b67688c6dc172";
-var PROJECTTABS_CMD_SELECT = "_RS5e696a12cf3b392b881b7636f70dd6efa2e226cd";
+var PROJECTTABS_CMD_READ   = "_RSfcdb45e82a335b4d78adcca0497fd3542c4a53d5";
+var PROJECTTABS_CMD_SELECT = "_RS4f0dfe650a14d8d7a0d02bd40e4c59df0c1bed89";
 
 var nikMarkerBarsMap = {};
 
@@ -1582,9 +1582,9 @@ function init() {
 </head>
 <body onLoad="init();calculateScale()">
 <div id="nikTabBar" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 4px; background-color:#1a1a1a; color:#A9ABAB; font-family:'Open Sans',sans-serif; flex-shrink:0;">
-    <button onclick="wwr_req('40667;_RSe38f1d2387f4c5f4a32453115dadc2f90c9f5569;'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">⏮ Tab</button>
+    <button onclick="wwr_req('40667;_RS6acff9912f9ff42bc863923681cc5b9ffcff568a;'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">⏮ Tab</button>
     <span id="nikActiveProjectName" onclick="nikOpenProjectTabsModal()" style="min-width:120px; text-align:center; cursor:pointer;">-</span>
-    <button onclick="wwr_req('40667;_RS7637537529f983c1b26bdb6eb88edf4627033d40;'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">Tab ⏭</button>
+    <button onclick="wwr_req('40667;_RSe7e6a21b05170da8e39895ffee19150db1ae89ee;'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">Tab ⏭</button>
 </div>
 <div id="nikMarkerBrowserOverlay" onclick="nikCloseMarkerBrowser()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
     <div id="nikMarkerBrowserPanel" onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:15%; max-height:70vh; width:85%; max-width:400px; overflow-y:auto; border-radius:8px; padding:0 8px 8px 8px; box-sizing:border-box;">
