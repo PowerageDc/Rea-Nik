@@ -109,3 +109,12 @@ o `docs`.
   primer `add` — para revisar qué va a entrar antes de comitear, hacer
   `git add .` seguido de `git status` (no fiarse del status previo al add
   en carpetas sin trackear todavía).
+- Herramientas basadas en `rugged`/`libgit2` (ej. `reapack-index`) hacen
+  un chequeo de "ownership" del repo más estricto que git nativo — tiran
+  `Rugged::ConfigError: repository path ... is not owned by current user`
+  aunque `git status` funcione sin problema. Fix: agregar la ruta como
+  segura en la config global de git (barras `/`, no `\`, aunque sea ruta
+  Windows):
+  ```
+  git config --global --add safe.directory "C:/Users/<user>/AppData/Roaming/REAPER"
+  ```

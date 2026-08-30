@@ -54,6 +54,10 @@ render, pero conviven en el mismo proyecto/entorno):
 - **Control remoto web**: interfaz HTML para controlar REAPER desde el
   celular en ensayos (transporte, faders, markers, playrate, semitonos
   ReaPitch), ver `features/remote_control.md`.
+- **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
+  scripts (hoy: Control remoto + Auto-color) a PCs de ensayo sin git ni
+  editor de código, vía repo propio `reaper-nik` en GitHub. Ver
+  `05_REAPACK_DEPLOY.md`.
 
 ## Estado general (ver detalle en cada doc de feature)
 | Funcionalidad           | Estado                                        |
@@ -65,6 +69,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
+| Deploy vía ReaPack        | En progreso (AutoColor deployado, RemoteControl pendiente) |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -74,3 +79,12 @@ render, pero conviven en el mismo proyecto/entorno):
 - Pitch-shift toggle script (per-stem, mapeable a footswitch MIDI).
 - Parser de nomenclatura alternativa de secciones (V1, V2, PC, C1...) usada en
   otros proyectos — no bloqueante.
+- Categoría de ReaPack anidada (`Scripts/Custom/AutoColor` en vez de
+  `AutoColor`) — causa raíz: el repo git vive en la raíz de
+  `%APPDATA%\REAPER` (necesario hoy para no romper Command IDs), y
+  `reapack-index` deriva la categoría de la ruta completa desde la raíz
+  del repo. Solución de fondo pendiente: reestructurar carpetas para que
+  un único repo permita categorías cortas sin sacrificar rutas estables
+  de Command ID (descartada la alternativa de un segundo repo/junctions
+  por complejidad injustificada). No bloqueante — no afecta
+  funcionalidad, solo estética del navegador de paquetes en ReaPack.
