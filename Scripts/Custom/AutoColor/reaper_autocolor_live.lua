@@ -1,18 +1,17 @@
--- ============================================================
--- REAPER Auto Color by Instrument — VERSIÓN LIVE (background)
--- Corre en background y reaplica colores solo cuando detecta
--- cambios reales en las pistas (nombre, cantidad, folder).
--- Usa throttle (chequea cada CHECK_INTERVAL segundos) + hash
--- de estado para evitar trabajo innecesario en cada tick de UI.
+-- @description REAPER Auto Color por instrumento — VERSIÓN LIVE (background)
+-- @version 1.0
+-- @author Nik
+-- @about
+--   Corre en background y reaplica colores solo cuando detecta
+--   cambios reales en las pistas (nombre, cantidad, folder).
+--   Usa throttle (chequea cada CHECK_INTERVAL segundos) + hash
+--   de estado para evitar trabajo innecesario en cada tick de UI.
 --
--- Instalación:
---   Actions List > New Action... > Load ReaScript...
+--   Instalación: Actions List > New Action... > Load ReaScript...
 --   Asignale un botón de toolbar o shortcut para poder
---   activarlo/desactivarlo fácilmente (toggle).
---   Al volver a correrlo, REAPER pregunta si querés terminar
---   la instancia anterior (comportamiento estándar de scripts
---   con reaper.defer).
--- ============================================================
+--   activarlo/desactivarlo fácilmente (toggle). Al volver a
+--   correrlo, REAPER pregunta si querés terminar la instancia
+--   anterior (comportamiento estándar de scripts con reaper.defer).
 
 -- ================== CONFIG ==================
 local PALETTE = "warm" -- opciones: "soft" | "warm" | "cool"
