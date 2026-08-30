@@ -1,0 +1,13 @@
+<div id="nikTracksVisOverlay" onclick="nikCloseTracksVisModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
+    <div id="nikTracksVisPanel" onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:6%; max-height:88vh; width:85%; max-width:400px; overflow-y:auto; border-radius:8px; padding:0 8px 8px 8px; box-sizing:border-box;">
+        <div style="position:sticky; top:0; z-index:1; background:#1a1a1a; color:#00D0FF; font-family:'Open Sans',sans-serif; font-size:0.85em; font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; padding:10px 8px 6px 8px; border-bottom:2px solid #00D0FF;">Visibilidad de tracks (TCP)</div>
+        <div style="display:flex; gap:8px; padding:10px 8px 4px 8px;">
+            <button onclick="nikTracksVisSetAll(true)" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:8px 4px; font-family:'Open Sans',sans-serif; font-size:0.9em;">Mostrar todas</button>
+            <button onclick="nikTracksVisSetAll(false)" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:8px 4px; font-family:'Open Sans',sans-serif; font-size:0.9em;">Ocultar todas</button>
+        </div>
+        <div id="nikTracksVisList"></div>
+        <div style="padding:8px;">
+            <button onclick="nikApplyTracksVis()" style="width:100%; background:#00D0FF; color:#1A1A1A; border:none; border-radius:4px; padding:10px 4px; font-family:'Open Sans',sans-serif; font-size:1em; font-weight:bold;">Aplicar</button>
+        </div>
+    </div>
+</div>

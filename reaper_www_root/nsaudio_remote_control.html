@@ -30,7 +30,7 @@ var last_transport_state = -1, mouseDown = 0, last_time_str = "",
     startX = 0, joggerAgg = 0, recarmCountAr = [], recarmCount = 0, newPos = -1,
     trackHeightsAr = [], trackColoursAr = [], trackNumbersAr = [], trackNamesAr = [],  trackVolumeAr = [],
     trackFlagsAr = [], trackSendCntAr = [], trackRcvCntAr = [], trackHwOutCntAr = [], trackSendHwCntAr = [], trackPeakAr = [], trackMeterAr = [], faderConAr = [],
-    hereCss = document.styleSheets[1], transitions = 1, nikTracksVisSnapshot = {};    
+    hereCss = document.styleSheets[1], transitions = 1;
 
 // NIK_MARKER_COLOR_MAP, NIK_MARKER_CHAIN_PATTERN y NIK_MARKER_CHAIN_STEP
 // viven ahora en config.js — editar ahí para sumar/ajustar categorías.
@@ -117,24 +117,7 @@ function nikParseMarkerBars(str) {
     return map;
     }
 
-// "idx:nombre:esActivo;idx:nombre:esActivo;..." -> [{idx, name, active}, ...]
-// (split defensivo: el nombre podria en teoria contener ":" — se toma el primer
-// campo como idx, el ultimo como flag activo, y todo lo del medio como nombre)
-function nikParseProjectTabs(str) {
-    var list = [];
-    if (!str) return list;
-    var entries = str.split(";");
-    for (var i = 0; i < entries.length; i++) {
-        var parts = entries[i].split(":");
-        if (parts.length < 3) continue;
-        list.push({
-            idx: parts[0],
-            name: parts.slice(1, parts.length - 1).join(":"),
-            active: (parts[parts.length - 1] == "1")
-            });
-        }
-    return list;
-    }
+// nikParseProjectTabs vive ahora en modals/project-tabs/project-tabs.js
 
 // Interpola entre dos colores hex ("#rrggbb") segun t (0..1)
 function nikLerpColor(hexA, hexB, t) {
@@ -174,163 +157,17 @@ function nikCheckProjectNameWatchdog() {
 // nikReaPitchToggleEnable viven ahora en modals/reapitch/reapitch.js
 // (llamadas desde wwr_onreply más abajo, resueltas en runtime vía window)
 
-function nikOpenTracksVisModal() {
-    var list = document.getElementById("nikTracksVisList");
-    if (!list) return;
-    list.innerHTML = "";
-    nikTracksVisSnapshot = {};
-    for (var i = 1; i <= nTrack; i++) {
-        var flags = parseInt(trackFlagsAr[i]) || 0;
-        var visible = !(flags & 512);
-        var hasFx = !!(flags & 4);
-        nikTracksVisSnapshot[i] = visible;
+// nikOpenTracksVisModal / nikCloseTracksVisModal / nikTracksVisSetAll /
+// nikApplyTracksVis / nikTracksVisSnapshot viven ahora en
+// modals/tracksvis/tracksvis.js
 
-        var row = document.createElement("label");
-        row.style.cssText = "display:flex; align-items:center; gap:10px; padding:10px 8px; color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.1em; border-bottom:1px solid #262626; cursor:pointer;";
+// nikMarkerAreaClick / nikOpenMarkerBrowser / nikCloseMarkerBrowser viven
+// ahora en modals/marker-browser/marker-browser.js
 
-        var cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.checked = visible;
-        cb.setAttribute("data-trackidx", i);
-        cb.style.cssText = "flex-shrink:0; width:20px; height:20px;";
-
-        var rawColor = parseInt(trackColoursAr[i]) || 0;
-        var trackColor = (rawColor > 0) ? ("#" + (rawColor|0x1000000).toString(16).substr(-6)) : "#A8A8A8";
-
-        var nameSpan = document.createElement("span");
-        nameSpan.textContent = trackNamesAr[i] ? trackNamesAr[i] : ("Track " + i);
-        nameSpan.style.cssText = "flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:" + trackColor + ";";
-
-        var fxSpan = document.createElement("span");
-        fxSpan.textContent = hasFx ? "FX" : "";
-        fxSpan.style.cssText = "color:#57FF86; font-size:0.8em; flex-shrink:0;";
-
-        row.appendChild(cb);
-        row.appendChild(nameSpan);
-        row.appendChild(fxSpan);
-        list.appendChild(row);
-        }
-    document.getElementById("nikTracksVisOverlay").style.display = "flex";
-    }
-
-function nikCloseTracksVisModal() {
-    document.getElementById("nikTracksVisOverlay").style.display = "none";
-    }
-
-function nikTracksVisSetAll(state) {
-    var checkboxes = document.getElementById("nikTracksVisList").getElementsByTagName("input");
-    for (var i = 0; i < checkboxes.length; i++) { checkboxes[i].checked = state; }
-    }
-
-function nikApplyTracksVis() {
-    var checkboxes = document.getElementById("nikTracksVisList").getElementsByTagName("input");
-    var cmds = "";
-    for (var i = 0; i < checkboxes.length; i++) {
-        var idx = checkboxes[i].getAttribute("data-trackidx");
-        var newVisible = checkboxes[i].checked;
-        if (newVisible != nikTracksVisSnapshot[idx]) {
-            cmds += "SET/TRACK/" + idx + "/B_SHOWINTCP/" + (newVisible ? 1 : 0) + ";";
-            }
-        }
-    if (cmds != "") {
-        cmds += "SET/UNDO/" + encodeURIComponent("Mostrar/ocultar tracks (remoto)") + ";";
-        cmds += NIK_LUA_COMMANDS.trackVisRefresh.commandId + ";";
-        wwr_req(cmds);
-        }
-    nikCloseTracksVisModal();
-    }
-
-function nikMarkerAreaClick(event) {
-    var t = event.target;
-    while (t && t.id != "prevButton" && t.id != "nextButton" && t.id != "dropMarker" && t.tagName != "svg") {
-        t = t.parentNode;
-        }
-    if (t && (t.id == "prevButton" || t.id == "nextButton" || t.id == "dropMarker")) return;
-    nikOpenMarkerBrowser();
-    }
-
-function nikOpenMarkerBrowser() {
-    var list = document.getElementById("nikMarkerBrowserList");
-    if (!list) return;
-    list.innerHTML = "";
-    var sorted = g_markers.slice().sort(function(a,b){ return parseFloat(a[3]) - parseFloat(b[3]); });
-    var nikPopupChainState = { color: null, step: 0 };
-    for (var i=0; i<sorted.length; i++) {
-        var m = sorted[i];
-        var rawName = m[1] ? m[1] : ("unnamed (" + m[2] + ")");
-        var resolved = nikResolveMarkerDisplay(m[1] ? m[1] : "", nikPopupChainState);
-        var displayName = m[1] ? resolved.displayName : rawName;
-        var resolvedColor = resolved.resolvedColor;
-
-        var item = document.createElement("div");
-        item.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 8px; color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.3em; border-bottom:1px solid #262626;";
-        var nameSpan = document.createElement("span");
-        nameSpan.textContent = displayName;
-        if (resolvedColor) nameSpan.style.color = resolvedColor;
-        var posSpan = document.createElement("span");
-        posSpan.style.cssText = "display:flex; color:#999999; font-size:0.95em; margin-left:8px; flex-shrink:0; font-variant-numeric:tabular-nums;";
-        var timeSpan = document.createElement("span");
-        timeSpan.style.cssText = "min-width:2.8em; text-align:right;";
-        timeSpan.textContent = nikFormatMinSec(parseFloat(m[3]));
-        var barsValSpan = document.createElement("span");
-        barsValSpan.style.cssText = "min-width:3.2em; text-align:right;";
-        var barsVal = nikMarkerBarsMap[m[2]];
-        barsValSpan.textContent = barsVal ? (barsVal + "c") : "";
-        posSpan.appendChild(timeSpan);
-        posSpan.appendChild(barsValSpan);
-        item.appendChild(nameSpan);
-        item.appendChild(posSpan);
-        item.setAttribute("data-markerid", m[2]);
-        item.onclick = function(){
-            wwr_req("SET/POS_STR/m" + this.getAttribute("data-markerid"));
-            nikCloseMarkerBrowser();
-            };
-        list.appendChild(item);
-        }
-    document.getElementById("nikMarkerBrowserOverlay").style.display = "flex";
-    }
-
-function nikCloseMarkerBrowser() {
-    document.getElementById("nikMarkerBrowserOverlay").style.display = "none";
-    }
-
-function nikOpenProjectTabsModal() {
-    wwr_req(NIK_LUA_COMMANDS.projectTabsRead.commandId + ";GET/EXTSTATE/NikRemote/project_tabs");
-    document.getElementById("nikProjectTabsOverlay").style.display = "flex";
-    }
-
-function nikCloseProjectTabsModal() {
-    document.getElementById("nikProjectTabsOverlay").style.display = "none";
-    }
-
-function nikRenderProjectTabsList(str) {
-    var list = document.getElementById("nikProjectTabsList");
-    if (!list) return;
-    list.innerHTML = "";
-    var tabs = nikParseProjectTabs(str);
-    for (var i = 0; i < tabs.length; i++) {
-        var tab = tabs[i];
-        var item = document.createElement("div");
-        item.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:12px 8px; font-family:'Open Sans',sans-serif; font-size:1.3em; border-bottom:1px solid #262626; color:" +
-            (tab.active ? "#00FF99" : "#A8A8A8") + ";" + (tab.active ? " font-weight:bold;" : "");
-        var nameSpan = document.createElement("span");
-        nameSpan.textContent = tab.name;
-        var metaSpan = document.createElement("span");
-        metaSpan.style.cssText = "color:#999999; font-size:0.8em; margin-left:8px; flex-shrink:0;";
-        // Reservado para metadata futura (BPM / metrica / tonalidad), sin uso hoy.
-        metaSpan.textContent = "";
-        item.appendChild(nameSpan);
-        item.appendChild(metaSpan);
-        item.setAttribute("data-idx", tab.idx);
-        item.setAttribute("data-active", tab.active ? "1" : "0");
-        item.onclick = function(){
-            if (this.getAttribute("data-active") == "1") { nikCloseProjectTabsModal(); return; }
-            wwr_req("SET/EXTSTATE/NikRemote/project_tabs_target_idx/" + this.getAttribute("data-idx") + ";" + NIK_LUA_COMMANDS.projectTabsSelect.commandId + ";" + NIK_ONDEMAND_READS);
-            nikCloseProjectTabsModal();
-            };
-        list.appendChild(item);
-        }
-    }
+// nikOpenProjectTabsModal / nikCloseProjectTabsModal /
+// nikRenderProjectTabsList viven ahora en
+// modals/project-tabs/project-tabs.js (llamada desde wwr_onreply más abajo,
+// resuelta en runtime vía window)
 
 function setTextForObject(obj, text) { 
   if (obj.lastChild) obj.lastChild.nodeValue = text;
@@ -1375,33 +1212,11 @@ function init() {
     <span id="nikActiveProjectName" onclick="nikOpenProjectTabsModal()" style="min-width:120px; text-align:center; cursor:pointer;">-</span>
     <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabNext.commandId+';'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">Tab ⏭</button>
 </div>
-<div id="nikMarkerBrowserOverlay" onclick="nikCloseMarkerBrowser()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
-    <div id="nikMarkerBrowserPanel" onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:15%; max-height:70vh; width:85%; max-width:400px; overflow-y:auto; border-radius:8px; padding:0 8px 8px 8px; box-sizing:border-box;">
-        <div style="position:sticky; top:0; z-index:1; background:#1a1a1a; color:#00D0FF; font-family:'Open Sans',sans-serif; font-size:0.85em; font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; padding:10px 8px 6px 8px; border-bottom:2px solid #00D0FF;">Markers</div>
-        <div id="nikMarkerBrowserList"></div>
-    </div>
-</div>
-<div id="nikProjectTabsOverlay" onclick="nikCloseProjectTabsModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
-    <div id="nikProjectTabsPanel" onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:15%; max-height:70vh; width:85%; max-width:400px; overflow-y:auto; border-radius:8px; padding:0 8px 8px 8px; box-sizing:border-box;">
-        <div style="position:sticky; top:0; z-index:1; background:#1a1a1a; color:#00D0FF; font-family:'Open Sans',sans-serif; font-size:0.85em; font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; padding:10px 8px 6px 8px; border-bottom:2px solid #00D0FF;">Proyectos</div>
-        <div id="nikProjectTabsList"></div>
-    </div>
-</div>
+<!-- nikMarkerBrowserOverlay vive ahora en modals/marker-browser/marker-browser.html, inyectado por modal-loader.js en #modalsRoot -->
+<!-- nikProjectTabsOverlay vive ahora en modals/project-tabs/project-tabs.html, inyectado por modal-loader.js en #modalsRoot -->
 <!-- nikPlayrateOverlay vive ahora en modals/playrate/playrate.html, inyectado por modal-loader.js en #modalsRoot -->
 <!-- nikReaPitchOverlay vive ahora en modals/reapitch/reapitch.html, inyectado por modal-loader.js en #modalsRoot -->
-<div id="nikTracksVisOverlay" onclick="nikCloseTracksVisModal()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:flex-start; justify-content:center;">
-    <div id="nikTracksVisPanel" onclick="event.stopPropagation()" style="background:#1a1a1a; margin-top:6%; max-height:88vh; width:85%; max-width:400px; overflow-y:auto; border-radius:8px; padding:0 8px 8px 8px; box-sizing:border-box;">
-        <div style="position:sticky; top:0; z-index:1; background:#1a1a1a; color:#00D0FF; font-family:'Open Sans',sans-serif; font-size:0.85em; font-weight:bold; letter-spacing:0.05em; text-transform:uppercase; padding:10px 8px 6px 8px; border-bottom:2px solid #00D0FF;">Visibilidad de tracks (TCP)</div>
-        <div style="display:flex; gap:8px; padding:10px 8px 4px 8px;">
-            <button onclick="nikTracksVisSetAll(true)" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:8px 4px; font-family:'Open Sans',sans-serif; font-size:0.9em;">Mostrar todas</button>
-            <button onclick="nikTracksVisSetAll(false)" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:8px 4px; font-family:'Open Sans',sans-serif; font-size:0.9em;">Ocultar todas</button>
-        </div>
-        <div id="nikTracksVisList"></div>
-        <div style="padding:8px;">
-            <button onclick="nikApplyTracksVis()" style="width:100%; background:#00D0FF; color:#1A1A1A; border:none; border-radius:4px; padding:10px 4px; font-family:'Open Sans',sans-serif; font-size:1em; font-weight:bold;">Aplicar</button>
-        </div>
-    </div>
-</div>
+<!-- nikTracksVisOverlay vive ahora en modals/tracksvis/tracksvis.html, inyectado por modal-loader.js en #modalsRoot -->
 <div id="colWrap">
 <div id="col1">
 <div id="optionsBar" class="optionsBar">
@@ -2192,5 +2007,8 @@ function easeInOutCubic(t, b, c, d) {
 <script src="modal-loader.js"></script>
 <script src="modals/playrate/playrate.js"></script>
 <script src="modals/reapitch/reapitch.js"></script>
+<script src="modals/tracksvis/tracksvis.js"></script>
+<script src="modals/marker-browser/marker-browser.js"></script>
+<script src="modals/project-tabs/project-tabs.js"></script>
 </body>
 </html>

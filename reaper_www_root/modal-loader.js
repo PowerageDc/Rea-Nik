@@ -16,7 +16,10 @@
 // Para sumar un modal nuevo: agregar su ruta a NIK_MODAL_FRAGMENTS.
 var NIK_MODAL_FRAGMENTS = [
     "modals/playrate/playrate.html",
-    "modals/reapitch/reapitch.html"
+    "modals/reapitch/reapitch.html",
+    "modals/tracksvis/tracksvis.html",
+    "modals/marker-browser/marker-browser.html",
+    "modals/project-tabs/project-tabs.html"
 ];
 
 (function nikLoadModals() {
