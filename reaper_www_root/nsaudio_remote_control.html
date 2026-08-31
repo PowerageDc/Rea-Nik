@@ -22,17 +22,12 @@
 <script src="config.js"></script>
 <script src="core/utils.js"></script>
 <script src="markers/markers.js"></script>
+<script src="core/state.js"></script>
 
 <script type="text/javascript">
             
-var last_transport_state = -1, mouseDown = 0, last_time_str = "",
-    last_metronome = false,  nTrack = 0, last_repeat = false, snapState = 0,
-    nikLastProjectNameUpdate = Date.now(),
-    drawnSig=0, drawnBeat=0, ts_numerator=0, ts_denominator=0, playPosSeconds=0, statusPosition=[], statusPositionAr=[],
-    startX = 0, joggerAgg = 0, recarmCountAr = [], recarmCount = 0, newPos = -1,
-    trackHeightsAr = [], trackColoursAr = [], trackNumbersAr = [], trackNamesAr = [],  trackVolumeAr = [],
-    trackFlagsAr = [], trackSendCntAr = [], trackRcvCntAr = [], trackHwOutCntAr = [], trackSendHwCntAr = [], trackPeakAr = [], trackMeterAr = [], faderConAr = [],
-    hereCss = document.styleSheets[1], transitions = 1;
+// Estado global (transporte, posición, tracks, hereCss, etc.) vive
+// ahora en core/state.js
 
 // NIK_MARKER_COLOR_MAP, NIK_MARKER_CHAIN_PATTERN y NIK_MARKER_CHAIN_STEP
 // viven ahora en config.js — editar ahí para sumar/ajustar categorías.
@@ -44,13 +39,9 @@ var last_transport_state = -1, mouseDown = 0, last_time_str = "",
 // Command IDs, NIK_SLOW_POLL/NIK_ONDEMAND_READS y flags de estado runtime
 // para ReaPitch/Playrate/ProjectTabs viven ahora en config.js
 // (NIK_LUA_COMMANDS) — cargado antes que este script.
-var nikReaPitchDragging = false;
-var nikPlayrateDragging = false;
-var nikPreservePitchServerState = null;
-var nikReaPitchLastSemitone = null;
-var nikReaPitchLastEnabled = null;
-
-var nikMarkerBarsMap = {};
+// nikReaPitchDragging / nikPlayrateDragging / nikPreservePitchServerState /
+// nikReaPitchLastSemitone / nikReaPitchLastEnabled / nikMarkerBarsMap
+// viven ahora en core/state.js
 
 // nikParseMarkerBars vive ahora en markers/markers.js
 
@@ -97,7 +88,7 @@ function mouseDownEventHandler(msg) {
   }
 }
     
-var volOutputdB = null;
+// volOutputdB vive ahora en core/state.js
 
 function mouseUpHandler(event){
   if (mouseDown == 1 && volOutputdB != null) {
@@ -133,8 +124,8 @@ function mouseMoveHandler(event){
         }
     }
  
-var thisSendTrackId=0, sendOutputdB=0;
-    
+// thisSendTrackId / sendOutputdB viven ahora en core/state.js
+
 function sendMouseMoveHandler(event){
     if (mouseDown != 1){ return; }
     else {
@@ -163,7 +154,7 @@ function sendMouseMoveHandler(event){
         }
     }
     
-var faderLastTapAr = [];
+// faderLastTapAr vive ahora en core/state.js
 // NIK_FADER_DBLTAP_MS vive en config.js
 
 function faderResetToUnity(content, thumb){
@@ -973,7 +964,7 @@ function prompt_seek() {
   }
 }    
     
-var scaleFactor = 1, optionsOpen =0;
+// scaleFactor / optionsOpen viven ahora en core/state.js
 // NIK_TRANSPORT_SCALE vive en config.js
 
 function calculateScale(event) {
