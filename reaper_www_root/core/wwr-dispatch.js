@@ -6,6 +6,29 @@
 // Depende de: config.js, core/utils.js, markers/markers.js, core/state.js,
 // core/faders.js, core/tracks-render.js — deben cargarse antes en el HTML.
 
+// Los templates SVG que se clonan por track (trackRow1Svg, trackRow2Svg,
+// trackSendSvg) traen <linearGradient id="..."> fijos. cloneNode(true)
+// duplica esos ids tal cual — el navegador resuelve toda referencia
+// fill="url(#id)" contra la PRIMERA ocurrencia de ese id en el documento.
+// Mientras esa primera ocurrencia esté visible, el resto de los clones le
+// "prestan" el gradiente sin problema; si ese track puntual queda oculto
+// (display:none, ver TracksVis), esa definición deja de renderizarse y
+// TODOS los clones que dependían de ella pierden el fill (fondo blanco
+// desaparece, se ve el color de fondo del track). Se llama una vez por
+// clon, apenas se inserta, con un sufijo único (el índice del track).
+function nikUniquifyGradientIds(cloneRoot, suffix) {
+    var grads = cloneRoot.querySelectorAll("linearGradient[id]");
+    for (var g = 0; g < grads.length; g++) {
+        var oldId = grads[g].id;
+        var newId = oldId + "_" + suffix;
+        grads[g].id = newId;
+        var refs = cloneRoot.querySelectorAll("[fill=\"url(#" + oldId + ")\"]");
+        for (var r = 0; r < refs.length; r++) {
+            refs[r].setAttributeNS(null, "fill", "url(#" + newId + ")");
+        }
+    }
+}
+
 function wwr_onreply(results) {
     /*var resultsDisplay = document.getElementById("_results");
      if(resultsDisplay!=null){
@@ -481,6 +504,7 @@ function wwr_onreply(results) {
                                 masterTrackRow2Content.id = "0";
                                 if (!masterTrackRow2Content.innerHTML) {
                                     masterTrackRow2Content.appendChild(cloneTrackRow2);
+                                    nikUniquifyGradientIds(cloneTrackRow2, "master");
                                     var trackSendsDiv = document.createElement("div");
                                     trackSendsDiv.id = ("sendsTrack0");
                                     masterTrackContent.appendChild(trackSendsDiv);
@@ -506,12 +530,14 @@ function wwr_onreply(results) {
                                 var trackRow1Content = document.getElementById("track" + idx).childNodes[0];
                                 if (!trackRow1Content.innerHTML) {
                                     trackRow1Content.appendChild(cloneTrackRow1);
+                                    nikUniquifyGradientIds(cloneTrackRow1, idx);
                                     trackRow1Content.firstChild.getElementsByClassName("hitbox")[0].id = idx;
                                 }
 
                                 var trackRow2Content = document.getElementById("track" + idx).childNodes[1];
                                 if (!trackRow2Content.innerHTML) {
                                     trackRow2Content.appendChild(cloneTrackRow2);
+                                    nikUniquifyGradientIds(cloneTrackRow2, idx);
                                 }
 
                                 trackBg = trackRow1Content.firstChild.getElementsByClassName("trackrow1bg")[0];
@@ -637,8 +663,10 @@ function wwr_onreply(results) {
                                 if (trackSendsContent.childNodes.length < trackSendHwCntAr[idx]) {
                                     var sendDiv = document.createElement("div");
                                     sendDiv.className = ("sendDiv");
+                                    var sendIdx = trackSendsContent.childNodes.length;
                                     trackSendsContent.appendChild(sendDiv);
                                     sendDiv.appendChild(cloneTrackSend);
+                                    nikUniquifyGradientIds(cloneTrackSend, idx + "_" + sendIdx);
                                     var thisSendThumb = sendDiv.getElementsByClassName("sendThumb")[0];
                                     sendConect(sendDiv, thisSendThumb);
                                     //bug - adding a send doesn't update the height of that send. So it'll be zero even if the panel is expanded.
