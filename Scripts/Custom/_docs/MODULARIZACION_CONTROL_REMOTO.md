@@ -21,6 +21,13 @@ reaper_www_root/
 ├── styles.css                    ← <style> original, sin cambios de contenido
 ├── config.js                     ← Command IDs + constantes de customización
 ├── modal-loader.js               ← fetch + inyección de modals/*/*.html en #modalsRoot
+├── core/
+│   ├── utils.js                  ← funciones puras sin estado (setTextForObject, lumaOffset, nikLerpColor, nikDeviationColor, elAttribute, easeInOutCubic, BtoMB)
+│   ├── state.js                  ← estado global consolidado (transporte/tracks, flags ReaPitch/Playrate/markers, faders/sends, escala UI)
+│   ├── faders.js                 ← arrastre de faders de volumen y sends
+│   └── tracks-render.js          ← hitbox() — expandir/colapsar filas de track
+├── markers/
+│   └── markers.js                ← parseo/resolución de nombres y colores de markers (compartido shell + marker-browser)
 └── modals/
     ├── playrate/{playrate.html, playrate.js}
     ├── reapitch/{reapitch.html, reapitch.js}
@@ -30,7 +37,12 @@ reaper_www_root/
 ```
 
 Los 5 popups del control remoto están completamente extraídos y testeados
-en REAPER. `nsaudio_remote_control.html` bajó de 2428 a ~2014 líneas.
+en REAPER. Pasos 1-5 de la modularización de `core/` (ver tabla más abajo)
+también completos y testeados: `core/utils.js`, `markers/markers.js`,
+`core/state.js`, `core/faders.js`, `core/tracks-render.js`.
+`nsaudio_remote_control.html` bajó de 2428 a ~2014 líneas tras los popups,
+y bajó más todavía con estos 5 pasos (no remedido con precisión — pendiente
+correr `wc -l` la próxima sesión).
 
 ### `config.js` — contenido
 - `NIK_LUA_COMMANDS`: objeto `{ luaFile, commandId, pending? }` por acción.
@@ -84,36 +96,23 @@ en REAPER. `nsaudio_remote_control.html` bajó de 2428 a ~2014 líneas.
 
 ## Pendiente — separar el `core/` que queda en el shell
 
-Todo lo de abajo vive hoy en los `<script>` inline de
-`nsaudio_remote_control.html` (uno grande en el `<head>` con casi toda la
-lógica, y uno chico al final del `<body>` con un par de utils).
-Identificado por nombre de función/variable (no por línea — las líneas se
-van a mover con cada extracción).
+Pasos 1-5 completos y testeados (ver `## Estado actual (hecho)` arriba:
+`core/utils.js`, `markers/markers.js`, `core/state.js`, `core/faders.js`,
+`core/tracks-render.js`). Quedan los 2 módulos más grandes, dejados para
+el final a propósito (ver razón en la tabla original — dispatch toca casi
+todo lo demás, por eso conviene abordarlo con todo lo demás ya en su
+lugar):
 
 | Módulo propuesto | Contenido | Por qué separado |
 |---|---|---|
-| `core/utils.js` | `setTextForObject`, `lumaOffset`, `nikLerpColor`, `nikDeviationColor`, `elAttribute`, `easeInOutCubic`, `BtoMB` | Utilidades puras sin estado — corte más seguro, cero dependencias cruzadas |
-| `markers/markers.js` | `nikNormalizeMarkerName`, `nikEscapeRegex`, `nikResolveMarkerDisplay`, `nikFormatMinSec`, `nikMatchMarkerCategory`, `nikParseMarkerBars` | Compartido entre `modals/marker-browser/marker-browser.js` y los indicadores prev/actual/next del transporte (que quedan en el shell) — por eso NO se movió a `marker-browser.js` en la sesión anterior |
-| `core/state.js` | Consolidar las `var` de estado global hoy desperdigadas en 3-4 bloques: `last_transport_state`, `mouseDown`, `last_time_str`, `nTrack`, los `*Ar` de tracks (`trackHeightsAr`, `trackColoursAr`, etc.), `nikReaPitchDragging`, `nikPlayrateDragging`, `nikPreservePitchServerState`, `nikReaPitchLastSemitone`, `nikReaPitchLastEnabled`, `nikMarkerBarsMap`, `volOutputdB`, `thisSendTrackId`/`sendOutputdB`, `faderLastTapAr`, `scaleFactor`/`optionsOpen` | Hoy no hay un solo lugar para ver "qué estado global existe" — mismo espíritu que `config.js`, es más documentación viva que optimización de performance |
-| `core/faders.js` | `mouseDownEventHandler`, `mouseUpHandler`, `mouseDownHandler`, `mouseLeaveHandler`, `mouseMoveHandler`, `sendMouseMoveHandler`, `faderResetToUnity`, `faderCheckDoubleTap`, `volFaderConect`, `sendMouseUpHandler` | Dominio autocontenido: arrastre de faders/sends |
-| `core/tracks-render.js` | `hitbox()` (con los `resizerDown`/`resizerUp` anidados) | Animación de expandir/colapsar filas de track |
 | `core/wwr-dispatch.js` | `wwr_onreply()` — el bloque más grande del archivo, con diferencia | Parser central del feed de REAPER. Llama a funciones de casi todos los demás módulos (dispatch), por eso va al final del orden de implementación |
 | `core/init.js` | `init()`, `on_record_button`, `prompt_abort`, `prompt_seek`, `calculateScale`, `nikCheckProjectNameWatchdog` | Bootstrapping + handlers sueltos de transporte que no encajan en otro bucket |
 
 ### Orden de implementación sugerido
-1. `core/utils.js` — sin dependencias, mecánico
-2. `markers/markers.js` — cierra el tema que quedó pendiente desde la
-   sesión de `marker-browser.js`
-3. `core/state.js` — mecánico, pero toca varios puntos de declaración
-   dispersos (cuidado con no duplicar como pasó con `nikTracksVisSnapshot`,
-   que terminó teniendo que sacarse de dos lugares)
-4. `core/faders.js` — autocontenido, algo de estado compartido con
-   `core/state.js` (`mouseDown`, `faderLastTapAr`)
-5. `core/tracks-render.js` — depende de los arrays de estado de tracks
-6. `core/wwr-dispatch.js` — el más grande y el que más toca; dejarlo para
-   cuando todo lo demás ya esté en su lugar y se pueda referenciar con
-   confianza
-7. `core/init.js` — al final, porque es el que ata todo (`wwr_req_recur`,
+1. `core/wwr-dispatch.js` — el más grande y el que más toca; abordar con
+   tiempo para probar bien después, no apurar sobre el cierre de una
+   sesión
+2. `core/init.js` — al final, porque es el que ata todo (`wwr_req_recur`,
    `wwr_start`)
 
 Al terminar esto, `nsaudio_remote_control.html` debería quedar como HTML
