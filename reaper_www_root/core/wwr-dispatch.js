@@ -79,6 +79,12 @@ function wwr_onreply(results) {
                 break;
             case "EXTSTATE":
                 if (tok[1] == "NikRemote" && tok[2] == "active_project_name") {
+                    if (tok[3] != nikCurrentProjectName) {
+                        if (nikCurrentProjectName != null) nikTabMemorySave(nikCurrentProjectName);
+                        nikTabMemoryResetRenderCaches();
+                        nikTabMemoryRestore(tok[3]);
+                        nikCurrentProjectName = tok[3];
+                    }
                     nikLastProjectNameUpdate = Date.now();
                     var nameDisplay = document.getElementById("nikActiveProjectName");
                     if (nameDisplay) nameDisplay.textContent = tok[3];
