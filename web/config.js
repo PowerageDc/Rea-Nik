@@ -19,24 +19,24 @@
 // sección "Selector de proyectos (tabs)").
 var NIK_LUA_COMMANDS = {
     reaPitchSet: {
-        luaFile: null, // TODO: confirmar wrapper — dominio ReaPitchBus_common_logic
-        commandId: "_RS69b0d0e40546eb776731c126893ea732568ba5f1"
+        luaFile: "NikRemote_ReaPitch_SetSemitones.lua",
+        commandId: "_RSd44494b93f93ba815104943210d9d60d634aa97f"
     },
     reaPitchToggle: {
-        luaFile: null, // TODO: confirmar wrapper — dominio ReaPitchBus_common_logic
-        commandId: "_RSdbe069eef00ee928d32efbc9fa40ebe5959d1a58"
+        luaFile: "NikRemote_ReaPitch_ToggleEnable.lua",
+        commandId: "_RS36d3eee6ba9a0ea78b6d4e7c82af2cee83414901"
     },
     playrateSet: {
-        luaFile: null, // TODO: confirmar wrapper
-        commandId: "_RS35ee59851e32d4035c0c1914625876598a00a56f"
+        luaFile: "NikRemote_PlayRate_Set.lua",
+        commandId: "_RS88f2ff39489a77ffacf278d52707c7758bbe9a47"
     },
     playrateTogglePreservePitch: {
-        luaFile: null, // TODO: confirmar wrapper
-        commandId: "_RSd4dafe70c206819a3c906a669bfa32c9cb243f6b"
+        luaFile: "NikRemote_PlayRate_TogglePreservePitch.lua",
+        commandId: "_RS9f226501268a0ae8972a775fbfa10f1672b21e18"
     },
     trackVisRefresh: {
         luaFile: "Nik_TrackVis_Refresh.lua",
-        commandId: "_RSd4ca4185e84293eb4a275e830d4a8f2d49e6ff1c"
+        commandId: "_RS9e8690f5288bed472199c14261d035628e558413"
     },
     // Lectura consolidada: proyecto activo + playrate/preserve pitch +
     // ReaPitch (semitonos/enabled) + compases por sección, en un solo
@@ -45,32 +45,29 @@ var NIK_LUA_COMMANDS = {
     // script (o su common_logic), nunca un _RS nuevo encadenado acá.
     statePoll: {
         luaFile: "Nik_RemoteState_Poll.lua",
-        commandId: "_RS19b96a416380cfbddafb6cbe4286d672c2164d1f"
+        commandId: "_RS63d9239195971e67e8f6101efab8a394ae6b274e"
     },
     // Lectura on-demand, deliberadamente FUERA del poll de fondo (costo de
     // EnumProjects no vale la pena en cada tick de 1000ms) — ver
     // remote_control.md, "Selector de proyectos (tabs)".
     projectTabsRead: {
         luaFile: "Nik_ProjectTabs_Read.lua",
-        commandId: "_RSfcdb45e82a335b4d78adcca0497fd3542c4a53d5",
-        pending: true // placeholder, reemplazar al registrar en el Action List
+        commandId: "_RS7d6978f61a8e761e3043667ccdb5eae1dd4c157d"
     },
     projectTabsSelect: {
         luaFile: "Nik_ProjectTabs_Select.lua",
-        commandId: "_RS4f0dfe650a14d8d7a0d02bd40e4c59df0c1bed89",
-        pending: true // placeholder, reemplazar al registrar en el Action List
+        commandId: "_RS5dc6a620c79603004bb66e4d0b4d8ffca9b832f5"
     },
     // Botones ⏮/⏭ del nikTabBar — van encadenados con la acción nativa 40667
     // (no forman parte del objeto, van hardcodeados junto a este Command ID
-    // en el propio onclick). luaFile TODO: confirmar contra la reorg de la
-    // carpeta Lua.
+    // en el propio onclick). 
     tabPrev: {
-        luaFile: null, // TODO: confirmar
-        commandId: "_RS6acff9912f9ff42bc863923681cc5b9ffcff568a"
+        luaFile: "NikRemote_TabPrev.lua",
+        commandId: "_RS8a4f73b76e280fee93fdc4fa4a20767f1cdd0743"
     },
     tabNext: {
-        luaFile: null, // TODO: confirmar
-        commandId: "_RSe7e6a21b05170da8e39895ffee19150db1ae89ee"
+        luaFile: "NikRemote_TabNext.lua",
+        commandId: "_RSf210b1bad35f1d98081c72ff7a89bcf1949f5538"
     }
 };
 

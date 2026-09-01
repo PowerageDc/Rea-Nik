@@ -1,0 +1,7 @@
+# Sistema operativo
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# VS Code (config de usuario, si en algún momento se generan)
+.vscode/*.log
