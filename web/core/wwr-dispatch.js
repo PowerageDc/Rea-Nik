@@ -265,71 +265,12 @@ function wwr_onreply(results) {
                 var nextPrevSvg = document.getElementById("nextPrev")
                 if ((pos != newPos || mrMapAr.length != newMrMapLength) && nextPrevSvg) {
                     var nikTransportChainState = { color: null, step: 0 };
-                    var rIdxAsg = [];
-                    search: for (i = 0; i < 4; i++) {                         // 4 is the maximum drawable number of regions
-                        if (mrMapAr[prevl] && mrMapAr[prevl][3] >= 1) {               //region end at prev?
-                            var q = parseFloat(mrMapAr[prevl][3]);
-                            if (rIdxAsg.indexOf(q) == -1) { rIdxAsg[i] = q; continue search; }
-                        }
-                        if (mrMapAr[prevl] && mrMapAr[prevl][2] >= 1) {               //region start at prev?
-                            var q = parseFloat(mrMapAr[prevl][2]);
-                            if (rIdxAsg.indexOf(q) == -1) { rIdxAsg[i] = q; continue search; }
-                        }
-                        if (mrMapAr[thisl] && mrMapAr[thisl][3] >= 1) {               //region end at this?
-                            var q = parseFloat(mrMapAr[thisl][3]);
-                            if (rIdxAsg.indexOf(q) == -1) { rIdxAsg[i] = q; continue search; }
-                        }
-                        if (mrMapAr[thisl] && mrMapAr[thisl][2] >= 1) {               //region start at this?
-                            var q = parseFloat(mrMapAr[thisl][2]);
-                            if (rIdxAsg.indexOf(q) == -1) { rIdxAsg[i] = q; continue search; }
-                        }
-                        if (mrMapAr[nextl] && mrMapAr[nextl][3] >= 1) {               //region end at next?
-                            var q = parseFloat(mrMapAr[nextl][3]);
-                            if (rIdxAsg.indexOf(q) == -1) { rIdxAsg[i] = q; continue search }
-                        }
-                        if (mrMapAr[nextl] && mrMapAr[nextl][2] >= 1) {               //region start at next?
-                            var q = parseFloat(mrMapAr[nextl][2]);
-                            if (rIdxAsg.indexOf(q) == -1) { rIdxAsg[i] = q; }
-                        }
-                    }
 
                     function getValFromAr(array, id, idLoc, valLoc) {
                         for (var i = 0, len = array.length; i < len; i++) {
                             if (array[i][idLoc] == id) { return array[i][valLoc]; }
                         }
                         return;
-                    }
-
-                    for (i = 1; i < 5; i++) {
-                        this['r' + i + 'StalkLx'] = 45.6;
-                        this['r' + i + 'StalkRx'] = 273.1;
-                        if (rIdxAsg[i - 1] && rIdxAsg[i - 1] >= 0) {
-                            this['r' + i + 'Idx'] = rIdxAsg[i - 1];
-                            this['r' + i + 'Name'] = getValFromAr(g_regions, rIdxAsg[i - 1], 2, 1);
-                            this['col' + i] = getValFromAr(g_regions, rIdxAsg[i - 1], 2, 5);
-                            this['rCol' + i] = "#" + (this['col' + i] | 0x1000000).toString(16).substr(-6);
-                            if (prevl >= 0 && mrMapAr[prevl][3] == rIdxAsg[i - 1]) { this['r' + i + 'StalkRx'] = 102.5; }
-                            if (prevl >= 0 && mrMapAr[prevl][2] == rIdxAsg[i - 1]) { this['r' + i + 'StalkLx'] = 102.5; }
-                            if (thisl >= 0 && mrMapAr[thisl][2] == rIdxAsg[i - 1]) { this['r' + i + 'StalkLx'] = 159.4; }
-                            if (thisl >= 0 && mrMapAr[thisl][3] == rIdxAsg[i - 1]) { this['r' + i + 'StalkRx'] = 159.4; }
-                            if (nextl >= 0 && mrMapAr[nextl][2] == rIdxAsg[i - 1]) { this['r' + i + 'StalkLx'] = 216.2; }
-                            if (nextl >= 0 && mrMapAr[nextl][3] == rIdxAsg[i - 1]) { this['r' + i + 'StalkRx'] = 216.2; }
-                            document.getElementById('region' + i).setAttributeNS(null, "visibility", "visible");
-                            document.getElementById('r' + i + 'Rect').setAttributeNS(null, "fill", this['rCol' + i]);
-                            document.getElementById('r' + i + 'StalkL').setAttributeNS(null, "x1", this['r' + i + 'StalkLx']);
-                            document.getElementById('r' + i + 'StalkL').setAttributeNS(null, "x2", this['r' + i + 'StalkLx']);
-                            document.getElementById('r' + i + 'StalkR').setAttributeNS(null, "x1", this['r' + i + 'StalkRx']);
-                            document.getElementById('r' + i + 'StalkR').setAttributeNS(null, "x2", this['r' + i + 'StalkRx']);
-                            this['r' + i + 'RectW'] = (this['r' + i + 'StalkRx']) - (this['r' + i + 'StalkLx']);
-                            document.getElementById('r' + i + 'Rect').setAttributeNS(null, "x", this['r' + i + 'StalkLx']);
-                            document.getElementById('r' + i + 'Rect').setAttributeNS(null, "width", this['r' + i + 'RectW']);
-                            if (!this['r' + i + 'Name']) { this['r' + i + 'Name'] = this['r' + i + 'Idx'] }
-                            document.getElementById('r' + i + 'Name').textContent = this['r' + i + 'Name'];
-                            document.getElementById('r' + i + 'Name').setAttributeNS(null, "fill", lumaOffset(this['rCol' + i]));
-                            this['r' + i + 'NamePos'] = this['r' + i + 'StalkLx'] + ((this['r' + i + 'StalkRx'] - this['r' + i + 'StalkLx']) / 2);
-                            document.getElementById('r' + i + 'Name').setAttributeNS(null, "transform", "matrix(1 0 0 1 " + this['r' + i + 'NamePos'] + " 31)");
-                        }
-                        else { document.getElementById('region' + i).setAttributeNS(null, "visibility", "hidden"); }
                     }
 
                     if (mrMapAr[prevl] && mrMapAr[prevl][1] >= 1) {
