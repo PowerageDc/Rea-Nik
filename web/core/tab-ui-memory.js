@@ -9,8 +9,10 @@
 //
 // Diseñado como mecanismo genérico: nikTabUiMemory[projectName] guarda
 // cualquier parámetro de UI que haya que recordar por proyecto (hoy:
-// expandedTracks; a futuro, sumar claves nuevas al objeto que arma
-// nikTabMemorySnapshot() sin tocar el resto del mecanismo).
+// expandedTracks + scrollTop; a futuro, sumar claves nuevas al objeto que
+// arma nikTabMemorySnapshot() sin tocar el resto del mecanismo — reaplicar
+// también en nikTabMemoryApplyPending() si el parámetro depende de que el
+// DOM tenga su tamaño final, como scrollTop).
 //
 // Único punto de enganche: el handler de EXTSTATE "active_project_name" en
 // core/wwr-dispatch.js, que ya detecta cambio de proyecto activo (llega en
@@ -20,9 +22,13 @@
 // trackNamesAr, trackNumbersAr, trackSendHwCntAr, nTrack). Debe cargar
 // después de core/state.js y antes de core/wwr-dispatch.js.
 
-var nikTabUiMemory = {};        // { "<nombre proyecto>": { expandedTracks: {3:1,5:1} } }
+var nikTabUiMemory = {};        // { "<nombre proyecto>": { expandedTracks: {3:1,5:1}, scrollTop: 240 } }
 var nikCurrentProjectName = null;
-var nikTabMemoryPendingRestore = {};   // expandedTracks del proyecto activo, consultado por wwr-dispatch.js al poblar por primera vez un shell que todavía no existía en el momento del restore
+
+// estado pendiente del proyecto activo, consultado por wwr-dispatch.js al 
+// poblar por primera vez un shell que todavía no existía en el momento del 
+// restore (también reaplica scrollTop, ver nikTabMemoryApplyPending)
+var nikTabMemoryPendingRestore = { expandedTracks: {}, scrollTop: 0 };
 
 // Snapshot del estado de UI vivo del proyecto ACTUAL — se llama antes de
 // pisar los arrays globales con datos del proyecto nuevo.
@@ -32,7 +38,11 @@ function nikTabMemorySnapshot() {
     for (var i = 0; i < domCount; i++) {
         if (trackHeightsAr[i] == 1) expandedTracks[i] = 1;
     }
-    return { expandedTracks: expandedTracks };
+    var tracksEl = document.getElementById("tracks");
+    return {
+        expandedTracks: expandedTracks,
+        scrollTop: tracksEl ? tracksEl.scrollTop : 0
+    };
 }
 
 function nikTabMemorySave(projectName) {
@@ -54,8 +64,8 @@ function nikTabMemoryResetRenderCaches() {
 // Aplica el desplegado guardado (o colapsado por default si es la primera
 // vez que se ve ese proyecto), sin animación — ver nikSetTrackExpandedInstant.
 function nikTabMemoryRestore(projectName) {
-    var saved = nikTabUiMemory[projectName] || { expandedTracks: {} };
-    nikTabMemoryPendingRestore = saved.expandedTracks;
+    var saved = nikTabUiMemory[projectName] || { expandedTracks: {}, scrollTop: 0 };
+    nikTabMemoryPendingRestore = { expandedTracks: saved.expandedTracks, scrollTop: saved.scrollTop || 0 };
     var domCount = document.getElementsByClassName("trackRow2").length;
     for (var i = 0; i < domCount; i++) {
         var shouldBeExpanded = !!saved.expandedTracks[i];
@@ -63,6 +73,8 @@ function nikTabMemoryRestore(projectName) {
             nikSetTrackExpandedInstant(i, shouldBeExpanded);
         }
     }
+    var tracksEl = document.getElementById("tracks");
+    if (tracksEl) tracksEl.scrollTop = nikTabMemoryPendingRestore.scrollTop;
 }
 
 // Consultado por wwr-dispatch.js apenas un shell recién creado termina de
@@ -71,9 +83,11 @@ function nikTabMemoryRestore(projectName) {
 // el shell existiera en el DOM (proyecto de destino con más tracks que el
 // actual al momento del cambio de tab).
 function nikTabMemoryApplyPending(id) {
-    if (nikTabMemoryPendingRestore[id]) {
+    if (nikTabMemoryPendingRestore.expandedTracks && nikTabMemoryPendingRestore.expandedTracks[id]) {
         nikSetTrackExpandedInstant(id, true);
     }
+    var tracksEl = document.getElementById("tracks");
+    if (tracksEl) tracksEl.scrollTop = nikTabMemoryPendingRestore.scrollTop || 0;
 }
 
 // Variante sin animación de la lógica de hitbox() (core/tracks-render.js):
