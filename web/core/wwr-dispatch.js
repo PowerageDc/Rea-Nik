@@ -110,7 +110,7 @@ function wwr_onreply(results) {
                     }
                     nikLastProjectNameUpdate = Date.now();
                     var nameDisplay = document.getElementById("nikActiveProjectName");
-                    if (nameDisplay) nameDisplay.textContent = tok[3];
+                    if (nameDisplay) nameDisplay.textContent = tok[3].replace(/\.rpp$/i, "");
                 }
                 if (tok[1] == "NikRemote" && tok[2] == "reapitch_semitone") {
                     nikReaPitchUpdateSemitoneDisplay(tok[3]);

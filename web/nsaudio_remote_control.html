@@ -77,9 +77,14 @@
 </head>
 <body onLoad="init();calculateScale()">
 <div id="nikTabBar" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 4px; background-color:#1a1a1a; color:#A9ABAB; font-family:'Open Sans',sans-serif; flex-shrink:0;">
-    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabPrev.commandId+';'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">⏮ Tab</button>
-    <span id="nikActiveProjectName" onclick="nikOpenProjectTabsModal()" style="min-width:120px; text-align:center; cursor:pointer;">-</span>
-    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabNext.commandId+';'+NIK_ONDEMAND_READS)" style="padding:10px 16px; font-size:1em;">Tab ⏭</button>
+    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabPrev.commandId+';'+NIK_ONDEMAND_READS)"
+        style="padding:10px 16px; font-size:1em; background:linear-gradient(180deg, #4A4A4A 0%, #2E2E2E 100%); color:#D0D0D0; border:none; border-radius:6px; font-family:'Open Sans',sans-serif; flex:0 0 auto; white-space:nowrap;">⏮
+        Tab</button>
+    <span id="nikActiveProjectName" onclick="nikOpenProjectTabsModal()"
+        style="flex:1 1 0; min-width:0; text-align:center; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">-</span>
+    <button onclick="wwr_req('40667;'+NIK_LUA_COMMANDS.tabNext.commandId+';'+NIK_ONDEMAND_READS)"
+        style="padding:10px 16px; font-size:1em; background:linear-gradient(180deg, #4A4A4A 0%, #2E2E2E 100%); color:#D0D0D0; border:none; border-radius:6px; font-family:'Open Sans',sans-serif; flex:0 0 auto; white-space:nowrap;">Tab
+        ⏭</button>
 </div>
 <!-- nikMarkerBrowserOverlay vive ahora en modals/marker-browser/marker-browser.html, inyectado por modal-loader.js en #modalsRoot -->
 <!-- nikProjectTabsOverlay vive ahora en modals/project-tabs/project-tabs.html, inyectado por modal-loader.js en #modalsRoot -->
@@ -210,7 +215,7 @@
    <div id="nikPlayrateReadout" onclick="nikOpenPlayrateModal()" style="position:absolute; top:50%; right:16%; transform:translateY(-50%); color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.5em; padding:4px 6px; cursor:pointer; z-index:1;">100%</div>
    <div id="nikReaPitchReadout" onclick="nikOpenReaPitchModal()" style="position:absolute; top:50%; left:16%; transform:translateY(-50%); color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.35em; padding:4px 6px; cursor:pointer; z-index:1;">—</div>
    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-     width="100%" height="100%" viewBox="0 0 320 47.2" xml:space="preserve">
+     width="100%" height="100%" viewBox="0 8 320 34.2" xml:space="preserve">
     <text id="status" onClick="prompt_seek()"; text-anchor="middle"; transform="matrix(1 0 0 1 155.1 27.4)" font-family="'Open Sans'" font-size="26px"></text>
     <text id="timeUnits" text-anchor="middle"; transform="matrix(1 0 0 1 155.1 39.4)" fill="#A8A8A8" font-family="'Open Sans'" font-size="9px">Hours:Minutes:Seconds:Frames</text>
     <text id="tsNum" text-anchor="end" transform="matrix(1 0 0 1 26.3 23.3)" fill="#A8A8A8" font-family="'Open Sans'" font-size="12px">8</text>
@@ -223,13 +228,24 @@
     </g>
     </svg>
     </div>
-<div id="nikCursorNav" style="display:flex; align-items:stretch; justify-content:space-between; gap:4px; background-color:#1A1A1A; padding:6px 4px;">
-    <button onclick="wwr_req(40042)" style="flex:0 0 auto; background:#262626; color:#808080; border:none; border-radius:4px; padding:8px 6px; font-family:'Open Sans',sans-serif; font-size:0.85em;">⏮</button>
-    <button onclick="wwr_req(41041)" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:8px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">◀◀ Comp</button>
-    <button onclick="wwr_req(41045)" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:8px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">◀ Beat</button>
-    <button onclick="wwr_req(41044)" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:8px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">Beat ▶</button>
-    <button onclick="wwr_req(41040)" style="flex:1 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:8px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">Comp ▶▶</button>
-    <button onclick="wwr_req(40043)" style="flex:0 0 auto; background:#262626; color:#808080; border:none; border-radius:4px; padding:8px 6px; font-family:'Open Sans',sans-serif; font-size:0.85em;">⏭</button>
+<div id="nikCursorNav"
+    style="display:flex; align-items:stretch; justify-content:space-between; gap:4px; background-color:#1A1A1A; padding:6px 4px;">
+    <button onclick="wwr_req(40042)"
+        style="flex:0 0 auto; background:#262626; color:#808080; border:none; border-radius:4px; padding:12px 14px; font-family:'Open Sans',sans-serif; font-size:1.3em;">⏮</button>
+    <button onclick="wwr_req(41041)"
+        style="flex:2 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:12px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">◀◀
+        Comp</button>
+    <button onclick="wwr_req(41045)"
+        style="flex:0 0 auto; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:12px 8px; font-family:'Open Sans',sans-serif; font-size:1em;">◀
+        Beat</button>
+    <button onclick="wwr_req(41044)"
+        style="flex:0 0 auto; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:12px 8px; font-family:'Open Sans',sans-serif; font-size:1em;">Beat
+        ▶</button>
+    <button onclick="wwr_req(41040)"
+        style="flex:2 1 0; background:#262626; color:#A8A8A8; border:none; border-radius:4px; padding:12px 4px; font-family:'Open Sans',sans-serif; font-size:1em;">Comp
+        ▶▶</button>
+    <button onclick="wwr_req(40043)"
+        style="flex:0 0 auto; background:#262626; color:#808080; border:none; border-radius:4px; padding:12px 14px; font-family:'Open Sans',sans-serif; font-size:1.3em;">⏭</button>
 </div>
 
 <div id="transport" style="display: flex; flex-direction: column;"> 
