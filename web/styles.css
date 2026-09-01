@@ -54,7 +54,30 @@
             }
         }
     
-    #optionsBar {overflow-y: hidden;-webkit-transition: all 0.2s ease-out;-o-transition: all 0.2s ease-out;transition: all 0.2s ease-out;}
+    #optionsBar {
+        overflow-y: hidden;
+        -webkit-transition: all 0.2s ease-out;
+        -o-transition: all 0.2s ease-out;
+        transition: all 0.2s ease-out;
+    }
+
+    #transport_r3 {
+        display: flex;
+        margin: 1.5%;
+    }
+
+    #transport_r3.nikCollapsed {
+        display: block;
+        height: 4px;
+        margin: 0;
+        padding: 0;
+        background-color: #1a1a1a;
+        overflow: hidden;
+    }
+
+    .button.nikToggledOn .iconBg {
+        fill: #4a2020;
+    }
     
     .trackRow1{
         will-change: transform;

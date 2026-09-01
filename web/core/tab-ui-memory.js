@@ -39,9 +39,11 @@ function nikTabMemorySnapshot() {
         if (trackHeightsAr[i] == 1) expandedTracks[i] = 1;
     }
     var tracksEl = document.getElementById("tracks");
+    var transportR3 = document.getElementById("transport_r3");
     return {
         expandedTracks: expandedTracks,
-        scrollTop: tracksEl ? tracksEl.scrollTop : 0
+        scrollTop: tracksEl ? tracksEl.scrollTop : 0,
+        loopRecExpanded: transportR3 ? !transportR3.classList.contains("nikCollapsed") : false
     };
 }
 
@@ -64,7 +66,7 @@ function nikTabMemoryResetRenderCaches() {
 // Aplica el desplegado guardado (o colapsado por default si es la primera
 // vez que se ve ese proyecto), sin animación — ver nikSetTrackExpandedInstant.
 function nikTabMemoryRestore(projectName) {
-    var saved = nikTabUiMemory[projectName] || { expandedTracks: {}, scrollTop: 0 };
+    var saved = nikTabUiMemory[projectName] || { expandedTracks: {}, scrollTop: 0, loopRecExpanded: false };
     nikTabMemoryPendingRestore = { expandedTracks: saved.expandedTracks, scrollTop: saved.scrollTop || 0 };
     var domCount = document.getElementsByClassName("trackRow2").length;
     for (var i = 0; i < domCount; i++) {
@@ -75,6 +77,7 @@ function nikTabMemoryRestore(projectName) {
     }
     var tracksEl = document.getElementById("tracks");
     if (tracksEl) tracksEl.scrollTop = nikTabMemoryPendingRestore.scrollTop;
+    nikApplyLoopRecState(!!saved.loopRecExpanded);
 }
 
 // Consultado por wwr-dispatch.js apenas un shell recién creado termina de

@@ -1,7 +1,8 @@
 // core/init.js
 // Bootstrapping + handlers sueltos de transporte que no encajan en otro
 // bucket: nikCheckProjectNameWatchdog, on_record_button, prompt_abort,
-// prompt_seek, calculateScale, init(). Extraído sin cambios de
+// prompt_seek, calculateScale, nikToggleLoopRecSection,
+// nikApplyLoopRecState, init(). Extraído sin cambios de
 // nsaudio_remote_control.html como parte de la modularización (ver
 // MODULARIZACION_CONTROL_REMOTO.md).
 // Depende de: config.js, core/utils.js, markers/markers.js, core/state.js,
@@ -87,12 +88,36 @@ function calculateScale(event) {
 
 window.addEventListener('resize', calculateScale, false);
 
+// Toggle de la sección Loop / Rec / Tracks armadas (#transport_r3),
+// disparado desde #buttonLoopRec en #optionsBar (reemplaza a Snap — sin
+// sentido en contexto remoto). Reemplaza al viejo #nikLoopRecToggle inline.
+function nikToggleLoopRecSection() {
+    var el = document.getElementById("transport_r3");
+    if (!el) return;
+    nikApplyLoopRecState(el.classList.contains("nikCollapsed"));
+}
+
+// Aplica el estado expandido/colapsado a #transport_r3 y al ícono de
+// #buttonLoopRec. Separado del toggle para que core/tab-ui-memory.js pueda
+// aplicar el estado guardado por tab directamente (clave loopRecExpanded).
+function nikApplyLoopRecState(expanded) {
+    var el = document.getElementById("transport_r3");
+    if (el) el.classList.toggle("nikCollapsed", !expanded);
+
+    var btn = document.getElementById("buttonLoopRec");
+    var iconOff = document.getElementById("iconLoopRecOff");
+    var iconOn = document.getElementById("iconLoopRecOn");
+    if (btn) btn.classList.toggle("nikToggledOn", expanded);
+    if (iconOff) iconOff.setAttribute("visibility", expanded ? "hidden" : "visible");
+    if (iconOn) iconOn.setAttribute("visibility", expanded ? "visible" : "hidden");
+}
+
 trackHeightsAr[0] = 0;
 // hitbox vive ahora en core/tracks-render.js
 
 function init() {
     wwr_req_recur("TRANSPORT;BEATPOS", 10);
-    wwr_req_recur("NTRACK;TRACK;GET/40364;GET/1157", 10);
+    wwr_req_recur("NTRACK;TRACK;GET/40364", 10);
     wwr_req_recur("MARKER;REGION", 500);
     wwr_req_recur(NIK_SLOW_POLL, 1000);
     window.setInterval(nikCheckProjectNameWatchdog, 1000);

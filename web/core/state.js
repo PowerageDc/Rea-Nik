@@ -6,7 +6,7 @@
 
 // --- Transporte / posición / firma de compás ---
 var last_transport_state = -1, mouseDown = 0, last_time_str = "",
-    last_metronome = false, nTrack = 0, last_repeat = false, snapState = 0,
+    last_metronome = false, nTrack = 0, last_repeat = false,
     nikLastProjectNameUpdate = Date.now(),
     drawnSig = 0, drawnBeat = 0, ts_numerator = 0, ts_denominator = 0, playPosSeconds = 0, statusPosition = [], statusPositionAr = [],
     startX = 0, joggerAgg = 0, recarmCountAr = [], recarmCount = 0, newPos = -1,

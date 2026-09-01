@@ -156,20 +156,6 @@ function wwr_onreply(results) {
                     }
                     last_metronome = tok[2];
                 }
-                var buttonSnap = document.getElementById("buttonSnap");
-                if (tok[1] == 1157 && buttonSnap) {
-                    if (tok[2] != snapState) {
-                        if (snapState == 0) {
-                            buttonSnap.childNodes[3].setAttributeNS(null, "visibility", "visible");
-                            buttonSnap.childNodes[7].setAttributeNS(null, "visibility", "hidden");
-                        }
-                        else {
-                            buttonSnap.childNodes[3].setAttributeNS(null, "visibility", "hidden");
-                            buttonSnap.childNodes[7].setAttributeNS(null, "visibility", "visible");
-                        }
-                        snapState = tok[2];
-                    }
-                }
                 break;
             case "BEATPOS":
                 var playLine = document.querySelector('#playLine');
