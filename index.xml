@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="reaper-nik" commit="eb47fd655909ce05d31df202ed3a1b857098e3c5">
-  <category name="Scripts/Custom/AutoColor">
+<index version="1" name="Rea-Nik" commit="4f00818754ee7b6ab1617c9760763c332fe013be">
+  <category name="AutoColor">
     <reapack name="reaper_autocolor_live.lua" type="script" desc="REAPER Auto Color por instrumento — VERSIÓN LIVE (background)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -12,8 +12,8 @@
 }
 ]]></description>
       </metadata>
-      <version name="1.0" author="Nik" time="2026-08-30T13:24:24Z">
-        <source main="main">https://github.com/PowerageDc/reaper-nik/raw/eb47fd655909ce05d31df202ed3a1b857098e3c5/Scripts/Custom/AutoColor/reaper_autocolor_live.lua</source>
+      <version name="1.0" author="Nik" time="2026-09-01T03:19:19Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/4f00818754ee7b6ab1617c9760763c332fe013be/AutoColor/reaper_autocolor_live.lua</source>
       </version>
     </reapack>
   </category>
