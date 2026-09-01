@@ -22,12 +22,14 @@
 
 var nikTabUiMemory = {};        // { "<nombre proyecto>": { expandedTracks: {3:1,5:1} } }
 var nikCurrentProjectName = null;
+var nikTabMemoryPendingRestore = {};   // expandedTracks del proyecto activo, consultado por wwr-dispatch.js al poblar por primera vez un shell que todavía no existía en el momento del restore
 
 // Snapshot del estado de UI vivo del proyecto ACTUAL — se llama antes de
 // pisar los arrays globales con datos del proyecto nuevo.
 function nikTabMemorySnapshot() {
     var expandedTracks = {};
-    for (var i = 0; i <= nTrack; i++) {
+    var domCount = document.getElementsByClassName("trackRow2").length;
+    for (var i = 0; i < domCount; i++) {
         if (trackHeightsAr[i] == 1) expandedTracks[i] = 1;
     }
     return { expandedTracks: expandedTracks };
@@ -53,11 +55,24 @@ function nikTabMemoryResetRenderCaches() {
 // vez que se ve ese proyecto), sin animación — ver nikSetTrackExpandedInstant.
 function nikTabMemoryRestore(projectName) {
     var saved = nikTabUiMemory[projectName] || { expandedTracks: {} };
-    for (var i = 0; i <= nTrack; i++) {
+    nikTabMemoryPendingRestore = saved.expandedTracks;
+    var domCount = document.getElementsByClassName("trackRow2").length;
+    for (var i = 0; i < domCount; i++) {
         var shouldBeExpanded = !!saved.expandedTracks[i];
         if ((trackHeightsAr[i] == 1) != shouldBeExpanded) {
             nikSetTrackExpandedInstant(i, shouldBeExpanded);
         }
+    }
+}
+
+// Consultado por wwr-dispatch.js apenas un shell recién creado termina de
+// poblarse con contenido SVG real (primera vez que ese índice existe en el
+// proyecto activo) — cubre el caso en que el restore corrió ANTES de que
+// el shell existiera en el DOM (proyecto de destino con más tracks que el
+// actual al momento del cambio de tab).
+function nikTabMemoryApplyPending(id) {
+    if (nikTabMemoryPendingRestore[id]) {
+        nikSetTrackExpandedInstant(id, true);
     }
 }
 

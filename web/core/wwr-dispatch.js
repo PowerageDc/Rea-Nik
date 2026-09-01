@@ -482,8 +482,11 @@ function wwr_onreply(results) {
                     else {
                         if (backLoaded != null && backLoaded.nextSibling != null) {
                             var cloneTrackRow1 = document.getElementById("trackRow1Svg").cloneNode(true);
+                            cloneTrackRow1.removeAttribute("id");
                             var cloneTrackRow2 = document.getElementById("trackRow2Svg").cloneNode(true);
+                            cloneTrackRow2.removeAttribute("id");
                             var cloneTrackSend = document.getElementById("trackSendSvg").cloneNode(true);
+                            cloneTrackSend.removeAttribute("id");
 
                             if (idx == 0) { //master track stuff
 
@@ -508,6 +511,7 @@ function wwr_onreply(results) {
                                     var trackSendsDiv = document.createElement("div");
                                     trackSendsDiv.id = ("sendsTrack0");
                                     masterTrackContent.appendChild(trackSendsDiv);
+                                    nikTabMemoryApplyPending(0);
                                 }
 
                                 var volThumb = masterTrackRow2Content.getElementsByClassName("fader")[0];
@@ -538,6 +542,7 @@ function wwr_onreply(results) {
                                 if (!trackRow2Content.innerHTML) {
                                     trackRow2Content.appendChild(cloneTrackRow2);
                                     nikUniquifyGradientIds(cloneTrackRow2, idx);
+                                    nikTabMemoryApplyPending(idx);
                                 }
 
                                 trackBg = trackRow1Content.firstChild.getElementsByClassName("trackrow1bg")[0];
