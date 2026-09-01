@@ -48,6 +48,24 @@ Scripts clásicos, nunca `type="module"` — el HTML tiene `onclick="nikAlgo()"`
 inline por todos lados; con módulos ES esas funciones quedarían scopeadas
 al archivo y los onclick se romperían. Todo cuelga de `window`.
 
+## Estilos: inline vs. clases en `styles.css`
+
+Criterio: un bloque de estilo **repetido en más de un elemento** (ej. los
+6 botones de `nikCursorNav`, los 2 de `nikTabBar`) va como clase en
+`styles.css` — evita desalinear instancias al ajustar (pasó con
+rewind/end antes de extraerlo). Layout puntual y no reutilizado (ej.
+posicionamiento absoluto de los readouts de Playrate/ReaPitch) y
+cualquier valor pisado dinámicamente por JS quedan inline.
+
+Cuando una clase mezcla layout (flex/padding/tamaño) y apariencia
+(background/color) y se anticipa que la apariencia va a variar por
+grupo (ej. gradientes distintos para subconjuntos de botones), separar
+en dos clases combinables — una de layout, una de apariencia — en vez de
+una sola clase monolítica. Caso real: `.nikCursorNavBtn` (base) +
+`.nikCursorNavEdge`/`.nikCursorNavWide`/`.nikCursorNavTight` (layout por
+grupo), pensado para sumar después clases de apariencia sin tocar el
+layout ya ajustado.
+
 ## Cómo agregar un popup nuevo
 
 1. Crear `modals/<nombre>/<nombre>.html` + `<nombre>.js`.
@@ -217,6 +235,19 @@ del proyecto B, pero sin este mecanismo la UI hereda estado entre ambos
   llamada una vez por clon (al insertarlo, no en cada poll) con el índice
   del track como sufijo. Aplica a **cualquier** template SVG nuevo que se
   clone por track — sumar la llamada al insertarlo.
+- **Un `<span>` flex con contenido de largo variable puede angostar a sus
+  hermanos**: con `flex-basis: auto` (default), el ancho "hipotético" que
+  usa el algoritmo de flex para repartir espacio se calcula sobre el
+  contenido sin truncar — `overflow:hidden`/`text-overflow:ellipsis` son
+  solo efectos de pintado, no achican ese cálculo. Con texto largo, ese
+  básis infla el total y el motor le roba espacio a los vecinos si estos
+  no tienen `flex-shrink:0`/`white-space:nowrap`. Pasó con
+  `#nikActiveProjectName` en `nikTabBar`: un nombre de proyecto largo
+  angostaba los botones ⏮/⏭ Tab hasta romper su label en 2 líneas,
+  agrandando la barra entera. Fix: `flex:1 1 0` (básis fijo en 0) en el
+  span + `flex:0 0 auto` y `white-space:nowrap` en los botones vecinos.
+  Aplica a cualquier elemento flex con texto de largo variable + hermanos
+  de ancho fijo.
 - **El propio wrapper de template (`<element id="trackRow2Svg">`, ídem
   `trackRow1Svg`/`trackSendSvg`) también tiene `id` fijo, y
   `cloneNode(true)` lo copia igual que a los gradientes.** Al insertar el
@@ -326,9 +357,15 @@ Tap en `#nikActiveProjectName` abre un popup con los proyectos abiertos.
   no cambió entre lectura y tap (ventana chica, no debería importar en
   uso normal). Tap en el activo solo cierra el popup.
 - **Color**: activo en `#00FF99` negrita, resto gris `#A8A8A8`.
-- Command IDs `projectTabsRead`/`projectTabsSelect` en `config.js` siguen
-  con `pending: true` — placeholder, falta registrar los scripts en el
-  Action List.
+- **Display del nombre activo** (`#nikActiveProjectName`, en
+  `nikTabBar`): el texto visible saca la extensión `.rpp`
+  (`wwr-dispatch.js`, case `EXTSTATE`/`active_project_name`,
+  `.replace(/\.rpp$/i, "")` aplicado solo sobre el `textContent`) —
+  `nikCurrentProjectName` (key de `tab-ui-memory.js`) conserva el string
+  completo con extensión, no tocar eso. Además trunca en una sola línea
+  con `text-overflow:ellipsis` (`white-space:nowrap`) — ver gotcha de
+  `flex-basis` más abajo, necesario para que un nombre largo no rompa el
+  alto de la barra.
 
 ## Funcionalidades activas (resumen)
 
@@ -339,7 +376,7 @@ Tap en `#nikActiveProjectName` abre un popup con los proyectos abiertos.
 | Playrate + preserve pitch | Cerrado | Patrón readout + modal (modelo de referencia) |
 | Doble-tap fader → 0dB | Cerrado, bug menor abierto | Rebote ocasional post-reset — ver pendientes |
 | Browser de markers | Cerrado, sin confirmar en listas largas | Sticky header, ver pendientes |
-| Nombre de proyecto activo (background) | Cerrado | + watchdog en `core/init.js` |
+| Nombre de proyecto activo (background) | Cerrado | + watchdog en `core/init.js`; display truncado (ellipsis, sin extensión `.rpp`) |
 | Visibilidad de tracks en TCP (popup) | Cerrado | `modals/tracksvis/` |
 | Indicador de color semitonos/playrate | Cerrado | `nikDeviationColor`/`nikLerpColor` |
 | Colores + traducción de markers (popup + transporte) | Cerrado | `markers/markers.js` |
