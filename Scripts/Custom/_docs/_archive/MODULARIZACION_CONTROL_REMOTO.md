@@ -25,7 +25,10 @@ reaper_www_root/
 │   ├── utils.js                  ← funciones puras sin estado (setTextForObject, lumaOffset, nikLerpColor, nikDeviationColor, elAttribute, easeInOutCubic, BtoMB)
 │   ├── state.js                  ← estado global consolidado (transporte/tracks, flags ReaPitch/Playrate/markers, faders/sends, escala UI)
 │   ├── faders.js                 ← arrastre de faders de volumen y sends
-│   └── tracks-render.js          ← hitbox() — expandir/colapsar filas de track
+│   ├── tracks-render.js          ← hitbox() — expandir/colapsar filas de track
+│   ├── tab-ui-memory.js          ← memoria de UI por proyecto (desplegado de tracks, reset de caches de render al cambiar de tab)
+│   ├── wwr-dispatch.js           ← wwr_onreply() — parser central del feed de REAPER
+│   └── init.js                   ← bootstrapping: watchdog, handlers de transporte sueltos, init()
 ├── markers/
 │   └── markers.js                ← parseo/resolución de nombres y colores de markers (compartido shell + marker-browser)
 └── modals/
@@ -37,12 +40,19 @@ reaper_www_root/
 ```
 
 Los 5 popups del control remoto están completamente extraídos y testeados
-en REAPER. Pasos 1-5 de la modularización de `core/` (ver tabla más abajo)
-también completos y testeados: `core/utils.js`, `markers/markers.js`,
-`core/state.js`, `core/faders.js`, `core/tracks-render.js`.
-`nsaudio_remote_control.html` bajó de 2428 a ~2014 líneas tras los popups,
-y bajó más todavía con estos 5 pasos (no remedido con precisión — pendiente
-correr `wc -l` la próxima sesión).
+en REAPER. Modularización de `core/` completa y testeada: `core/utils.js`,
+`markers/markers.js`, `core/state.js`, `core/faders.js`,
+`core/tracks-render.js`, `core/wwr-dispatch.js`, `core/init.js`.
+`nsaudio_remote_control.html` bajó de 2428 líneas (previo a los popups) a
+**873 líneas** — shell puro, HTML + `<script src>` en orden, sin lógica de
+negocio inline. Objetivo de la modularización cerrado.
+
+Además, sumado durante el testeo post-modularización (no estaba en el
+plan original, pero encaja en `core/`): `core/tab-ui-memory.js`, memoria
+de UI por proyecto — evita que el estado de UI (tracks desplegados, cache
+de colores/flags para redraw) se herede entre tabs al cambiar de proyecto
+activo. Ver `remote_control.md` para el detalle de los bugs que motivaron
+esto (pendiente de pasar en limpio a ese doc).
 
 ### `config.js` — contenido
 - `NIK_LUA_COMMANDS`: objeto `{ luaFile, commandId, pending? }` por acción.
@@ -91,32 +101,6 @@ correr `wc -l` la próxima sesión).
    href="styles.css">` quedó en la misma posición del DOM donde estaba el
    `<style>` inline original. Si en algún momento se reordenan los
    `<link>`/`<style>` del `<head>`, revisar este índice.
-
----
-
-## Pendiente — separar el `core/` que queda en el shell
-
-Pasos 1-5 completos y testeados (ver `## Estado actual (hecho)` arriba:
-`core/utils.js`, `markers/markers.js`, `core/state.js`, `core/faders.js`,
-`core/tracks-render.js`). Quedan los 2 módulos más grandes, dejados para
-el final a propósito (ver razón en la tabla original — dispatch toca casi
-todo lo demás, por eso conviene abordarlo con todo lo demás ya en su
-lugar):
-
-| Módulo propuesto | Contenido | Por qué separado |
-|---|---|---|
-| `core/wwr-dispatch.js` | `wwr_onreply()` — el bloque más grande del archivo, con diferencia | Parser central del feed de REAPER. Llama a funciones de casi todos los demás módulos (dispatch), por eso va al final del orden de implementación |
-| `core/init.js` | `init()`, `on_record_button`, `prompt_abort`, `prompt_seek`, `calculateScale`, `nikCheckProjectNameWatchdog` | Bootstrapping + handlers sueltos de transporte que no encajan en otro bucket |
-
-### Orden de implementación sugerido
-1. `core/wwr-dispatch.js` — el más grande y el que más toca; abordar con
-   tiempo para probar bien después, no apurar sobre el cierre de una
-   sesión
-2. `core/init.js` — al final, porque es el que ata todo (`wwr_req_recur`,
-   `wwr_start`)
-
-Al terminar esto, `nsaudio_remote_control.html` debería quedar como HTML
-puro + `<script src>` en orden — sin ninguna lógica de negocio inline.
 
 ---
 
