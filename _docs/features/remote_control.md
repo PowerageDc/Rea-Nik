@@ -124,10 +124,13 @@ del proyecto B, pero sin este mecanismo la UI hereda estado entre ambos
 (ver gotchas — es la causa de dos bugs ya cerrados).
 
 - `nikTabUiMemory[projectName]` — objeto por proyecto,
-  `{ expandedTracks: {3:1, 5:1} }` hoy; **cualquier parámetro custom
-  nuevo que necesite persistir por proyecto (sin equivalente nativo en
-  REAPER) se suma como clave nueva acá**, sin tocar el resto del
-  mecanismo.
+  `{ expandedTracks: {3:1, 5:1}, scrollTop: 240, loopRecExpanded: false }`
+  hoy; **cualquier parámetro custom nuevo que necesite persistir por
+  proyecto (sin equivalente nativo en REAPER) se suma como clave nueva
+  acá**, sin tocar el resto del mecanismo. `scrollTop` se reaplica también
+  en `nikTabMemoryApplyPending()` (no solo en el restore inicial) porque
+  depende de que el DOM ya tenga su alto final — mismo criterio a seguir
+  para futuros parámetros que dependan del tamaño real del contenido.
 - `nikTabMemorySnapshot()` — arma el objeto a partir del estado vivo.
   **Para sumar un parámetro nuevo: agregarlo al objeto que devuelve esta
   función.**
@@ -239,6 +242,28 @@ siempre, vía su propio `setInterval` independiente del poll** — es la
 única señal posible de "REAPER cerró del todo" (el servidor web muere con
 REAPER, ninguna respuesta vuelve nunca más). Costo despreciable.
 
+## Toggle de sección Loop/Rec/Tracks armadas (`core/init.js`)
+
+`#transport_r3` (loop, tracks armadas, botón de record) se despliega o
+colapsa con `nikToggleLoopRecSection()`, disparado desde `#buttonLoopRec`
+en `#optionsBar` — reemplaza al botón de Snap (sin uso en contexto
+remoto, la barra de íconos funciona como el "menú" de funciones
+secundarias). Colapsado se ve como línea fina de 4px (`#1a1a1a`), sin
+texto. El ícono recicla el círculo rojo de record (`iconLoopRecOn`/
+`iconLoopRecOff`), con estado "prendido" (color del ícono + fondo del
+ítem resaltado, clase `.nikToggledOn`) cuando la sección está desplegada.
+
+- `nikApplyLoopRecState(expanded)` — separado del toggle para que
+  `core/tab-ui-memory.js` pueda aplicar el estado guardado por tab
+  directamente (clave `loopRecExpanded`), sin pasar por el toggle.
+- **Default**: colapsado, tanto en un tab nunca visto como al perder
+  conexión con REAPER.
+- Reemplaza al viejo botón `#nikLoopRecToggle` (texto "▾ Loop / Rec /
+  Tracks armadas"), eliminado del HTML.
+- Limpieza asociada: se sacó `GET/1157` del poll de 10ms, el bloque
+  muerto que leía `#buttonSnap` en `core/wwr-dispatch.js`, y la variable
+  `snapState` en `core/state.js` (Snap ya no es controlable desde acá).
+
 ## Popup de visibilidad de tracks en TCP (`modals/tracksvis/tracksvis.js`)
 
 Excepción al patrón Script Lua + ExtState: el protocolo nativo de
@@ -321,7 +346,8 @@ Tap en `#nikActiveProjectName` abre un popup con los proyectos abiertos.
 | Compases por sección (popup) | Cerrado | `Nik_RemoteState_Poll` |
 | Achicar bloque play/pause/stop | Cerrado | `NIK_TRANSPORT_SCALE` en `config.js` |
 | Selector de proyectos (tabs), popup | Cerrado | `modals/project-tabs/` |
-| Memoria de UI por proyecto | Cerrado (expandedTracks) | `core/tab-ui-memory.js` — ver sección dedicada |
+| Memoria de UI por proyecto | Cerrado (expandedTracks, scrollTop, loopRecExpanded) | `core/tab-ui-memory.js` — ver sección dedicada |
+| Toggle Loop/Rec/Tracks armadas vía `#optionsBar` | Cerrado | `core/init.js` — reemplaza a Snap, ver sección dedicada |
 | Ids de gradiente únicos por track clonado | Cerrado | `nikUniquifyGradientIds()` en `core/wwr-dispatch.js` |
 | Ids de template SVG únicos al clonar | Cerrado | `removeAttribute("id")` post-clone — ver gotchas |
 
@@ -337,13 +363,18 @@ Tap en `#nikActiveProjectName` abre un popup con los proyectos abiertos.
   individual (`mouseDownAr[id]`) en vez del flag global `mouseDown`.
 - Sticky header del browser de markers sin confirmar con listas largas
   (>15 markers).
-- Achicar horizontalmente los botones prev/next del seeker.
+- **Seeker de markers (`#nextPrev`) — rediseño pendiente, sesión aparte**:
+  sacar la visualización de regiones (`region1`-`region4`, `regionStrip`)
+  y comprimir el alto del bloque. Ocultar solo por CSS no alcanza — el
+  `viewBox` fijo (`0 0 318.9 87.8`) mantiene el alto reservado aunque el
+  contenido esté oculto; hace falta recalcular coordenadas, incluyendo
+  achicar/reposicionar `prevButton`/`nextButton` (hoy ocupan casi todo el
+  alto del bloque). Incluye también achicar horizontalmente los botones
+  prev/next (pendiente previo, mismo bloque, fusionado acá).
 - Popup de selección de proyecto: parpadeo cosmético al abrir (se ve
   brevemente el resaltado del tab anterior hasta que llega la respuesta).
 - Colores grisáceos en markers `xN` cuando no hay referencia de color
   previo disponible (ni en popup ni en indicadores de transporte).
-- Scroll de `#tracks` no se recuerda por proyecto (ver sección "Memoria
-  de UI por proyecto" — candidato a sumarse al mismo mecanismo)
 
 ## Convención de scripts (recordatorio, fuente de verdad en `01_CONVENCIONES.md`)
 - Ejecutables: `Nik_<Dominio>_<Acción>.lua`. Módulos: `<Dominio>_common_logic.lua`
