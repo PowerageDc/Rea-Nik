@@ -5,6 +5,50 @@
 - SWS/S&M Extensions
 - Windows 10
 
+## Entorno de desarrollo
+Repo real (`.git`, historial completo) vive en `C:\dev\Rea-Nik\`, **fuera**
+de `%APPDATA%\REAPER` — decisión tomada para resolver dos problemas a la
+vez: categorías cortas en ReaPack (`reapack-index` deriva la categoría de
+la ruta relativa a la raíz del repo — con el repo afuera, las carpetas de
+dominio quedan directamente en la raíz, sin el prefijo `Scripts/Custom/`
+de antes) y una raíz de repo real abierta en VS Code (el workspace viejo
+abría subcarpetas sueltas vía `.gitignore` allow-list, lo cual rompía el
+refresh automático de extensiones como GitGraph).
+
+Estructura:
+
+```
+C:\dev\Rea-Nik
+├── AutoColor, RemoteControl, ReaPitchBus, RenderWorkflow,
+│ TempoTools, MvsepImporter, StemFragment, Tests-Debug, _Shared
+├── web\ ← contenido servido como reaper_www_root
+├── _docs
+└── Rea-Nik.code-workspace
+```
+
+Los scripts Lua **no** requieren estar físicamente bajo `Scripts\` del
+resource path de REAPER — el Command ID se asigna según dónde REAPER
+encuentra el archivo al registrarlo ("Load ReaScript..."), sin importar
+la ubicación. Se registran directo contra `C:\dev\Rea-Nik\<Dominio>\...`.
+
+`web\` sí necesita vivir en una ruta fija (`reaper_www_root`, requerida
+por el servidor web embebido de REAPER) — se resuelve con un **junction**:
+
+```
+%APPDATA%\REAPER\reaper_www_root → (junction) → C:\dev\Rea-Nik\web
+```
+
+Creado con `New-Item -ItemType Junction` (no symlink — no requiere admin
+en Windows 10). Transparente para REAPER: lee/escribe como si fuera una
+carpeta normal.
+
+**Importante:** el Command ID de cada script es específico de esta PC de
+dev — no tiene relación con el Command ID que un script recibe en una PC
+de destino tras un deploy vía ReaPack (ver `05_REAPACK_DEPLOY.md`), ya
+que ReaPack instala en `Scripts\Rea-Nik\<categoría>\...`, una ruta
+distinta. Son independientes por diseño, no hay sincronización posible
+entre ambos.
+
 ## Modo de trabajo (aplica a toda sesión de scripting/documentación)
 - Resolver por pasos, esperando confirmación antes de avanzar al siguiente.
 - Advertir antes de escribir más de 300 líneas de código.
@@ -56,7 +100,7 @@ render, pero conviven en el mismo proyecto/entorno):
   ReaPitch), ver `features/remote_control.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color) a PCs de ensayo sin git ni
-  editor de código, vía repo propio `reaper-nik` en GitHub. Ver
+  editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
   `05_REAPACK_DEPLOY.md`.
 
 ## Estado general (ver detalle en cada doc de feature)
@@ -79,12 +123,3 @@ render, pero conviven en el mismo proyecto/entorno):
 - Pitch-shift toggle script (per-stem, mapeable a footswitch MIDI).
 - Parser de nomenclatura alternativa de secciones (V1, V2, PC, C1...) usada en
   otros proyectos — no bloqueante.
-- Categoría de ReaPack anidada (`Scripts/Custom/AutoColor` en vez de
-  `AutoColor`) — causa raíz: el repo git vive en la raíz de
-  `%APPDATA%\REAPER` (necesario hoy para no romper Command IDs), y
-  `reapack-index` deriva la categoría de la ruta completa desde la raíz
-  del repo. Solución de fondo pendiente: reestructurar carpetas para que
-  un único repo permita categorías cortas sin sacrificar rutas estables
-  de Command ID (descartada la alternativa de un segundo repo/junctions
-  por complejidad injustificada). No bloqueante — no afecta
-  funcionalidad, solo estética del navegador de paquetes en ReaPack.

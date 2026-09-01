@@ -81,7 +81,7 @@ Nota: existe una nomenclatura alternativa abreviada usada en otros proyectos
 (V1, V2, PC, C1, etc.) — pendiente de considerar un parser a futuro, no
 bloqueante hoy.
 
-## Convención de nombres de scripts Lua (carpeta `Custom/`)
+## Convención de nombres de scripts Lua (raíz del repo, `C:\dev\Rea-Nik\`)
 
 Dos categorías, para poder distinguirlas a simple vista (y para poder
 filtrar solo lo ejecutable si algún día se importa la carpeta al Action
@@ -106,15 +106,18 @@ Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
 Convención aplica de acá en adelante para scripts nuevos; evaluar rename de
 los existentes en otra sesión, sin apuro.
 
-## Estructura de subcarpetas (`Scripts/Custom/`)
+## Estructura de subcarpetas (raíz del repo, `C:\dev\Rea-Nik\`)
 
 Cada dominio funcional vive en su propia subcarpeta, nombrada en PascalCase
 igual que el `<Dominio>` usado en el naming de scripts ejecutables
 (`Nik_<Dominio>_<Acción>.lua`), para que carpeta y prefijo de archivo queden
-alineados a simple vista:
+alineados a simple vista. El repo vive fuera de `%APPDATA%\REAPER` (ver
+"Entorno de desarrollo" en `00_CONTEXTO_GENERAL.md`) — los scripts se
+registran en el Action List apuntando directo a esta ruta, sin necesidad de
+vivir bajo `Scripts\` del resource path de REAPER:
 
 ```
-Scripts/Custom/
+C:\dev\Rea-Nik\
 ├── _Shared/ módulos *_common_logic.lua consumidos por más de un dominio
 ├── RemoteControl/ control remoto web (poll, tabs, playrate, ReaPitch remoto)
 ├── ReaPitchBus/ panel nativo ReaImGui de ReaPitch
@@ -123,7 +126,9 @@ Scripts/Custom/
 ├── TempoTools/ utilidades de tempo/compás
 ├── AutoColor/ auto-color de tracks
 ├── StemFragment/ captura/UI de fragmentos de stem
-└── Tests-Debug/ scripts de diagnóstico y prueba (sin dominio propio)
+├── Tests-Debug/ scripts de diagnóstico y prueba (sin dominio propio)
+├── web/ control remoto web servido como `reaper_www_root` (vía junction)
+└── _docs/ documentación del proyecto (este archivo y los demás `.md`)
 ```
 
 `_Shared/` lleva el prefijo `_` para ordenar primero en el explorador y para

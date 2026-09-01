@@ -2,9 +2,11 @@
 
 Documenta el empaquetado y distribución de scripts a PCs de ensayo (sin
 git ni editor de código instalado) usando ReaPack, con `reapack-index`
-generando el índice desde el mismo repo `reaper-nik` versionado en
-`04_GIT_TOOLING.md`. No duplica convenciones de nomenclatura ni estructura
-de carpetas (ver `01_CONVENCIONES.md`).
+generando el índice desde el mismo repo `Rea-Nik` versionado en
+`04_GIT_TOOLING.md`. El repo de desarrollo vive en `C:\dev\Rea-Nik\`, fuera
+de `%APPDATA%\REAPER` (ver "Entorno de desarrollo" en
+`00_CONTEXTO_GENERAL.md`). No duplica convenciones de nomenclatura ni
+estructura de carpetas (ver `01_CONVENCIONES.md`).
 
 ## Alcance: qué se deploya y qué no
 
@@ -61,13 +63,13 @@ Ejemplo real aplicado: `Scripts/Custom/AutoColor/reaper_autocolor_live.lua`.
 
 ## Generar y publicar el índice
 
-Desde la raíz del repo (`%APPDATA%\REAPER`):
+Desde la raíz del repo (`C:\dev\Rea-Nik`):
 
 ```powershell
-reapack-index --rebuild --ignore _docs -n "reaper-nik"
+reapack-index --rebuild --ignore _docs -n "Rea-Nik"
 ```
 
-- `-n "reaper-nik"` solo hace falta en la primera corrida (fija el nombre
+- `-n "Rea-Nik"` solo hace falta en la primera corrida (fija el nombre
   del repo mostrado en ReaPack).
 - `--rebuild` fuerza un re-escaneo completo; en corridas normales alcanza
   con `reapack-index --ignore _docs`.
@@ -86,7 +88,7 @@ git push
 `Extensions > ReaPack > Import a repository`, con la URL:
 
 ```
-https://github.com/<usuario>/reaper-nik/raw/main/index.xml
+https://github.com/PowerageDc/Rea-Nik/raw/main/index.xml
 ```
 
 Repo tiene que ser **público** — `raw.githubusercontent.com` no soporta
@@ -99,9 +101,10 @@ submission manual, que no se hizo).
 Action List sin tocar nada más, el circuito funcionó completo.
 
 **No instalar vía ReaPack en la PC de desarrollo** — generaría una copia
-duplicada del script en otra ruta (`Scripts/reaper-nik/...`), separada de
-la que se edita y versiona en `Scripts/Custom/...`. El import se prueba
-en una PC de destino real (o una PC de ensayo), nunca sobre la de dev.
+duplicada del script en otra ruta (`Scripts/Rea-Nik/...`, bajo el
+resource path de REAPER), separada de la que se edita y versiona en
+`C:\dev\Rea-Nik\...`. El import se prueba en una PC de destino real (o una
+PC de ensayo), nunca sobre la de dev.
 
 ## Gotchas conocidos
 
@@ -120,6 +123,15 @@ en una PC de destino real (o una PC de ensayo), nunca sobre la de dev.
   del lado de ReaPack, pero sí invalida el Command ID local si ya estaba
   registrado en el Action List de la PC de dev — mismo gotcha de siempre,
   documentado en `01_CONVENCIONES.md`.
+- **`index.xml` desactualizado en ReaPack tras un push reciente**: no es
+  cache de ReaPack — `raw.githubusercontent.com` cachea contenido unos
+  minutos en su CDN (Fastly), independientemente de lo que haga ReaPack.
+  Confirmado reinstalando el repo en ReaPack (el `.xml` cacheado local
+  desaparece y se regenera en cada import, así que no es persistencia de
+  ReaPack) y confirmando el contenido real servido con
+  `Invoke-WebRequest` directo a la URL — si ahí también sale desactualizado,
+  es cache de GitHub, no bug local. Se resuelve solo con tiempo (esperar
+  unos minutos y reimportar); no hay forma de forzarlo desde ReaPack.
 
 ## Pendiente
 
