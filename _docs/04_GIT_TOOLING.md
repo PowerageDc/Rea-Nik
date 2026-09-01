@@ -1,45 +1,57 @@
 # Git y Tooling de Desarrollo
 
-Documenta el repo git, el workspace de VS Code y el flujo de trabajo
-alrededor de `Scripts/Custom/` y `reaper_www_root/`. No duplica
-convenciones de nomenclatura (ver `01_CONVENCIONES.md`).
+Documenta el repo git, el workspace de VS Code y el flujo de trabajo del
+repo `Rea-Nik`. No duplica convenciones de nomenclatura (ver
+`01_CONVENCIONES.md`) ni el detalle de por qué el repo vive fuera de
+`%APPDATA%\REAPER` (ver "Entorno de desarrollo" en
+`00_CONTEXTO_GENERAL.md`).
 
 ## Alcance del repo
 
-Repo: `reaper-nik` (GitHub, privado).
+Repo: `Rea-Nik` (GitHub, privado).
 
-El repo vive físicamente en `%APPDATA%\REAPER` (no en una carpeta aparte),
-para que las rutas que REAPER resuelve en runtime no cambien. Solo trackea
-dos carpetas — el resto de `%APPDATA%\REAPER` (configs, cache, `.ini`,
-temas, etc.) queda fuera vía `.gitignore`:
+El repo vive en `C:\dev\Rea-Nik\`, fuera de `%APPDATA%\REAPER` — el Command
+ID de un script no depende de que viva bajo el resource path de REAPER
+(se resuelve por dónde REAPER lo encuentra al registrarlo, no por
+convención de carpeta), así que no hace falta la raíz vieja. Toda la
+carpeta es del repo, sin allow-list de `.gitignore`:
 
-- `Scripts/Custom/` — scripts Lua (ver estructura de subcarpetas en
-  `01_CONVENCIONES.md`).
-- `reaper_www_root/` — control remoto web (html/css/js).
+- Carpetas de dominio (`AutoColor/`, `RemoteControl/`, etc.) — scripts Lua,
+  ver estructura en `01_CONVENCIONES.md`.
+- `web/` — control remoto web (html/css/js), expuesto a REAPER vía junction
+  (ver abajo).
+- `_docs/` — esta documentación.
 
-`.gitignore`:
+`.gitignore` (mínimo, solo ruido de SO/editor — ya no hace falta allow-list
+porque no hay nada ajeno al repo en esta carpeta):
 ```
-# ignorar todo por defecto
-/*
+# Sistema operativo
+Thumbs.db
+Desktop.ini
+.DS_Store
 
-# re-incluir Scripts/Custom (no todo Scripts/)
-!/Scripts/
-/Scripts/*
-!/Scripts/Custom/
-
-# re-incluir reaper_www_root completo
-!/reaper_www_root/
-
-# workspace de VS Code
-!/reaper-rig.code-workspace
+# VS Code (config de usuario, si en algún momento se generan)
+.vscode/*.log
 ```
+
+**Junction para `reaper_www_root`**: el servidor web embebido de REAPER
+espera esa carpeta en una ubicación fija dentro de su resource path, así
+que `web/` se expone ahí vía junction (no symlink — no requiere admin en
+Windows 10):
+```powershell
+New-Item -ItemType Junction -Path "$env:APPDATA\REAPER\reaper_www_root" -Target "C:\dev\Rea-Nik\web"
+```
+Se crea una sola vez por PC (dev o destino con setup manual); no viaja con
+el repo ni con `git clone`.
 
 ## Setup en una PC nueva
 
 ```powershell
-cd "$env:APPDATA\REAPER"
-git clone https://github.com/<usuario>/reaper-nik.git .
+git clone https://github.com/PowerageDc/Rea-Nik.git C:\dev\Rea-Nik
 ```
+
+Después, crear el junction de `reaper_www_root` (ver comando arriba, en
+"Alcance del repo") — necesario en cualquier PC nueva, dev o destino.
 
 Después: re-registrar en el Action List cualquier script que se dispare
 desde ahí o esté mapeado a un footswitch MIDI — los Command ID están
@@ -48,22 +60,25 @@ repo). Ver nota en `01_CONVENCIONES.md`.
 
 ## Workspace de VS Code
 
-`reaper-rig.code-workspace` (en la raíz de `%APPDATA%\REAPER`, trackeado en
-git, con rutas relativas para que sea portable entre PCs):
+`Rea-Nik.code-workspace` (en la raíz de `C:\dev\Rea-Nik\`, trackeado en
+git). Carpeta única — al vivir el repo fuera de `%APPDATA%\REAPER`, ya no
+hace falta abrir subcarpetas sueltas vía `.gitignore` allow-list; abrir la
+raíz del repo directo también resolvió que GitGraph (y en general
+cualquier extensión que espere el repo entre las carpetas abiertas) vea
+el historial correctamente:
 
 ```json
 {
-  "folders": [
-    { "name": "Scripts (Lua)", "path": "Scripts/Custom" },
-    { "name": "Remote Control (Web)", "path": "reaper_www_root" }
-  ],
-  "settings": {}
+    "folders": [
+        { "path": "." }
+    ],
+    "settings": {}
 }
 ```
 
 Acceso directo de escritorio apuntando a:
 ```
-"C:\Users\<user>\AppData\Local\Programs\Microsoft VS Code\Code.exe" "%APPDATA%\REAPER\reaper-rig.code-workspace"
+"C:\Users\<user>\AppData\Local\Programs\Microsoft VS Code\Code.exe" "C:\dev\Rea-Nik\Rea-Nik.code-workspace"
 ```
 (sin `.bat`/`cmd.exe` de por medio, abre directo sin ventana de consola).
 
@@ -116,5 +131,5 @@ o `docs`.
   segura en la config global de git (barras `/`, no `\`, aunque sea ruta
   Windows):
   ```
-  git config --global --add safe.directory "C:/Users/<user>/AppData/Roaming/REAPER"
+  git config --global --add safe.directory "C:/dev/Rea-Nik"
   ```
