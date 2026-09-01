@@ -27,7 +27,7 @@ var nikCurrentProjectName = null;
 // pisar los arrays globales con datos del proyecto nuevo.
 function nikTabMemorySnapshot() {
     var expandedTracks = {};
-    for (var i = 1; i <= nTrack; i++) {
+    for (var i = 0; i <= nTrack; i++) {
         if (trackHeightsAr[i] == 1) expandedTracks[i] = 1;
     }
     return { expandedTracks: expandedTracks };
@@ -53,7 +53,7 @@ function nikTabMemoryResetRenderCaches() {
 // vez que se ve ese proyecto), sin animación — ver nikSetTrackExpandedInstant.
 function nikTabMemoryRestore(projectName) {
     var saved = nikTabUiMemory[projectName] || { expandedTracks: {} };
-    for (var i = 1; i <= nTrack; i++) {
+    for (var i = 0; i <= nTrack; i++) {
         var shouldBeExpanded = !!saved.expandedTracks[i];
         if ((trackHeightsAr[i] == 1) != shouldBeExpanded) {
             nikSetTrackExpandedInstant(i, shouldBeExpanded);
