@@ -182,3 +182,24 @@ Bus y sus tracks hijos) + `ReaPitchBus_common_logic.lua` (específico de
 ReaPitch, consume el módulo anterior). Ambos viven en `_Shared/`, consumidos
 por `RemoteControl/NikRemote_ReaPitch_Read/SetSemitones/ToggleEnable.lua` y
 por `ReaPitchBus/Nik_ReaPitchBus_Knob.lua` (ver `03_PANEL_REAPITCH_KNOB.md`).
+
+## Clonar elementos DOM con `id` (control remoto web, JS)
+
+Regla general, no específica de un dominio: **todo `cloneNode(true)` de un
+elemento HTML/SVG que tenga `id` debe limpiar ese `id` (`removeAttribute
+("id")`) antes de insertar el clon en el documento**, salvo que el clon
+vaya a reemplazar por completo al original.
+
+Motivo: `document.getElementById()` devuelve siempre el **primer** match
+en orden de documento. Un clon con el mismo `id` que su plantilla, una vez
+insertado, puede terminar antes que la plantilla en el DOM — a partir de
+ahí, cualquier código que siga buscando la plantilla por
+`getElementById()` empieza a recibir el clon en su lugar (con el estado
+que ese clon tenga en ese momento), de forma silenciosa y sin error en
+consola. Bug real encontrado por esta causa: control remoto web,
+`core/wwr-dispatch.js`, templates `trackRow1Svg`/`trackRow2Svg`/
+`trackSendSvg` (ver `features/remote_control.md`, sección "Memoria de UI
+por proyecto" → gotchas).
+
+Aplica a cualquier patrón de clonado de templates por instancia (tracks,
+sends, o UI repetida en otros paneles) — no solo al caso ya resuelto.

@@ -142,13 +142,34 @@ del proyecto B, pero sin este mecanismo la UI hereda estado entre ambos
   `"active_project_name"` en `core/wwr-dispatch.js` — ya es el único
   lugar donde se detecta cambio de proyecto activo, sin costo de red
   adicional (viaja en `NIK_SLOW_POLL`, 1000ms).
-- **Límite conocido, sin resolver**: `active_project_name` llega por el
-  poll lento (1000ms) pero `NTRACK;TRACK` va cada 10ms — en teoría es
-  posible que `nTrack` ya refleje el proyecto nuevo en el instante exacto
-  en que se hace el snapshot del proyecto viejo, perdiendo algún track de
-  la cola si tiene más tracks que el nuevo. No reproducido todavía en uso
-  real — si aparece, instrumentar con datos concretos antes de tocar el
-  mecanismo.
+- **`nikTabMemoryPendingRestore` + `nikTabMemoryApplyPending(id)`** —
+  cubren el caso en que el proyecto de destino tiene *más* tracks que
+  los que existen en el DOM al momento del restore (shells todavía no
+  creados). `nikTabMemorySnapshot()`/`nikTabMemoryRestore()` **no
+  iteran por `nTrack`**, sino por `document.getElementsByClassName
+  ("trackRow2").length` (conteo real de shells ya presentes) — cualquier
+  índice guardado por encima de ese conteo queda en
+  `nikTabMemoryPendingRestore` hasta que su shell se cree. El enganche
+  vive en `core/wwr-dispatch.js`, en el punto exacto donde el contenido
+  SVG de cada `trackRow2` se puebla por primera vez (`if
+  (!trackRow2Content.innerHTML) {...}`, para track normal y para
+  Master) — ahí se llama `nikTabMemoryApplyPending(idx)`. **Para
+  parámetros nuevos que dependan de shells todavía no creados, sumar su
+  aplicación en ese mismo punto de enganche, no solo en
+  `nikTabMemoryRestore()`.**
+- **Resuelto — nunca usar `nTrack` como límite de loop de
+  snapshot/restore**: `nTrack` lo actualiza un poll independiente
+  (10ms) del que detecta `active_project_name` (1000ms); en el instante
+  del restore, `nTrack` reflejaba el proyecto que se estaba
+  *abandonando*, no el de destino, dejando afuera del loop cualquier
+  índice por encima de ese valor. Confirmado con logs — ver gotcha
+  dedicado más abajo.
+- **Pendiente, no bloqueante**: el scroll vertical de `#tracks` no se
+  recuerda por proyecto (a diferencia de `expandedTracks`) — al volver a
+  un tab, la posición de scroll queda la que tenía el proyecto anterior
+  en vez de restaurarse. Candidato natural para sumarse como clave nueva
+  del mismo mecanismo (`nikTabMemorySnapshot`/`nikTabMemoryRestore`),
+  guardando `document.getElementById("tracks").scrollTop`.
 
 ## Gotchas confirmados (lecciones, no repetir)
 
@@ -193,6 +214,22 @@ del proyecto B, pero sin este mecanismo la UI hereda estado entre ambos
   llamada una vez por clon (al insertarlo, no en cada poll) con el índice
   del track como sufijo. Aplica a **cualquier** template SVG nuevo que se
   clone por track — sumar la llamada al insertarlo.
+- **El propio wrapper de template (`<element id="trackRow2Svg">`, ídem
+  `trackRow1Svg`/`trackSendSvg`) también tiene `id` fijo, y
+  `cloneNode(true)` lo copia igual que a los gradientes.** Al insertar el
+  primer clon en el documento, queda duplicado el `id` de la plantilla —
+  y como `getElementById()` siempre devuelve el primer match en **orden
+  de documento**, si el clon insertado queda antes que la plantilla
+  original (caso Master, que vive arriba en el HTML, antes que
+  `#backLoad`), `getElementById("trackRow2Svg")` deja de apuntar a la
+  plantilla limpia y pasa a apuntar al clon de Master — con el estado
+  (`viewBox`) que Master tenga en ese momento. Todo track nuevo creado
+  después clona, sin saberlo, el estado de Master en vez del default de
+  la plantilla (causa real del bug "tracks nuevos nacen ya
+  expandidos/colapsados según el estado de Master", ver
+  `01_CONVENCIONES.md` para la lección general). Fix aplicado:
+  `cloneTrackRow1/2/Send.removeAttribute("id")` inmediatamente después
+  de cada `cloneNode(true)`, antes de insertarlo.
 
 ## Watchdog de "proyecto desconectado" (`core/init.js`)
 
@@ -284,8 +321,9 @@ Tap en `#nikActiveProjectName` abre un popup con los proyectos abiertos.
 | Compases por sección (popup) | Cerrado | `Nik_RemoteState_Poll` |
 | Achicar bloque play/pause/stop | Cerrado | `NIK_TRANSPORT_SCALE` en `config.js` |
 | Selector de proyectos (tabs), popup | Cerrado | `modals/project-tabs/` |
-| Memoria de UI por proyecto | Cerrado | `core/tab-ui-memory.js` — ver sección dedicada |
+| Memoria de UI por proyecto | Cerrado (expandedTracks) | `core/tab-ui-memory.js` — ver sección dedicada |
 | Ids de gradiente únicos por track clonado | Cerrado | `nikUniquifyGradientIds()` en `core/wwr-dispatch.js` |
+| Ids de template SVG únicos al clonar | Cerrado | `removeAttribute("id")` post-clone — ver gotchas |
 
 ## Pendientes activos
 
@@ -304,8 +342,8 @@ Tap en `#nikActiveProjectName` abre un popup con los proyectos abiertos.
   brevemente el resaltado del tab anterior hasta que llega la respuesta).
 - Colores grisáceos en markers `xN` cuando no hay referencia de color
   previo disponible (ni en popup ni en indicadores de transporte).
-- Caso borde de sincronización entre pollers en `tab-ui-memory.js` (ver
-  sección dedicada) — sin reproducir, monitorear.
+- Scroll de `#tracks` no se recuerda por proyecto (ver sección "Memoria
+  de UI por proyecto" — candidato a sumarse al mismo mecanismo)
 
 ## Convención de scripts (recordatorio, fuente de verdad en `01_CONVENCIONES.md`)
 - Ejecutables: `Nik_<Dominio>_<Acción>.lua`. Módulos: `<Dominio>_common_logic.lua`
