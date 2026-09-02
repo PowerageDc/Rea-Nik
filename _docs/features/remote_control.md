@@ -264,6 +264,16 @@ del proyecto B, pero sin este mecanismo la UI hereda estado entre ambos
   `01_CONVENCIONES.md` para la lección general). Fix aplicado:
   `cloneTrackRow1/2/Send.removeAttribute("id")` inmediatamente después
   de cada `cloneNode(true)`, antes de insertarlo.
+- **No asumir que todo `wwr_onreply` sigue el patrón `if (elemento)
+  {...}`**: al sacar `#region1`-`#region4` del HTML (rediseño de
+  `#nextPrev`) se encontró que el loop que los pintaba llamaba
+  `document.getElementById(...).setAttributeNS(...)` directo, sin
+  guardia — sacar el markup sin sacar también ese bloque de JS hubiera
+  tirado `TypeError` en cada poll, cortando la ejecución antes de llegar
+  al pintado de markers (`prevMarkerName`/`atMarkerName`/
+  `nextMarkerName`), que sí vive más abajo en el mismo `if`. Verificar
+  caso por caso antes de asumir "no debería romper nada, ya está
+  guardado" al sacar markup referenciado desde `wwr-dispatch.js`.
 
 ## Watchdog de "proyecto desconectado" (`core/init.js`)
 
@@ -294,6 +304,39 @@ texto. El ícono recicla el círculo rojo de record (`iconLoopRecOn`/
 - Limpieza asociada: se sacó `GET/1157` del poll de 10ms, el bloque
   muerto que leía `#buttonSnap` en `core/wwr-dispatch.js`, y la variable
   `snapState` en `core/state.js` (Snap ya no es controlable desde acá).
+
+## Seeker de markers (`#nextPrev`)
+
+Rediseño cerrado (arrancó como pendiente de sesión aparte, ver
+`SESION_seeker_markers.md` para el diagnóstico original).
+
+- `viewBox` `0 0 318.9 87.8` → `0 0 266 36` — sin regiones, alto
+  comprimido a padding + texto + badge + padding (3 / 14.6 / 15 / 3.4).
+- Sacados del HTML: `#regionStrip`, `#region1`-`#region4`,
+  `#locTriangles`, los 3 `markerStalk`. `#markerSecBg` conserva solo la
+  muesca central (indicador del marker actual), recalculada al nuevo
+  alto y ancho.
+- `#prevButton`/`#nextButton`: los paths (pill + gradiente `mrg1`/`mrg2`)
+  **no se redibujaron** — se reposicionan/escalan con
+  `transform="translate(tx,ty) scale(sx,sy)"` sobre el `<g>` completo.
+  El bbox de referencia para calcular `sx`/`sy`/`tx`/`ty` tiene que salir
+  del path de **relleno** (`fill="#1A1A1A"`), no del `shadow` — el
+  shadow sobresale más abajo por el offset de sombra, y usarlo de
+  referencia infla el bbox y desalinea el "piso" del botón contra
+  `markerSecBg`.
+- **Patrón — contra-escalado de íconos dentro de un grupo con `scale`
+  no-uniforme**: con `sx≠sy` (botón angosto respecto a su alto), escalar
+  el `<g>` completo distorsiona todo el contenido, íconos incluidos.
+  Fix: envolver los `<path>` de ícono en un `<g>` hijo con
+  `transform="translate(cx,cy) scale(1, sx/sy) translate(-cx,-cy)"`
+  (`cx,cy` = centro del ícono en coordenadas locales, propias del path)
+  — cancela la distorsión relativa y el ícono queda escalado de forma
+  uniforme aunque el grupo padre no lo esté. Aplica a cualquier grupo
+  SVG reescalado de forma no-uniforme que contenga sub-elementos que
+  deban mantener proporción (íconos, texto, logos).
+- Markers extremos (prev/next) separados simétricamente del centro
+  (antes ±56.85, ahora ±62) + área de texto (`npClip1`/`3`/`5`)
+  ensanchada (56.8→62 cada una) — mejora lectura de nombres largos.
 
 ## Popup de visibilidad de tracks en TCP (`modals/tracksvis/tracksvis.js`)
 
@@ -387,6 +430,7 @@ Tap en `#nikActiveProjectName` abre un popup con los proyectos abiertos.
 | Toggle Loop/Rec/Tracks armadas vía `#optionsBar` | Cerrado | `core/init.js` — reemplaza a Snap, ver sección dedicada |
 | Ids de gradiente únicos por track clonado | Cerrado | `nikUniquifyGradientIds()` en `core/wwr-dispatch.js` |
 | Ids de template SVG únicos al clonar | Cerrado | `removeAttribute("id")` post-clone — ver gotchas |
+| Seeker de markers (`#nextPrev`), rediseño | Cerrado | Sin regiones, viewBox comprimido — ver sección dedicada |
 
 ## Pendientes activos
 
@@ -400,14 +444,6 @@ Tap en `#nikActiveProjectName` abre un popup con los proyectos abiertos.
   individual (`mouseDownAr[id]`) en vez del flag global `mouseDown`.
 - Sticky header del browser de markers sin confirmar con listas largas
   (>15 markers).
-- **Seeker de markers (`#nextPrev`) — rediseño pendiente, sesión aparte**:
-  sacar la visualización de regiones (`region1`-`region4`, `regionStrip`)
-  y comprimir el alto del bloque. Ocultar solo por CSS no alcanza — el
-  `viewBox` fijo (`0 0 318.9 87.8`) mantiene el alto reservado aunque el
-  contenido esté oculto; hace falta recalcular coordenadas, incluyendo
-  achicar/reposicionar `prevButton`/`nextButton` (hoy ocupan casi todo el
-  alto del bloque). Incluye también achicar horizontalmente los botones
-  prev/next (pendiente previo, mismo bloque, fusionado acá).
 - Popup de selección de proyecto: parpadeo cosmético al abrir (se ve
   brevemente el resaltado del tab anterior hasta que llega la respuesta).
 - Colores grisáceos en markers `xN` cuando no hay referencia de color
