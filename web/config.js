@@ -38,6 +38,14 @@ var NIK_LUA_COMMANDS = {
         luaFile: "Nik_TrackVis_Refresh.lua",
         commandId: "_RS9e8690f5288bed472199c14261d035628e558413"
     },
+    // Lectura on-demand del tempo base (primer marker de tempo, o tempo de
+    // proyecto si no hay ninguno) — encadenada solo al abrir el popup de
+    // Playrate, no vive en el poll de fondo (mismo criterio que
+    // projectTabsRead). Ver playrate.js / Nik_Playrate_ReadBaseTempo.lua.
+    playrateBaseTempoRead: {
+        luaFile: "Nik_Playrate_ReadBaseTempo.lua",
+        commandId: "_RS4b7680ea1ce560fbe6576db26cda0e37fd14f7ab"
+    },
     // Lectura consolidada: proyecto activo + playrate/preserve pitch +
     // ReaPitch (semitonos/enabled) + compases por sección, en un solo
     // script/Command ID — ver remote_control.md, "Lectura de estado

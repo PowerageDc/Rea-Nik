@@ -158,3 +158,75 @@
         flex: 0 0 auto;
         white-space: nowrap;
     }
+
+    /* Fader modular */
+    .nikVFaderWrap {
+        position: relative;
+        width: 72px;
+        height: 320px;
+        margin: 0;
+    }
+
+    .nikVFaderTrack {
+        -webkit-appearance: none;
+        appearance: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 320px;
+        height: 72px;
+        margin: 0;
+        background: transparent;
+        transform: translate(-50%, -50%) rotate(-90deg);
+    }
+
+    .nikVFaderTrack::-webkit-slider-runnable-track {
+        height: 8px;
+        background: #333333;
+        border-radius: 4px;
+    }
+
+    .nikVFaderTrack::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #00D0FF;
+        cursor: pointer;
+        margin-top: -26px;
+    }
+
+    .nikVFaderTrack::-moz-range-track {
+        height: 8px;
+        background: #333333;
+        border-radius: 4px;
+    }
+
+    .nikVFaderTrack::-moz-range-thumb {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #00D0FF;
+        border: none;
+        cursor: pointer;
+    }
+
+    .nikVFaderStepBtn {
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 50%;
+        background: #262626;
+        color: #A8A8A8;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 1.4em;
+        line-height: 1;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .nikVFaderClampFlash {
+        transition: color 0.15s ease, background-color 0.15s ease;
+        color: #FF5757 !important;
+        background-color: #3a2020 !important;
+    }

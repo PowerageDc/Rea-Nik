@@ -119,17 +119,10 @@ function wwr_onreply(results) {
                     nikReaPitchUpdateEnabledDisplay(tok[3]);
                 }
                 if (tok[1] == "NikRemote" && tok[2] == "playrate") {
-                    var readout = document.getElementById("nikPlayrateReadout");
-                    if (readout) {
-                        readout.textContent = tok[3] + "%";
-                        readout.style.color = nikDeviationColor(parseFloat(tok[3]), 100, 40, 150);
-                    }
-                    if (!nikPlayrateDragging) {
-                        var slider = document.getElementById("nikPlayrateSlider");
-                        var valueLabel = document.getElementById("nikPlayrateValue");
-                        if (slider) slider.value = tok[3];
-                        if (valueLabel) valueLabel.textContent = tok[3] + "%";
-                    }
+                    nikPlayrateUpdateDisplay(tok[3]);
+                }
+                if (tok[1] == "NikRemote" && tok[2] == "base_tempo") {
+                    nikPlayrateSetBaseTempo(tok[3]);
                 }
                 if (tok[1] == "NikRemote" && tok[2] == "marker_bars") {
                     nikMarkerBarsMap = nikParseMarkerBars(tok[3]);

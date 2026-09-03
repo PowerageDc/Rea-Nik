@@ -25,11 +25,13 @@ function nikReaPitchUpdateSemitoneDisplay(val) {
     nikReaPitchLastSemitone = (val == "none" || val == "mixed") ? val : numVal;
     nikRefreshReaPitchReadoutColor();
     if (!nikReaPitchDragging) {
-        var slider = document.getElementById("nikReaPitchSlider");
+        var fader = nikReaPitchEnsureFader();
         var valueLabel = document.getElementById("nikReaPitchValue");
-        if (slider) slider.value = numVal;
+        if (fader) fader.setValue(numVal, { silent: true });
+        // "—"/"mixed" no son valores numéricos del fader — se pisa el texto
+        // del readout después de setValue (que ya escribió el numérico).
         if (valueLabel) valueLabel.textContent = (val == "none") ? "—" : (val == "mixed") ? "mixed" : (numVal > 0 ? "+" + numVal : "" + numVal);
-        }
+    }
     }
 
 function nikReaPitchUpdateEnabledDisplay(val) {
@@ -56,26 +58,48 @@ function nikRefreshReaPitchReadoutColor() {
     readout.style.color = nikDeviationColor(nikReaPitchLastSemitone, 0, -12, 12);
     }
 
+var nikReaPitchFaderHandle = null;
+
+// Lazy-init: se crea en el primer momento en que el slider ya existe en el DOM
+// (puede ser al abrir el modal, o antes, en la primera respuesta de poll —
+// lo que llegue primero). nikCreateVerticalFader ya guarda internamente
+// con "if (!slider) return null" si el modal todavía no fue inyectado.
+function nikReaPitchEnsureFader() {
+    if (nikReaPitchFaderHandle) return nikReaPitchFaderHandle;
+    nikReaPitchFaderHandle = nikCreateVerticalFader({
+        key: "reapitch",
+        sliderId: "nikReaPitchSlider",
+        displayId: "nikReaPitchValue",
+        min: -12, max: 12, step: 1, defaultValue: 0,
+        formatDisplay: function (v) { return (v > 0 ? "+" + v : "" + v); },
+        onDragChange: function () { nikReaPitchDragging = true; },
+        onCommit: nikReaPitchCommit
+    });
+    return nikReaPitchFaderHandle;
+}
+
+function nikReaPitchCommit(val) {
+    wwr_req("SET/EXTSTATE/NikRemote/reapitch_semitone_target/" + val + ";" + NIK_LUA_COMMANDS.reaPitchSet.commandId + ";" + NIK_ONDEMAND_READS);
+    window.setTimeout(function () { nikReaPitchDragging = false; }, 400);
+}
+
+function nikReaPitchStep(direction) {
+    var fader = nikReaPitchEnsureFader();
+    if (fader) fader.stepBy(direction);
+}
+
 function nikOpenReaPitchModal() {
+    nikReaPitchEnsureFader();
     wwr_req(NIK_ONDEMAND_READS);
     document.getElementById("nikReaPitchOverlay").style.display = "flex";
-    }
+}
 function nikCloseReaPitchModal() {
     document.getElementById("nikReaPitchOverlay").style.display = "none";
-    }
-function nikReaPitchSliderInput(val) {
-    nikReaPitchDragging = true;
-    document.getElementById("nikReaPitchValue").textContent = (val > 0 ? "+" + val : val);
-    }
-function nikReaPitchSliderCommit(val) {
-    wwr_req("SET/EXTSTATE/NikRemote/reapitch_semitone_target/" + val + ";" + NIK_LUA_COMMANDS.reaPitchSet.commandId + ";" + NIK_ONDEMAND_READS);
-    window.setTimeout(function(){ nikReaPitchDragging = false; }, 400);
-    }
+}
 function nikReaPitchReset() {
-    document.getElementById("nikReaPitchSlider").value = 0;
-    document.getElementById("nikReaPitchValue").textContent = "0";
-    nikReaPitchSliderCommit(0);
-    }
+    var fader = nikReaPitchEnsureFader();
+    if (fader) fader.reset();
+}
 
 function nikReaPitchToggleEnable() {
     wwr_req(NIK_LUA_COMMANDS.reaPitchToggle.commandId);
