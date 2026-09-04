@@ -43,9 +43,11 @@ var nikMarkerFadeListenerAttached = false;
 function nikUpdateMarkerScrollFade() {
     var scroller = document.getElementById("nikMarkerBrowserScroll");
     var fade = document.getElementById("nikMarkerScrollFade");
+    var fadeTop = document.getElementById("nikMarkerScrollFadeTop");
     if (!scroller || !fade) return;
     var canScrollMore = (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight) > 4;
     fade.style.opacity = canScrollMore ? "1" : "0";
+    if (fadeTop) fadeTop.style.opacity = (scroller.scrollTop > 4) ? "1" : "0";
 }
 
 function nikPreMarkerBarsStep(delta) {
@@ -124,23 +126,37 @@ function nikOpenMarkerBrowser() {
         var resolvedColor = resolved.resolvedColor;
 
         var item = document.createElement("div");
-        item.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 8px; color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.3em; border-bottom:1px solid #262626; border-left:3px solid transparent; position:relative; overflow:hidden;";
+        item.style.cssText = "display:flex; flex-direction:column; gap:4px; padding:14px 10px; color:#A8A8A8; font-family:'Open Sans',sans-serif; border-bottom:1px solid #3A3A3A; border-left:3px solid transparent; position:relative; overflow:hidden;";
         var pressBar = document.createElement("div");
         pressBar.style.cssText = "position:absolute; left:0; bottom:0; height:2px; width:0%; background:#00D0FF;";
         item.appendChild(pressBar);
         var nameSpan = document.createElement("span");
+        nameSpan.style.cssText = "font-size:1.22em; font-weight:600; line-height:1.3;";
         nameSpan.textContent = displayName;
         if (resolvedColor) nameSpan.style.color = resolvedColor;
         var posSpan = document.createElement("span");
-        posSpan.style.cssText = "display:flex; color:#999999; font-size:0.95em; margin-left:8px; flex-shrink:0; font-variant-numeric:tabular-nums;";
+        posSpan.style.cssText = "display:flex; gap:14px; color:#C4C4C4; font-size:1.05em; letter-spacing:0.02em; font-variant-numeric:tabular-nums;";
         var timeSpan = document.createElement("span");
-        timeSpan.style.cssText = "min-width:2.8em; text-align:right;";
+        timeSpan.style.cssText = "min-width:2.6em;";
         timeSpan.textContent = nikFormatMinSec(parseFloat(m[3]));
         var barsValSpan = document.createElement("span");
-        barsValSpan.style.cssText = "min-width:3.2em; text-align:right;";
+        barsValSpan.style.cssText = "display:flex; align-items:baseline; gap:4px; min-width:7em;";
         var barsVal = nikMarkerBarsMap[m[2]];
-        barsValSpan.textContent = barsVal ? (barsVal + "c") : "";
+        if (barsVal) {
+            var barsLabelSpan = document.createElement("span");
+            barsLabelSpan.style.cssText = "color:#9A9A9A;";
+            barsLabelSpan.textContent = "Compases:";
+            var sepSpan = document.createElement("span");
+            sepSpan.style.cssText = "color:#5A5A5A;";
+            sepSpan.textContent = "|";
+            var barsNumSpan = document.createElement("span");
+            barsNumSpan.style.cssText = "min-width:1.4em; text-align:right; font-weight:600;";
+            barsNumSpan.textContent = barsVal;
+            barsValSpan.appendChild(barsLabelSpan);
+            barsValSpan.appendChild(barsNumSpan);
+        }
         posSpan.appendChild(timeSpan);
+        if (barsVal) posSpan.appendChild(sepSpan);
         posSpan.appendChild(barsValSpan);
         item.appendChild(nameSpan);
         item.appendChild(posSpan);
