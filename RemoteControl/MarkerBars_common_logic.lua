@@ -44,4 +44,17 @@ function M.write_aggregated_state()
   return out
 end
 
+-- Posicion (segundos) del marker con ese id, o nil si no existe. Usado por
+-- el seek relativo -- ver Nik_Markers_SeekRelative.lua.
+function M.find_marker_pos(proj, markerId)
+  local total = reaper.CountProjectMarkers(proj)
+  for i = 0, total - 1 do
+    local retval, isrgn, pos, _, _, markrgnindexnumber = reaper.EnumProjectMarkers2(proj, i)
+    if retval > 0 and not isrgn and markrgnindexnumber == markerId then
+      return pos
+      end
+    end
+  return nil
+end
+
 return M

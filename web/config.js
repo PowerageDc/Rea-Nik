@@ -76,6 +76,13 @@ var NIK_LUA_COMMANDS = {
     tabNext: {
         luaFile: "NikRemote_TabNext.lua",
         commandId: "_RSf210b1bad35f1d98081c72ff7a89bcf1949f5538"
+    },
+    // Seek relativo "N compases antes de <marker>" -- long-press en el popup
+    // de markers. Placeholder: reemplazar por el Command ID real una vez
+    // registrado el script en el Action List de esta PC.
+    preMarkerSeek: {
+        luaFile: "Nik_Markers_SeekRelative.lua",
+        commandId: "_RS4a5dc1b0b6e91880cf9f2d469c1cb0bad2bc87b2",
     }
 };
 

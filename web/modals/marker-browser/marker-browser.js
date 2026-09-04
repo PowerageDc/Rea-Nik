@@ -16,6 +16,87 @@
 // cuelgan de `window` para que el onclick="nikMarkerAreaClick(event)" del
 // área de markers en index.html las encuentre igual que antes.
 
+var nikPreMarkerBars = 2;
+var NIK_PRE_MARKER_LONGPRESS_MS = 450;
+var NIK_PRE_MARKER_MOVE_TOLERANCE = 10;
+
+function nikUpdatePreMarkerBarsDisplay() {
+    var pill = document.getElementById("nikPreMarkerBarsPill");
+    var number = document.getElementById("nikPreMarkerBarsNumber");
+    var caption = document.getElementById("nikPreMarkerBarsCaption");
+    if (pill) pill.textContent = nikPreMarkerBars + "c";
+    if (number) number.textContent = nikPreMarkerBars;
+    if (caption) caption.textContent = (nikPreMarkerBars == 1 ? "compás antes" : "compases antes");
+}
+
+function nikTogglePreMarkerStepper() {
+    var row = document.getElementById("nikPreMarkerStepperRow");
+    if (!row) return;
+    row.style.display = (row.style.display == "flex") ? "none" : "flex";
+    requestAnimationFrame(nikUpdateMarkerScrollFade);
+}
+
+var nikMarkerFadeListenerAttached = false;
+
+function nikUpdateMarkerScrollFade() {
+    var scroller = document.getElementById("nikMarkerBrowserScroll");
+    var fade = document.getElementById("nikMarkerScrollFade");
+    if (!scroller || !fade) return;
+    var canScrollMore = (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight) > 4;
+    fade.style.opacity = canScrollMore ? "1" : "0";
+}
+
+function nikPreMarkerBarsStep(delta) {
+    nikPreMarkerBars = Math.max(1, Math.min(8, nikPreMarkerBars + delta));
+    nikUpdatePreMarkerBarsDisplay();
+}
+
+function nikFirePreMarkerSeek(markerId) {
+    wwr_req("SET/EXTSTATE/NikRemote/preseek_marker_id/" + markerId +
+        ";SET/EXTSTATE/NikRemote/preseek_bars/" + nikPreMarkerBars +
+        ";" + NIK_LUA_COMMANDS.preMarkerSeek.commandId);
+    nikCloseMarkerBrowser();
+}
+
+function nikAttachMarkerLongPress(item, markerId, bar) {
+    var timer = null;
+    var startX = 0, startY = 0;
+    var fired = false;
+
+    function start(x, y) {
+        fired = false;
+        startX = x; startY = y;
+        bar.style.transition = "none";
+        bar.style.width = "0%";
+        bar.offsetWidth;
+        bar.style.transition = "width " + NIK_PRE_MARKER_LONGPRESS_MS + "ms linear";
+        bar.style.width = "100%";
+        timer = setTimeout(function () {
+            fired = true;
+            bar.style.transition = "none";
+            bar.style.width = "0%";
+            nikFirePreMarkerSeek(markerId);
+        }, NIK_PRE_MARKER_LONGPRESS_MS);
+    }
+    function cancel() {
+        clearTimeout(timer);
+        bar.style.transition = "none";
+        bar.style.width = "0%";
+    }
+    function move(x, y) {
+        if (Math.abs(x - startX) > NIK_PRE_MARKER_MOVE_TOLERANCE || Math.abs(y - startY) > NIK_PRE_MARKER_MOVE_TOLERANCE) cancel();
+    }
+
+    item.addEventListener("touchstart", function (e) { start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    item.addEventListener("touchmove", function (e) { move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    item.addEventListener("touchend", function () { cancel(); if (fired) item._nikSuppressClick = true; }, { passive: true });
+    item.addEventListener("touchcancel", cancel, { passive: true });
+    item.addEventListener("mousedown", function (e) { start(e.clientX, e.clientY); });
+    item.addEventListener("mousemove", function (e) { if (timer) move(e.clientX, e.clientY); });
+    item.addEventListener("mouseup", function () { cancel(); if (fired) item._nikSuppressClick = true; });
+    item.addEventListener("mouseleave", cancel);
+}
+
 function nikMarkerAreaClick(event) {
     var t = event.target;
     while (t && t.id != "prevButton" && t.id != "nextButton" && t.id != "dropMarker" && t.tagName != "svg") {
@@ -29,8 +110,9 @@ function nikOpenMarkerBrowser() {
     var list = document.getElementById("nikMarkerBrowserList");
     if (!list) return;
     list.innerHTML = "";
-    var sorted = g_markers.slice().sort(function(a,b){ return parseFloat(a[3]) - parseFloat(b[3]); });
+    var sorted = g_markers.slice().sort(function (a, b) { return parseFloat(a[3]) - parseFloat(b[3]); });
     var nikPopupChainState = { color: null, step: 0 };
+    nikUpdatePreMarkerBarsDisplay();
     for (var i=0; i<sorted.length; i++) {
         var m = sorted[i];
         var rawName = m[1] ? m[1] : ("unnamed (" + m[2] + ")");
@@ -39,7 +121,10 @@ function nikOpenMarkerBrowser() {
         var resolvedColor = resolved.resolvedColor;
 
         var item = document.createElement("div");
-        item.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 8px; color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.3em; border-bottom:1px solid #262626;";
+        item.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 8px; color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.3em; border-bottom:1px solid #262626; position:relative; overflow:hidden;";
+        var pressBar = document.createElement("div");
+        pressBar.style.cssText = "position:absolute; left:0; bottom:0; height:2px; width:0%; background:#00D0FF;";
+        item.appendChild(pressBar);
         var nameSpan = document.createElement("span");
         nameSpan.textContent = displayName;
         if (resolvedColor) nameSpan.style.color = resolvedColor;
@@ -57,13 +142,21 @@ function nikOpenMarkerBrowser() {
         item.appendChild(nameSpan);
         item.appendChild(posSpan);
         item.setAttribute("data-markerid", m[2]);
-        item.onclick = function(){
+        item.onclick = function () {
+            if (this._nikSuppressClick) { this._nikSuppressClick = false; return; }
             wwr_req("SET/POS_STR/m" + this.getAttribute("data-markerid"));
             nikCloseMarkerBrowser();
-            };
+        };
+        nikAttachMarkerLongPress(item, m[2], pressBar);
         list.appendChild(item);
         }
     document.getElementById("nikMarkerBrowserOverlay").style.display = "flex";
+    var scroller = document.getElementById("nikMarkerBrowserScroll");
+    if (scroller && !nikMarkerFadeListenerAttached) {
+        scroller.addEventListener("scroll", nikUpdateMarkerScrollFade);
+        nikMarkerFadeListenerAttached = true;
+        }
+    requestAnimationFrame(nikUpdateMarkerScrollFade);
     }
 
 function nikCloseMarkerBrowser() {
