@@ -182,23 +182,14 @@
                         <rect class="mouseover" visibility="hidden" x="137.9" y="1.6" opacity="5.000000e-02"
                             fill="#FFFFFF" width="43.9" height="43.9" />
                     </g>
-                    <g class="button" onClick="wwr_req(40527)">
+                    <g id="buttonSoloInFront" class="button" onClick="wwr_req('40745;GET/40745')">
                         <rect class="iconBg" x="183.3" y="1.6" fill="#262626" width="43.9" height="43.9" />
                         <rect class="active" visibility="hidden" x="183.3" y="1.6" fill="#8a9999" width="43.9"
                             height="43.9" />
-                        <g id="iconClipClear">
-                            <path id="iconUndo_1_" fill="#FF5757" d="M208.6,14.5l2.2,4.6c-0.1,0.2-0.2,0.3-0.4,0.4v0.2c-0.1,0.1-0.6,0.3-0.6,0.4
-				c0,0.1,0.1,0.3,0.1,0.4c-0.1,0.3-0.6,0.7-0.9,0.7c-0.4,0-0.9-1-1-1.2l-2.6-4l-5.5,8.5c-0.3,0.2-1.1,0.3-1.4,0.3
-				c-0.4,0-0.4-0.3-0.6-0.6c-0.2-0.2-0.4-0.6-0.4-0.9c0-0.2,0-0.3,0.1-0.4c0.1-0.2,0.2-0.4,0-0.6c-0.1-0.1-0.1-0.1-0.1-0.2
-				c0-0.4,0.5-1,0.7-1.4l0.7-1.1c1.1-2,3.2-4.5,4.7-6.3l0.3-0.4l-2-5.6c-0.1-0.2-0.3-0.7-0.3-0.9c0-0.2,0.2-0.4,0.4-0.6l0.2-0.2
-				c0.1-0.1,0.1-0.1,0.2-0.1c0.2,0,0.3,0.1,0.4,0.2c0.2-0.1,0.2-0.1,0.4-0.1c0.2-0.1,0.2-0.1,0.2-0.2c0.1-0.1,0.1-0.2,0.3-0.2
-				c0.3,0,0.4,0.3,0.5,0.5l1.1,2.3l1,1.9l0.7-0.9l1.4-1.5c0.3-0.4,2.4-2.9,2.7-2.9c0.2,0,0.8,0.4,1,0.5l0.3-0.3
-				c0.1-0.1,0.2-0.3,0.3-0.3c0.1,0,0.1,0.2,0.2,0.2c0.1,0.3,0.6,0.6,0.6,0.8c0,0.2-0.2,0.3-0.3,0.4c-0.3,0.3-0.7,0.8-0.9,1.1
-				l-3.9,5.1l-0.3,0.4L208.6,14.5z" />
-                            <path fill="#922525" d="M195.3,41.3h19.8c3.7,0,6.6-3,6.6-6.6v-0.8c0-3.7-3-6.6-6.6-6.6h-19.8c-3.7,0-6.6,3-6.6,6.6v0.8
-				C188.7,38.3,191.7,41.3,195.3,41.3z" />
-                            <text transform="matrix(1 0 0 1 192.9692 38.471)" fill="#FFBFBF" font-family="'Open Sans'"
-                                font-size="11px">CLIP</text>
+                        <g id="iconSoloInFront">
+                            <circle id="iconSoloInFrontSource" cx="205.25" cy="10.4" r="2.2" fill="#808080" />
+                            <polygon id="iconSoloInFrontBeam" points="205.25,10.4 197.55,30.1 212.95,30.1" fill="#808080" opacity="0.55" />
+                            <ellipse id="iconSoloInFrontSpot" cx="205.25" cy="34.5" rx="11" ry="3.8" fill="#808080" />
                         </g>
                         <g class="gloss">
                             <rect x="183.3" y="1.6" opacity="0.2" fill="#262626" width="43.9" height="43.9" />
@@ -228,10 +219,10 @@
             </div>
             <div style="width: 100%; background-color: #1a1a1a; position:relative;">
                 <div id="nikPlayrateReadout" onclick="nikOpenPlayrateModal()"
-                    style="position:absolute; top:50%; right:16%; transform:translateY(-50%); color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.5em; padding:4px 6px; cursor:pointer; z-index:1;">
-                    100%</div>
+                    style="position:absolute; top:50%; right:18%; transform:translateY(-50%); color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.5em; padding:4px 6px; cursor:pointer; z-index:1; white-space:nowrap; display:inline-flex; align-items:center;">
+                    <span id="nikPlayrateNoteIcon" style="font-size:1.5em; line-height:1; margin-right:4px;">♩ </span><span id="nikPlayrateBpmValue">—</span></div>
                 <div id="nikReaPitchReadout" onclick="nikOpenReaPitchModal()"
-                    style="position:absolute; top:50%; left:16%; transform:translateY(-50%); color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.35em; padding:4px 6px; cursor:pointer; z-index:1;">
+                    style="position:absolute; top:50%; left:20%; transform:translateY(-50%); color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.35em; padding:4px 6px; cursor:pointer; z-index:1;">
                     —</div>
                 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px"
                     y="0px" width="100%" height="100%" viewBox="0 8 320 34.2" xml:space="preserve">

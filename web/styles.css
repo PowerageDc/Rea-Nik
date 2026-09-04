@@ -88,6 +88,10 @@
         fill: #4a2020;
     }
 
+    #buttonSoloInFront.nikToggledOn .iconBg {
+        fill: #4a3a14;
+    }
+
     .trackRow1 {
         will-change: transform;
     }

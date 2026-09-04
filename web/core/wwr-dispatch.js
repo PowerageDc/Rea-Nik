@@ -107,6 +107,7 @@ function wwr_onreply(results) {
                         nikTabMemoryResetRenderCaches();
                         nikTabMemoryRestore(tok[3]);
                         nikCurrentProjectName = tok[3];
+                        nikPlayrateRequestBaseTempo(); // tempo base puede diferir por proyecto
                     }
                     nikLastProjectNameUpdate = Date.now();
                     var nameDisplay = document.getElementById("nikActiveProjectName");
@@ -148,6 +149,16 @@ function wwr_onreply(results) {
                         buttonMetro.childNodes[7].setAttributeNS(null, "visibility", "visible");
                     }
                     last_metronome = tok[2];
+                }
+                var buttonSoloInFront = document.getElementById("buttonSoloInFront");
+                if (tok[1] == 40745 && buttonSoloInFront) {
+                    var soloOn = (tok[2] == 1);
+                    buttonSoloInFront.classList.toggle("nikToggledOn", soloOn);
+                    var soloColor = soloOn ? "#FFC107" : "#808080";
+                    document.getElementById("iconSoloInFrontSource").setAttributeNS(null, "fill", soloColor);
+                    document.getElementById("iconSoloInFrontBeam").setAttributeNS(null, "fill", soloColor);
+                    document.getElementById("iconSoloInFrontSpot").setAttributeNS(null, "fill", soloColor);
+                    last_soloinfront = tok[2];
                 }
                 break;
             case "BEATPOS":

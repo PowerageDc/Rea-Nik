@@ -36,8 +36,26 @@ function nikParseProjectTabs(str) {
     }
 
 function nikOpenProjectTabsModal() {
+    nikRefreshProjectTabsHighlight();
     wwr_req(NIK_LUA_COMMANDS.projectTabsRead.commandId + ";GET/EXTSTATE/NikRemote/project_tabs");
     document.getElementById("nikProjectTabsOverlay").style.display = "flex";
+    }
+
+// Repinta el resaltado de la lista ya renderizada (de la última apertura)
+// contra nikCurrentProjectName, que el poll de fondo mantiene fresco sin
+// costo extra — evita mostrar el resaltado viejo mientras se espera la
+// respuesta on-demand de Nik_ProjectTabs_Read.lua (ver remote_control.md,
+// "Selector de proyectos (tabs)", bug de parpadeo).
+function nikRefreshProjectTabsHighlight() {
+    var list = document.getElementById("nikProjectTabsList");
+    if (!list || typeof nikCurrentProjectName == "undefined" || nikCurrentProjectName == null) return;
+    var items = list.children;
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var isActive = (item.getAttribute("data-name") == nikCurrentProjectName);
+        item.setAttribute("data-active", isActive ? "1" : "0");
+        item.style.color = isActive ? "#00FF99" : "#A8A8A8";
+        }
     }
 
 function nikCloseProjectTabsModal() {
@@ -53,7 +71,7 @@ function nikRenderProjectTabsList(str) {
         var tab = tabs[i];
         var item = document.createElement("div");
         item.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:12px 8px; font-family:'Open Sans',sans-serif; font-size:1.3em; border-bottom:1px solid #262626; color:" +
-            (tab.active ? "#00FF99" : "#A8A8A8") + ";" + (tab.active ? " font-weight:bold;" : "");
+            (tab.active ? "#00FF99" : "#A8A8A8") + ";";
         var nameSpan = document.createElement("span");
         nameSpan.textContent = tab.name;
         var metaSpan = document.createElement("span");
@@ -64,6 +82,7 @@ function nikRenderProjectTabsList(str) {
         item.appendChild(metaSpan);
         item.setAttribute("data-idx", tab.idx);
         item.setAttribute("data-active", tab.active ? "1" : "0");
+        item.setAttribute("data-name", tab.name);
         item.onclick = function(){
             if (this.getAttribute("data-active") == "1") { nikCloseProjectTabsModal(); return; }
             wwr_req("SET/EXTSTATE/NikRemote/project_tabs_target_idx/" + this.getAttribute("data-idx") + ";" + NIK_LUA_COMMANDS.projectTabsSelect.commandId + ";" + NIK_ONDEMAND_READS);

@@ -98,7 +98,11 @@ var NIK_SLOW_POLL = NIK_LUA_COMMANDS.statePoll.commandId +
     ";GET/EXTSTATE/NikRemote/preservepitch" +
     ";GET/EXTSTATE/NikRemote/reapitch_semitone" +
     ";GET/EXTSTATE/NikRemote/reapitch_enabled" +
-    ";GET/EXTSTATE/NikRemote/marker_bars";
+    ";GET/EXTSTATE/NikRemote/marker_bars" +
+    // GET/40745 no es EXTSTATE del Lua poll -- es CMDSTATE nativo de REAPER
+    // (Options: Solo in front), leído acá en vez del poll de 10ms porque no
+    // necesita resolución de tiempo real (toggle manual, no meter/transporte).
+    ";GET/40745";
 
 // Alias: hoy el refresco puntual (al abrir un modal) pide exactamente lo
 // mismo que el poll de fondo — no hay razón para mantenerlos separados.

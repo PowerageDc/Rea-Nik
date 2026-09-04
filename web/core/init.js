@@ -14,6 +14,12 @@ function nikCheckProjectNameWatchdog() {
     if (Date.now() - nikLastProjectNameUpdate > 3500) {
         var nameDisplay = document.getElementById("nikActiveProjectName");
         if (nameDisplay) nameDisplay.textContent = "-";
+        // REAPER desconectado: nikPlayrateBaseTempo queda desactualizado,
+        // volvemos al placeholder en vez de mostrar un BPM potencialmente
+        // viejo (se re-dispara solo al reconectar, ver init()).
+        nikPlayrateBaseTempo = null;
+        var playrateReadout = document.getElementById("nikPlayrateBpmValue");
+        if (playrateReadout) playrateReadout.textContent = "—";
     }
 }
 
@@ -122,6 +128,7 @@ function init() {
     wwr_req_recur(NIK_SLOW_POLL, 1000);
     window.setInterval(nikCheckProjectNameWatchdog, 1000);
     wwr_start();
+    nikPlayrateRequestBaseTempo();
 
     if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
         for (let l = 0; l < document.styleSheets.length; l++) {

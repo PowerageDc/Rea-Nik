@@ -10,6 +10,7 @@ local target = tonumber(reaper.GetExtState("NikRemote", "project_tabs_target_idx
 if target then
     local proj = reaper.EnumProjects(target)
     if proj then
+        reaper.Main_OnCommand(40667, 0) -- Transport: Stop, save all recorded media
         reaper.SelectProjectInstance(proj)
         end
     end

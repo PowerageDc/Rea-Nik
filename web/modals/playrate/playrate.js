@@ -52,20 +52,51 @@ function nikPlayrateStep(direction) {
     if (fader) fader.stepBy(direction);
 }
 
+// Único punto de cálculo del tempo equivalente (% de playrate -> BPM),
+// compartido por el campo BPM del popup y el readout principal (fuera del
+// modal). Devuelve null si todavía no se conoce nikPlayrateBaseTempo (antes
+// del primer boot / tras reconectar) — pendiente: revisar precisión de esta
+// cuenta, a veces se desvía (ver PENDING).
+function nikPlayrateComputeEquivalentBpm(percent) {
+    if (nikPlayrateBaseTempo == null || nikPlayrateBaseTempo <= 0) return null;
+    return nikPlayrateBaseTempo * (percent / 100);
+}
+
 // Recalcula el campo de BPM a partir del % del fader. No pisa el campo
 // mientras el usuario lo tiene enfocado (está tipeando) — mismo criterio
 // que ya usa nikPreservePitchCheckbox contra document.activeElement.
 function nikPlayrateUpdateBpmField(percent) {
     var bpmInput = document.getElementById("nikPlayrateBpm");
     if (!bpmInput || document.activeElement == bpmInput) return;
-    if (nikPlayrateBaseTempo == null || nikPlayrateBaseTempo <= 0) {
+    var bpm = nikPlayrateComputeEquivalentBpm(percent);
+    if (bpm == null) {
         bpmInput.value = "";
         bpmInput.placeholder = "—";
         bpmInput.disabled = true;
         return;
     }
     bpmInput.disabled = false;
-    bpmInput.value = (nikPlayrateBaseTempo * (percent / 100)).toFixed(1);
+    bpmInput.value = bpm.toFixed(1);
+}
+
+// Pinta el readout principal (#nikPlayrateReadout, fuera del modal) con el
+// tempo equivalente redondeado sin decimales — placeholder "—" mientras no
+// haya nikPlayrateBaseTempo disponible (boot / reconexión en curso).
+function nikPlayrateRefreshMainReadout(percent) {
+    var readout = document.getElementById("nikPlayrateReadout");
+    var bpmValue = document.getElementById("nikPlayrateBpmValue");
+    if (!readout || !bpmValue) return;
+    var bpm = nikPlayrateComputeEquivalentBpm(percent);
+    bpmValue.textContent = (bpm != null) ? Math.round(bpm) : "—";
+    readout.style.color = nikDeviationColor(parseFloat(percent), 100, 50, 150);
+}
+
+// Dispara la lectura on-demand del tempo base sin abrir el popup — usada al
+// bootear la app (init.js) y al detectar cambio de proyecto activo
+// (wwr-dispatch.js), para que el readout principal muestre BPM equivalente
+// desde el arranque, no solo después de haber abierto el popup alguna vez.
+function nikPlayrateRequestBaseTempo() {
+    wwr_req(NIK_LUA_COMMANDS.playrateBaseTempoRead.commandId + ";GET/EXTSTATE/NikRemote/base_tempo");
 }
 
 // onchange del campo de BPM: traduce a %, clampea al rango del fader,
@@ -99,23 +130,25 @@ function nikPlayrateBpmKeydown(event, el) {
     if (event.key == "Enter") { el.blur(); }
 }
 
-// Llamada desde wwr-dispatch.js al llegar EXTSTATE/base_tempo (on-demand,
-// disparado en nikOpenPlayrateModal).
+// Llamada desde wwr-dispatch.js al llegar EXTSTATE/base_tempo — ya sea
+// on-demand al abrir el modal, o disparado sin abrirlo (boot/cambio de
+// proyecto, ver nikPlayrateRequestBaseTempo). Refresca ambos displays de
+// una: el campo BPM del popup (si existe fader) y el readout principal
+// (con el % actual conocido por el fader, sin esperar el próximo poll).
 function nikPlayrateSetBaseTempo(val) {
     var parsed = parseFloat(val);
     nikPlayrateBaseTempo = (isNaN(parsed) || parsed <= 0) ? null : parsed;
     var fader = nikPlayrateEnsureFader();
-    if (fader) nikPlayrateUpdateBpmField(fader.getValue());
+    if (fader) {
+        nikPlayrateUpdateBpmField(fader.getValue());
+        nikPlayrateRefreshMainReadout(fader.getValue());
+    }
 }
 
 // Llamada desde wwr-dispatch.js al llegar EXTSTATE/playrate (poll de fondo
 // o refresco on-demand) — reemplaza el bloque que antes vivía inline ahí.
 function nikPlayrateUpdateDisplay(val) {
-    var readout = document.getElementById("nikPlayrateReadout");
-    if (readout) {
-        readout.textContent = val + "%";
-        readout.style.color = nikDeviationColor(parseFloat(val), 100, 50, 150);
-    }
+    nikPlayrateRefreshMainReadout(val);
     if (!nikPlayrateDragging) {
         var fader = nikPlayrateEnsureFader();
         if (fader) fader.setValue(val, { silent: true });
