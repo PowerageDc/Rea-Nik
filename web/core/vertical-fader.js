@@ -36,8 +36,19 @@ function nikCreateVerticalFader(config) {
     slider.value = (config.initialValue != null) ? config.initialValue : config.defaultValue;
     if (display) display.textContent = config.formatDisplay(slider.value);
 
+    var knob = null;
+    if (config.knobMountId) {
+        var knobMountEl = document.getElementById(config.knobMountId);
+        if (knobMountEl) knob = nikCreateFaderKnobSvg({ mountEl: knobMountEl, orientation: config.knobOrientation || "vertical" });
+    }
+    function updateKnob(value) {
+        if (knob) knob.setFraction((value - config.min) / (config.max - config.min));
+    }
+    updateKnob(slider.value);
+
     slider.addEventListener("input", function () {
         if (display) display.textContent = config.formatDisplay(slider.value);
+        updateKnob(slider.value);
         if (config.onDragChange) config.onDragChange(slider.value);
     }, false);
 
@@ -62,6 +73,7 @@ function nikCreateVerticalFader(config) {
         setValue: function (value, opts) {
             slider.value = value;
             if (display) display.textContent = config.formatDisplay(value);
+            updateKnob(value);
             if (!(opts && opts.silent) && config.onDragChange) config.onDragChange(value);
         },
         getValue: function () { return slider.value; },

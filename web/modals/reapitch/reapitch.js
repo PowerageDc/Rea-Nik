@@ -70,6 +70,8 @@ function nikReaPitchEnsureFader() {
         key: "reapitch",
         sliderId: "nikReaPitchSlider",
         displayId: "nikReaPitchValue",
+        knobMountId: "nikReaPitchFaderWrap",
+        knobOrientation: "vertical",
         min: -12, max: 12, step: 1, defaultValue: 0,
         formatDisplay: function (v) { return (v > 0 ? "+" + v : "" + v); },
         onDragChange: function () { nikReaPitchDragging = true; },

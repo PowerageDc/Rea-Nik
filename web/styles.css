@@ -1,6 +1,12 @@
     html,
     body {
         height: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    button,
+    input {
+        -webkit-tap-highlight-color: transparent;
     }
 
     body {
@@ -182,8 +188,7 @@
 
     .nikVFaderTrack::-webkit-slider-runnable-track {
         height: 8px;
-        background: #333333;
-        border-radius: 4px;
+        background: transparent;
     }
 
     .nikVFaderTrack::-webkit-slider-thumb {
@@ -191,35 +196,51 @@
         width: 60px;
         height: 60px;
         border-radius: 50%;
-        background: #00D0FF;
+        background: transparent;
         cursor: pointer;
         margin-top: -26px;
     }
 
     .nikVFaderTrack::-moz-range-track {
         height: 8px;
-        background: #333333;
-        border-radius: 4px;
+        background: transparent;
     }
 
     .nikVFaderTrack::-moz-range-thumb {
         width: 60px;
         height: 60px;
         border-radius: 50%;
-        background: #00D0FF;
+        background: transparent;
         border: none;
         cursor: pointer;
     }
 
+    /* Knob SVG (core/fader-knob-svg.js), montado dentro de .nikVFaderWrap,
+       mismo sistema de posicionamiento que .nikVFaderTrack — capa puramente
+       visual, el input de arriba sigue manejando el drag. */
+    .nikFaderKnobSvg {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 320px;
+        height: 72px;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+    }
+
+    .nikFaderKnobSvg--vertical {
+        transform: translate(-50%, -50%) rotate(-90deg);
+    }
+
     .nikVFaderStepBtn {
-        width: 44px;
-        height: 44px;
+        width: 52px;
+        height: 52px;
         border: none;
         border-radius: 50%;
         background: #262626;
         color: #A8A8A8;
         font-family: 'Open Sans', sans-serif;
-        font-size: 1.4em;
+        font-size: 1.6em;
         line-height: 1;
         cursor: pointer;
         flex-shrink: 0;

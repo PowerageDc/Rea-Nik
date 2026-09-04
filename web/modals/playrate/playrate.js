@@ -29,6 +29,8 @@ function nikPlayrateEnsureFader() {
         key: "playrate",
         sliderId: "nikPlayrateSlider",
         displayId: "nikPlayrateValue",
+        knobMountId: "nikPlayrateFaderWrap",
+        knobOrientation: "vertical",
         min: 50, max: 150, step: 1, defaultValue: 100,
         formatDisplay: function (v) { return v + "%"; },
         onDragChange: function (v) {
