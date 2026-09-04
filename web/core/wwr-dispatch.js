@@ -268,13 +268,21 @@ function wwr_onreply(results) {
 
                 var nextPrevSvg = document.getElementById("nextPrev")
                 if ((pos != newPos || mrMapAr.length != newMrMapLength) && nextPrevSvg) {
-                    var nikTransportChainState = { color: null, step: 0 };
-
                     function getValFromAr(array, id, idLoc, valLoc) {
                         for (var i = 0, len = array.length; i < len; i++) {
                             if (array[i][idLoc] == id) { return array[i][valLoc]; }
                         }
                         return;
+                    }
+
+                    var markerChainMap = {};
+                    var nikFullChainState = { color: null, step: 0 };
+                    for (var mi = 0; mi < mrMapAr.length; mi++) {
+                        if (mrMapAr[mi][1] >= 1) {
+                            var mChainId = mrMapAr[mi][1];
+                            var mChainName = getValFromAr(g_markers, mChainId, 2, 1);
+                            if (mChainName) markerChainMap[mChainId] = nikResolveMarkerDisplay(mChainName, nikFullChainState);
+                        }
                     }
 
                     if (mrMapAr[prevl] && mrMapAr[prevl][1] >= 1) {
@@ -284,7 +292,7 @@ function wwr_onreply(results) {
                         mPrevCol = "#" + (mPrevCol | 0x1000000).toString(16).substr(-6);
                         var mPrevDisplay = mPrevName;
                         if (mPrevName) {
-                            var mPrevResolved = nikResolveMarkerDisplay(mPrevName, nikTransportChainState);
+                            var mPrevResolved = markerChainMap[mPrevIdx];
                             if (mPrevResolved.resolvedColor) { mPrevCol = mPrevResolved.resolvedColor; mPrevDisplay = mPrevResolved.displayName; }
                         }
                         document.getElementById("marker1").setAttributeNS(null, "visibility", "visible");
@@ -303,7 +311,7 @@ function wwr_onreply(results) {
                         mThisCol = "#" + (mThisCol | 0x1000000).toString(16).substr(-6);
                         var mThisDisplay = mThisName;
                         if (mThisName) {
-                            var mThisResolved = nikResolveMarkerDisplay(mThisName, nikTransportChainState);
+                            var mThisResolved = markerChainMap[mThisIdx];
                             if (mThisResolved.resolvedColor) { mThisCol = mThisResolved.resolvedColor; mThisDisplay = mThisResolved.displayName; }
                         }
                         document.getElementById("marker2").setAttributeNS(null, "visibility", "visible");
@@ -322,7 +330,7 @@ function wwr_onreply(results) {
                         mNextCol = "#" + (mNextCol | 0x1000000).toString(16).substr(-6);
                         var mNextDisplay = mNextName;
                         if (mNextName) {
-                            var mNextResolved = nikResolveMarkerDisplay(mNextName, nikTransportChainState);
+                            var mNextResolved = markerChainMap[mNextIdx];
                             if (mNextResolved.resolvedColor) { mNextCol = mNextResolved.resolvedColor; mNextDisplay = mNextResolved.displayName; }
                         }
                         document.getElementById("marker3").setAttributeNS(null, "visibility", "visible");
