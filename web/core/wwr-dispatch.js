@@ -385,6 +385,8 @@ function wwr_onreply(results) {
                     elAttribute("iconNext", "visibility", nextIconVis);
                     elAttribute("iconEnd", "visibility", endIconVis);
 
+                    nikMarkerBrowserHighlightCurrent();
+
                     newPos = pos;
                     newMrMapLength = mrMapAr.length;
                 }

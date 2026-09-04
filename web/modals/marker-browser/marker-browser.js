@@ -19,6 +19,8 @@
 var nikPreMarkerBars = 2;
 var NIK_PRE_MARKER_LONGPRESS_MS = 450;
 var NIK_PRE_MARKER_MOVE_TOLERANCE = 10;
+var nikMarkerBrowserSorted = [];
+var nikMarkerBrowserCurrentId = null;
 
 function nikUpdatePreMarkerBarsDisplay() {
     var pill = document.getElementById("nikPreMarkerBarsPill");
@@ -111,6 +113,7 @@ function nikOpenMarkerBrowser() {
     if (!list) return;
     list.innerHTML = "";
     var sorted = g_markers.slice().sort(function (a, b) { return parseFloat(a[3]) - parseFloat(b[3]); });
+    nikMarkerBrowserSorted = sorted;
     var nikPopupChainState = { color: null, step: 0 };
     nikUpdatePreMarkerBarsDisplay();
     for (var i=0; i<sorted.length; i++) {
@@ -121,7 +124,7 @@ function nikOpenMarkerBrowser() {
         var resolvedColor = resolved.resolvedColor;
 
         var item = document.createElement("div");
-        item.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 8px; color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.3em; border-bottom:1px solid #262626; position:relative; overflow:hidden;";
+        item.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px 8px; color:#A8A8A8; font-family:'Open Sans',sans-serif; font-size:1.3em; border-bottom:1px solid #262626; border-left:3px solid transparent; position:relative; overflow:hidden;";
         var pressBar = document.createElement("div");
         pressBar.style.cssText = "position:absolute; left:0; bottom:0; height:2px; width:0%; background:#00D0FF;";
         item.appendChild(pressBar);
@@ -150,6 +153,8 @@ function nikOpenMarkerBrowser() {
         nikAttachMarkerLongPress(item, m[2], pressBar);
         list.appendChild(item);
         }
+    nikMarkerBrowserCurrentId = null;
+    nikMarkerBrowserHighlightCurrent();
     document.getElementById("nikMarkerBrowserOverlay").style.display = "flex";
     var scroller = document.getElementById("nikMarkerBrowserScroll");
     if (scroller && !nikMarkerFadeListenerAttached) {
@@ -157,6 +162,30 @@ function nikOpenMarkerBrowser() {
         nikMarkerFadeListenerAttached = true;
         }
     requestAnimationFrame(nikUpdateMarkerScrollFade);
+    }
+
+function nikMarkerBrowserFindCurrentId(pos) {
+    var currentId = null;
+    for (var i = 0; i < nikMarkerBrowserSorted.length; i++) {
+        var mTime = parseFloat(nikMarkerBrowserSorted[i][3]);
+        if (mTime <= pos + 1e-6) currentId = nikMarkerBrowserSorted[i][2];
+        else break;
+        }
+    return currentId;
+    }
+
+function nikMarkerBrowserHighlightCurrent() {
+    var overlay = document.getElementById("nikMarkerBrowserOverlay");
+    if (!overlay || overlay.style.display != "flex") return;
+    var currentId = nikMarkerBrowserFindCurrentId(parseFloat(playPosSeconds));
+    if (currentId == nikMarkerBrowserCurrentId) return;
+    nikMarkerBrowserCurrentId = currentId;
+    var items = document.getElementById("nikMarkerBrowserList").children;
+    for (var i = 0; i < items.length; i++) {
+        var isCurrent = (items[i].getAttribute("data-markerid") == currentId);
+        items[i].style.borderLeftColor = isCurrent ? "#00D0FF" : "transparent";
+        items[i].style.backgroundColor = isCurrent ? "#1f2f33" : "transparent";
+        }
     }
 
 function nikCloseMarkerBrowser() {
