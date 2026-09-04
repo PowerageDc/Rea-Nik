@@ -14,6 +14,11 @@ var last_transport_state = -1, mouseDown = 0, last_time_str = "",
     trackFlagsAr = [], trackSendCntAr = [], trackRcvCntAr = [], trackHwOutCntAr = [], trackSendHwCntAr = [], trackPeakAr = [], trackMeterAr = [], faderConAr = [],
     hereCss = document.styleSheets[1], transitions = 1;
 
+// Modo de display de #status: "measures" | "minsec" — toggle sticky vía
+// long tap (ver core/init.js / core/long-press.js). Independiente del
+// ruler real del proyecto en REAPER.
+var nikPositionDisplayMode = "measures";
+
 // --- ReaPitch / Playrate / markers (flags de estado runtime) ---
 var nikReaPitchDragging = false;
 var nikPlayrateDragging = false;

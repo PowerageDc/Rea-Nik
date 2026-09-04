@@ -45,6 +45,18 @@ function prompt_seek() {
     }
 }
 
+// Tap corto en #status: abre prompt_seek() como siempre. Long tap: lo
+// suprime (nikAttachLongPress marca _nikSuppressClick) y en su lugar
+// alterna el formato del readout de posición.
+function nikStatusAreaClick(el) {
+    if (el._nikSuppressClick) { el._nikSuppressClick = false; return; }
+    prompt_seek();
+}
+
+function nikTogglePositionDisplayMode() {
+    nikPositionDisplayMode = (nikPositionDisplayMode == "measures") ? "minsec" : "measures";
+}
+
 // scaleFactor / optionsOpen viven ahora en core/state.js
 // NIK_TRANSPORT_SCALE vive en config.js
 
@@ -122,6 +134,9 @@ trackHeightsAr[0] = 0;
 // hitbox vive ahora en core/tracks-render.js
 
 function init() {
+    var statusEl = document.getElementById("status");
+    if (statusEl) nikAttachLongPress(statusEl, { onLongPress: nikTogglePositionDisplayMode });
+
     wwr_req_recur("TRANSPORT;BEATPOS", 10);
     wwr_req_recur("NTRACK;TRACK;GET/40364", 10);
     wwr_req_recur("MARKER;REGION", 500);

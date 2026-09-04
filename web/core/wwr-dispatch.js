@@ -65,19 +65,18 @@ function wwr_onreply(results) {
                         }
                         var statusDisplay = document.getElementById("status");
 
-                        //make an array of the current position and its unit
-                        statusPosition[0] = tok[4];
-                        statusPositionAr = tok[4].split(".");
-                        if (statusPositionAr[1] == undefined) {
-                            if (statusPositionAr[0].match(":")) { statusPosition[1] = "Hours:Minutes:Seconds:Frames"; }
-                            else { statusPosition[1] = "samples / frames"; }
+                        // Formato del readout de posición: toggle sticky vía long tap en
+                        // #status (nikPositionDisplayMode, ver core/init.js), independiente
+                        // del ruler real del proyecto. tok[2]=position_seconds, tok[5]=
+                        // position_string_beats (measures.beats.hundredths) — ambos vienen
+                        // siempre en TRANSPORT sin importar cómo esté seteado el ruler.
+                        if (nikPositionDisplayMode == "minsec") {
+                            statusPosition[0] = nikFormatMinSec(parseFloat(tok[2]));
+                            statusPosition[1] = "Minutes:Seconds";
                         }
                         else {
-                            if (statusPositionAr[1].length == 3) {
-                                if (statusPositionAr[0].match(":")) { statusPosition[1] = "Minutes:Seconds"; }
-                                else { statusPosition[1] = "Seconds"; }
-                            }
-                            else { statusPosition[1] = "Measures.Beats"; }
+                            statusPosition[0] = tok[5];
+                            statusPosition[1] = "Measures.Beats";
                         }
                         document.getElementById("timeUnits").textContent = statusPosition[1];
 

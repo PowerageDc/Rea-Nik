@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="styles.css">
     <script src="config.js"></script>
     <script src="core/utils.js"></script>
+    <script src="core/long-press.js"></script>
     <script src="markers/markers.js"></script>
     <script src="core/state.js"></script>
     <script src="core/faders.js"></script>
@@ -226,7 +227,7 @@
                     —</div>
                 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px"
                     y="0px" width="100%" height="100%" viewBox="0 8 320 34.2" xml:space="preserve">
-                    <text id="status" onClick="prompt_seek()" ; text-anchor="middle" ;
+                    <text id="status" onClick="nikStatusAreaClick(this)" ; text-anchor="middle" ;
                         transform="matrix(1 0 0 1 155.1 27.4)" font-family="'Open Sans'" font-size="26px"></text>
                     <text id="timeUnits" text-anchor="middle" ; transform="matrix(1 0 0 1 155.1 39.4)" fill="#A8A8A8"
                         font-family="'Open Sans'" font-size="9px">Hours:Minutes:Seconds:Frames</text>
