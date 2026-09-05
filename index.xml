@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Rea-Nik" commit="4f00818754ee7b6ab1617c9760763c332fe013be">
+<index version="1" name="Rea-Nik" commit="3ae46c6f3fc94ac224b843c560bcb7dd01bb79ca">
   <category name="AutoColor">
     <reapack name="reaper_autocolor_live.lua" type="script" desc="REAPER Auto Color por instrumento — VERSIÓN LIVE (background)">
       <metadata>
@@ -14,6 +14,13 @@
       </metadata>
       <version name="1.0" author="Nik" time="2026-09-01T03:19:19Z">
         <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/4f00818754ee7b6ab1617c9760763c332fe013be/AutoColor/reaper_autocolor_live.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="RemoteControl">
+    <reapack name="Nik_RemoteState_Poll.lua" type="script" desc="Nik RemoteState Poll — lectura consolidada de estado para control remoto web">
+      <version name="1.0" author="Nik" time="2026-09-05T08:05:46Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/3ae46c6f3fc94ac224b843c560bcb7dd01bb79ca/RemoteControl/Nik_RemoteState_Poll.lua</source>
       </version>
     </reapack>
   </category>
