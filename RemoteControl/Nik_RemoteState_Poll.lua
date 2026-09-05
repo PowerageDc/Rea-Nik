@@ -1,5 +1,5 @@
 -- @description Nik RemoteState Poll — lectura consolidada de estado para control remoto web
--- @version 1.0
+-- @version 1.1
 -- @author Nik
 -- @provides
 --   ActiveProject_common_logic.lua
