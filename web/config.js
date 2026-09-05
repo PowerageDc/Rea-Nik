@@ -59,7 +59,7 @@ var NIK_LUA_COMMANDS = {
     // script (o su common_logic), nunca un _RS nuevo encadenado acá.
     statePoll: {
         luaFile: "Nik_RemoteState_Poll.lua",
-        commandId: "_RS63d9239195971e67e8f6101efab8a394ae6b274e"
+        commandId: "_RS77cef7ebc79f9272c90cdcbe1f5f3dce141ef742"
     },
     // Lectura on-demand, deliberadamente FUERA del poll de fondo (costo de
     // EnumProjects no vale la pena en cada tick de 1000ms) — ver
