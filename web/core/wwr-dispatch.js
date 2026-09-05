@@ -95,6 +95,11 @@ function wwr_onreply(results) {
                             statusDisplay.style.fill = "#a8a8a8";
                         }
                         if (tok[2] != playPosSeconds) { playPosSeconds = tok[2]; }
+                        // Refresco en vivo del BPM equivalente de Playrate: en proyectos
+                        // con mapa de tempo variable, el bpm original vigente cambia según
+                        // la sección que está sonando -- no alcanza con refrescar solo
+                        // cuando llega el poll lento de EXTSTATE/playrate (ver playrate.js).
+                        nikPlayrateRefreshMainReadout(nikPlayrateEnsureFader().getValue());
                     }
                     last_time_str = tok[4];
                 }
@@ -106,7 +111,7 @@ function wwr_onreply(results) {
                         nikTabMemoryResetRenderCaches();
                         nikTabMemoryRestore(tok[3]);
                         nikCurrentProjectName = tok[3];
-                        nikPlayrateRequestBaseTempo(); // tempo base puede diferir por proyecto
+                        nikPlayrateRequestTempoMap(); // el mapa de tempo puede diferir por proyecto
                     }
                     nikLastProjectNameUpdate = Date.now();
                     var nameDisplay = document.getElementById("nikActiveProjectName");
@@ -121,8 +126,8 @@ function wwr_onreply(results) {
                 if (tok[1] == "NikRemote" && tok[2] == "playrate") {
                     nikPlayrateUpdateDisplay(tok[3]);
                 }
-                if (tok[1] == "NikRemote" && tok[2] == "base_tempo") {
-                    nikPlayrateSetBaseTempo(tok[3]);
+                if (tok[1] == "NikRemote" && tok[2] == "tempo_map") {
+                    nikPlayrateSetTempoMap(tok[3]);
                 }
                 if (tok[1] == "NikRemote" && tok[2] == "marker_bars") {
                     nikMarkerBarsMap = nikParseMarkerBars(tok[3]);
