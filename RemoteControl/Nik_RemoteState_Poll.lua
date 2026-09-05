@@ -1,6 +1,12 @@
 -- @description Nik RemoteState Poll — lectura consolidada de estado para control remoto web
 -- @version 1.0
 -- @author Nik
+-- @provides
+--   ActiveProject_common_logic.lua
+--   MarkerBars_common_logic.lua
+--   ProjectTabs_common_logic.lua
+--   ../_Shared/ReaPitchBus_common_logic.lua
+--   ../_Shared/StemBus_common_logic.lua
 -- Nik_RemoteState_Poll.lua
 -- Lee todo el estado que necesita el control remoto (proyecto activo,
 -- playrate/preserve pitch, semitonos/enabled de ReaPitch) y lo escribe a

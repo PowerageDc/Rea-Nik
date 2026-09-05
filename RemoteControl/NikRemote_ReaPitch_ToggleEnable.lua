@@ -1,3 +1,6 @@
+-- @description Nik RemoteControl — ReaPitch Toggle Enable
+-- @version 1.0
+-- @author Nik
 -- NikRemote_ReaPitch_ToggleEnable.lua
 -- Toggle global: si no todas las instancias de ReaPitch (hijos del Stem Bus)
 -- están encendidas, las enciende todas. Si ya están todas encendidas, las

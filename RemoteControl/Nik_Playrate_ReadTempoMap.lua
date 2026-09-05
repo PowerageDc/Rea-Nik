@@ -1,3 +1,6 @@
+-- @description Nik RemoteControl — Lectura de mapa de tempo completo
+-- @version 1.0
+-- @author Nik
 -- Nik_Playrate_ReadTempoMap.lua
 -- Reemplaza a Nik_Playrate_ReadBaseTempo.lua: en vez de un solo BPM de
 -- referencia, publica el mapa de tempo completo del proyecto (posicion en

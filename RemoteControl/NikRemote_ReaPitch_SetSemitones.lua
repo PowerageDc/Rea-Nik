@@ -1,3 +1,6 @@
+-- @description Nik RemoteControl — ReaPitch Set Semitones
+-- @version 1.0
+-- @author Nik
 -- NikRemote_ReaPitch_SetSemitones.lua
 -- Lee el semitono objetivo desde ExtState (seteado por la web antes de
 -- invocar este script) y lo aplica a todas las instancias de ReaPitch

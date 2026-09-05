@@ -1,3 +1,6 @@
+-- @description Nik RemoteControl — PlayRate Set
+-- @version 1.0
+-- @author Nik
 -- NikRemote_PlayRate_Set.lua
 local target = tonumber(reaper.GetExtState("NikRemote", "playrate_target"))
 if target then

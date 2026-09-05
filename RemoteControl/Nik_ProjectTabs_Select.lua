@@ -1,3 +1,6 @@
+-- @description Nik RemoteControl — Project Tabs Select
+-- @version 1.0
+-- @author Nik
 -- Nik_ProjectTabs_Select.lua
 -- Switchea a la tab de proyecto indicada por el remoto (tap en el popup).
 -- Lee el índice destino (mismo orden de EnumProjects que arma

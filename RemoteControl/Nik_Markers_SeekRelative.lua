@@ -1,3 +1,6 @@
+-- @description Nik RemoteControl — Seek relativo antes de marker
+-- @version 1.0
+-- @author Nik
 -- Nik_Markers_SeekRelative.lua
 -- Seek relativo: N compases antes de un marker dado. Se dispara desde el
 -- popup de markers del control remoto (long-press sobre un marker) -- ver

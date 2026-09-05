@@ -1,3 +1,6 @@
+-- @description Nik RemoteControl — Project Tabs Read
+-- @version 1.0
+-- @author Nik
 -- Nik_ProjectTabs_Read.lua
 -- Wrapper delgado sobre ProjectTabs_common_logic.write_aggregated_state().
 -- Disparado por el remoto (PROJECTTABS_CMD_READ) solo al abrir el popup de
