@@ -173,7 +173,7 @@ function nikOpenMarkerBrowser() {
     document.getElementById("nikMarkerBrowserOverlay").style.display = "flex";
     var savedMem = nikTabUiMemory[nikCurrentProjectName];
     document.getElementById("nikMarkerBrowserScroll").scrollTop = savedMem ? (savedMem.markerScrollTop || 0) : 0;
-    nikMarkerBrowserHighlightCurrent(true);
+    nikMarkerBrowserHighlightCurrent();
     var scroller = document.getElementById("nikMarkerBrowserScroll");
     if (scroller && !nikMarkerFadeListenerAttached) {
         scroller.addEventListener("scroll", nikUpdateMarkerScrollFade);
