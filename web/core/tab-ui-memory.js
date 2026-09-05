@@ -41,13 +41,15 @@ function nikTabMemorySnapshot() {
     var tracksEl = document.getElementById("tracks");
     var transportR3 = document.getElementById("transport_r3");
     var markerScrollEl = document.getElementById("nikMarkerBrowserScroll");
+    var markerOverlay = document.getElementById("nikMarkerBrowserOverlay");
     var prevMem = nikTabUiMemory[nikCurrentProjectName];
+    var markerPopupVisible = markerOverlay && markerOverlay.style.display == "flex";
     return {
         expandedTracks: expandedTracks,
         scrollTop: tracksEl ? tracksEl.scrollTop : 0,
         loopRecExpanded: transportR3 ? !transportR3.classList.contains("nikCollapsed") : false,
         preMarkerBars: (typeof nikPreMarkerBars != "undefined") ? nikPreMarkerBars : 2,
-        markerScrollTop: markerScrollEl ? markerScrollEl.scrollTop : (prevMem ? prevMem.markerScrollTop : 0)
+        markerScrollTop: (markerPopupVisible && markerScrollEl) ? markerScrollEl.scrollTop : (prevMem ? prevMem.markerScrollTop : 0)
     };
 }
 
