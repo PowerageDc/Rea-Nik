@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Rea-Nik" commit="431a38860884b8ab1402316ceea1d4153e84535c">
+<index version="1" name="Rea-Nik" commit="d500c19e7595f20282e86491f54501d24f949862">
   <category name="AutoColor">
     <reapack name="reaper_autocolor_live.lua" type="script" desc="REAPER Auto Color por instrumento — VERSIÓN LIVE (background)">
       <metadata>
@@ -41,6 +41,14 @@
     <reapack name="Nik_RemoteState_Poll.lua" type="script" desc="Nik RemoteState Poll — lectura consolidada de estado para control remoto web">
       <version name="1.0" author="Nik" time="2026-09-05T08:05:46Z">
         <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/3ae46c6f3fc94ac224b843c560bcb7dd01bb79ca/RemoteControl/Nik_RemoteState_Poll.lua</source>
+      </version>
+      <version name="1.1" author="Nik" time="2026-09-05T10:40:57Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/RemoteControl/Nik_RemoteState_Poll.lua</source>
+        <source file="ActiveProject_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/RemoteControl/ActiveProject_common_logic.lua</source>
+        <source file="MarkerBars_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/RemoteControl/MarkerBars_common_logic.lua</source>
+        <source file="ProjectTabs_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/RemoteControl/ProjectTabs_common_logic.lua</source>
+        <source file="../_Shared/ReaPitchBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/_Shared/ReaPitchBus_common_logic.lua</source>
+        <source file="../_Shared/StemBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/_Shared/StemBus_common_logic.lua</source>
       </version>
     </reapack>
     <reapack name="Nik_TrackVis_Refresh.lua" type="script" desc="Nik RemoteControl — Track Visibility Refresh">
