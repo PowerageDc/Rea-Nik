@@ -102,23 +102,77 @@ repo vive fuera de `%APPDATA%\REAPER`), una PC de ensayo no debería
 necesitar ningún junction — ReaPack instala directo en el resource path
 de esa PC. Queda sujeto a la validación del punto anterior.
 
-**Test propuesto:** armar un paquete `.www` mínimo (por ejemplo, solo el
-shell `nsaudio_remote_control.html` sin el resto del árbol) para
-confirmar el destino real de instalación antes de escribir el
-`@provides` completo con toda la estructura de `web/`.
+**Test propuesto — probe descartable, no tocar la interfaz real:**
+
+Estructura, en `Tests-Debug/WebProbe/` (encaja con la convención ya
+existente de esa carpeta: "diagnóstico y prueba, sin dominio propio"):
+
+```
+Tests-Debug/WebProbe/
+├── nik_webprobe.www          ← manifiesto con el header
+└── webprobe/
+    └── index.html             ← un archivo estático de una línea
+```
+
+`nik_webprobe.www`:
+```
+-- @description Nik WebProbe (descartable, test de ruta de instalación)
+-- @version 1.0
+-- @provides
+--   webprobe/index.html
+```
+
+`webprobe/index.html`:
+```html
+<html><body>WEBPROBE OK</body></html>
+```
+
+Un solo archivo real adentro alcanza para responder la pregunta — no
+hace falta reproducir la estructura de `core/`, `modals/`, `markers/` de
+la interfaz real.
+
+Pasos:
+1. Commitear el probe, correr `reapack-index --rebuild`, push.
+2. Instalar el paquete "Nik WebProbe" vía ReaPack en la PC de ensayo.
+3. Buscar en el resource path de esa PC dónde apareció `index.html` (por
+   nombre, ya que no se sabe la ruta de antemano) — confirma si ReaPack
+   resolvió solo contra `reaper_www_root/` o si hizo falta algo más.
+4. Si el servidor web embebido de REAPER está activo, probar acceder por
+   navegador a la URL esperada
+   (`http://<ip-pc-ensayo>:<puerto>/webprobe/index.html`) — doble
+   confirmación, filesystem + funcional.
+5. Borrar `Tests-Debug/WebProbe/`, reindexar (`reapack-index`), listo —
+   no debe quedar rastro en el índice publicado a largo plazo.
+
+Recién con el resultado de esto se escribe el `@provides` completo con
+toda la estructura real de `web/`.
 
 ## Orden propuesto para la sesión de implementación
 
-1. Test named ID (Frente 2) — rápido, desbloquea si hace falta tocar
-   `config.js` antes de seguir.
-2. Test `.www` mínimo (Frente 3) — desbloquea el resto del `@provides` de
-   `web/`.
-3. `@provides` de módulos Lua (Frente 1) — mecánico, sin incógnitas
-   técnicas, se puede hacer en paralelo o después de los tests.
-4. Armar el `@provides` completo de `web/` con el resultado del punto 2.
-5. `reapack-index --rebuild` + validación de instalación end-to-end en
-   una PC de ensayo real (no en la PC de dev, ver gotcha ya documentado
-   en `05_REAPACK_DEPLOY.md`).
+**Ojo con la dependencia:** el test del Frente 2 necesita que exista al
+menos un paquete instalable vía ReaPack — no se puede probar named ID
+"en el vacío" antes de tener algo indexado. El header mínimo (sin
+`@provides` todavía) alcanza para eso: el Command ID se asigna al
+instalar el paquete en Action List, no al ejecutarlo, así que el script
+puede quedar sin `dofile` resuelto todavía y el test igual es válido.
+
+1. **Header mínimo** en al menos un script de entrada (ej.
+   `Nik_RemoteState_Poll.lua`) — solo `@description`/`@version`/`@author`,
+   sin `@provides` todavía, lo justo para que `reapack-index` lo indexe.
+2. `reapack-index --rebuild` + push.
+3. Instalar ese paquete vía ReaPack en la PC de ensayo → copiar el
+   `_RS<hash>` asignado → comparar contra lo hardcodeado en `config.js`
+   (test del Frente 2).
+4. Con el resultado ya sabido (actualizar `config.js` o no, según el
+   caso — ver Frente 2), completar el `@provides` real de todos los
+   scripts + módulos (resto del Frente 1) — recién ahí el script queda
+   funcional de punta a punta en la PC de ensayo.
+5. Test `.www` mínimo (Frente 3) — en paralelo o después del punto 4, sin
+   dependencia de los pasos anteriores.
+6. Armar el `@provides` completo de `web/` con el resultado del punto 5.
+7. `reapack-index --rebuild` final + validación de instalación end-to-end
+   en una PC de ensayo real (no en la PC de dev, ver gotcha ya
+   documentado en `05_REAPACK_DEPLOY.md`).
 
 ## Hallazgos técnicos de esta sesión (investigación web)
 
