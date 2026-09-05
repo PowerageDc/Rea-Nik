@@ -40,11 +40,14 @@ function nikTabMemorySnapshot() {
     }
     var tracksEl = document.getElementById("tracks");
     var transportR3 = document.getElementById("transport_r3");
+    var markerScrollEl = document.getElementById("nikMarkerBrowserScroll");
+    var prevMem = nikTabUiMemory[nikCurrentProjectName];
     return {
         expandedTracks: expandedTracks,
         scrollTop: tracksEl ? tracksEl.scrollTop : 0,
         loopRecExpanded: transportR3 ? !transportR3.classList.contains("nikCollapsed") : false,
-        preMarkerBars: (typeof nikPreMarkerBars != "undefined") ? nikPreMarkerBars : 2
+        preMarkerBars: (typeof nikPreMarkerBars != "undefined") ? nikPreMarkerBars : 2,
+        markerScrollTop: markerScrollEl ? markerScrollEl.scrollTop : (prevMem ? prevMem.markerScrollTop : 0)
     };
 }
 
@@ -67,7 +70,7 @@ function nikTabMemoryResetRenderCaches() {
 // Aplica el desplegado guardado (o colapsado por default si es la primera
 // vez que se ve ese proyecto), sin animación — ver nikSetTrackExpandedInstant.
 function nikTabMemoryRestore(projectName) {
-    var saved = nikTabUiMemory[projectName] || { expandedTracks: {}, scrollTop: 0, loopRecExpanded: false, preMarkerBars: 2 };
+    var saved = nikTabUiMemory[projectName] || { expandedTracks: {}, scrollTop: 0, loopRecExpanded: false, preMarkerBars: 2, markerScrollTop: 0 };
     nikTabMemoryPendingRestore = { expandedTracks: saved.expandedTracks, scrollTop: saved.scrollTop || 0 };
     var domCount = document.getElementsByClassName("trackRow2").length;
     for (var i = 0; i < domCount; i++) {

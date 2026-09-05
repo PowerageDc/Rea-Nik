@@ -170,8 +170,10 @@ function nikOpenMarkerBrowser() {
         list.appendChild(item);
         }
     nikMarkerBrowserCurrentId = null;
-    nikMarkerBrowserHighlightCurrent();
     document.getElementById("nikMarkerBrowserOverlay").style.display = "flex";
+    var savedMem = nikTabUiMemory[nikCurrentProjectName];
+    document.getElementById("nikMarkerBrowserScroll").scrollTop = savedMem ? (savedMem.markerScrollTop || 0) : 0;
+    nikMarkerBrowserHighlightCurrent(true);
     var scroller = document.getElementById("nikMarkerBrowserScroll");
     if (scroller && !nikMarkerFadeListenerAttached) {
         scroller.addEventListener("scroll", nikUpdateMarkerScrollFade);
@@ -190,7 +192,7 @@ function nikMarkerBrowserFindCurrentId(pos) {
     return currentId;
     }
 
-function nikMarkerBrowserHighlightCurrent() {
+function nikMarkerBrowserHighlightCurrent(skipAutoScroll) {
     var overlay = document.getElementById("nikMarkerBrowserOverlay");
     if (!overlay || overlay.style.display != "flex") return;
     var currentId = nikMarkerBrowserFindCurrentId(parseFloat(playPosSeconds));
@@ -204,7 +206,7 @@ function nikMarkerBrowserHighlightCurrent() {
         items[i].style.backgroundColor = isCurrent ? "#1f2f33" : "transparent";
         if (isCurrent) currentItem = items[i];
         }
-    if (currentItem) {
+    if (currentItem && !skipAutoScroll) {
         var scroller = document.getElementById("nikMarkerBrowserScroll");
         var itemTop = currentItem.offsetTop;
         var itemBottom = itemTop + currentItem.offsetHeight;
@@ -216,6 +218,15 @@ function nikMarkerBrowserHighlightCurrent() {
         }
     }
 
+function nikMarkerBrowserSaveScroll() {
+    if (!nikCurrentProjectName) return;
+    var scroller = document.getElementById("nikMarkerBrowserScroll");
+    if (!scroller) return;
+    if (!nikTabUiMemory[nikCurrentProjectName]) nikTabUiMemory[nikCurrentProjectName] = nikTabMemorySnapshot();
+    nikTabUiMemory[nikCurrentProjectName].markerScrollTop = scroller.scrollTop;
+    }
+
 function nikCloseMarkerBrowser() {
+    nikMarkerBrowserSaveScroll();
     document.getElementById("nikMarkerBrowserOverlay").style.display = "none";
     }
