@@ -197,10 +197,22 @@ function nikMarkerBrowserHighlightCurrent() {
     if (currentId == nikMarkerBrowserCurrentId) return;
     nikMarkerBrowserCurrentId = currentId;
     var items = document.getElementById("nikMarkerBrowserList").children;
+    var currentItem = null;
     for (var i = 0; i < items.length; i++) {
         var isCurrent = (items[i].getAttribute("data-markerid") == currentId);
         items[i].style.borderLeftColor = isCurrent ? "#00D0FF" : "transparent";
         items[i].style.backgroundColor = isCurrent ? "#1f2f33" : "transparent";
+        if (isCurrent) currentItem = items[i];
+        }
+    if (currentItem) {
+        var scroller = document.getElementById("nikMarkerBrowserScroll");
+        var itemTop = currentItem.offsetTop;
+        var itemBottom = itemTop + currentItem.offsetHeight;
+        var viewTop = scroller.scrollTop;
+        var viewBottom = viewTop + scroller.clientHeight;
+        if (itemTop < viewTop || itemBottom > viewBottom) {
+            currentItem.scrollIntoView({ block: "center", behavior: "smooth" });
+            }
         }
     }
 
