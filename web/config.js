@@ -20,23 +20,23 @@
 var NIK_LUA_COMMANDS = {
     reaPitchSet: {
         luaFile: "NikRemote_ReaPitch_SetSemitones.lua",
-        commandId: "_RSd44494b93f93ba815104943210d9d60d634aa97f"
+        commandId: "_RS7e588f562834facba2540f56370d89fc6765edaf"
     },
     reaPitchToggle: {
         luaFile: "NikRemote_ReaPitch_ToggleEnable.lua",
-        commandId: "_RS36d3eee6ba9a0ea78b6d4e7c82af2cee83414901"
+        commandId: "_RSb2138070e19c8658594ab91b6f72b975e3a3aaf4"
     },
     playrateSet: {
         luaFile: "NikRemote_PlayRate_Set.lua",
-        commandId: "_RS88f2ff39489a77ffacf278d52707c7758bbe9a47"
+        commandId: "_RSaf7630759774b3248879211af4060c8ccc46d423"
     },
     playrateTogglePreservePitch: {
         luaFile: "NikRemote_PlayRate_TogglePreservePitch.lua",
-        commandId: "_RS9f226501268a0ae8972a775fbfa10f1672b21e18"
+        commandId: "_RS5ccf8eb0e00608ef3c07c0557af514db831b0c71"
     },
     trackVisRefresh: {
         luaFile: "Nik_TrackVis_Refresh.lua",
-        commandId: "_RS9e8690f5288bed472199c14261d035628e558413"
+        commandId: "_RSaa3488c24c557c5272537302cc5e588e04a6df14"
     },
     // Lectura on-demand del mapa de tempo completo del proyecto (todas las
     // posiciones de tempo/time-sig marker + su bpm, o un unico punto en
@@ -50,7 +50,7 @@ var NIK_LUA_COMMANDS = {
     // reemplazar este commandId placeholder por el real.
     playrateTempoMapRead: {
         luaFile: "Nik_Playrate_ReadTempoMap.lua",
-        commandId: "_RSa7a7fcd6586da58b20de8b8607ac23602a829c9e"
+        commandId: "_RS89d73a1e79056655be8c85b0c4c06f3293a272d2"
     },
     // Lectura consolidada: proyecto activo + playrate/preserve pitch +
     // ReaPitch (semitonos/enabled) + compases por sección, en un solo
@@ -66,29 +66,28 @@ var NIK_LUA_COMMANDS = {
     // remote_control.md, "Selector de proyectos (tabs)".
     projectTabsRead: {
         luaFile: "Nik_ProjectTabs_Read.lua",
-        commandId: "_RS7d6978f61a8e761e3043667ccdb5eae1dd4c157d"
+        commandId: "_RS3a08f9b323ce908079914d573fffd19355cc69a1"
     },
     projectTabsSelect: {
         luaFile: "Nik_ProjectTabs_Select.lua",
-        commandId: "_RS5dc6a620c79603004bb66e4d0b4d8ffca9b832f5"
+        commandId: "_RSb727e02414793872e7398ac26b113906d666d407"
     },
     // Botones ⏮/⏭ del nikTabBar — van encadenados con la acción nativa 40667
     // (no forman parte del objeto, van hardcodeados junto a este Command ID
     // en el propio onclick). 
     tabPrev: {
         luaFile: "NikRemote_TabPrev.lua",
-        commandId: "_RS8a4f73b76e280fee93fdc4fa4a20767f1cdd0743"
+        commandId: "_RSd93405ed5b06b81dba0b95dd996e624cf712777b"
     },
     tabNext: {
         luaFile: "NikRemote_TabNext.lua",
-        commandId: "_RSf210b1bad35f1d98081c72ff7a89bcf1949f5538"
+        commandId: "_RS6c8005d1c4b2c718df4bac9472764000708082b7"
     },
     // Seek relativo "N compases antes de <marker>" -- long-press en el popup
-    // de markers. Placeholder: reemplazar por el Command ID real una vez
-    // registrado el script en el Action List de esta PC.
+    // de markers.
     preMarkerSeek: {
         luaFile: "Nik_Markers_SeekRelative.lua",
-        commandId: "_RS4a5dc1b0b6e91880cf9f2d469c1cb0bad2bc87b2",
+        commandId: "_RS5a6d12f5fb532102c7afbde2760ea6cff26bb7f1",
     }
 };
 
