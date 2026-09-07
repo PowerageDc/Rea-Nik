@@ -203,3 +203,32 @@ por proyecto" → gotchas).
 
 Aplica a cualquier patrón de clonado de templates por instancia (tracks,
 sends, o UI repetida en otros paneles) — no solo al caso ya resuelto.
+
+## Patrón de módulos JS de puro cálculo (wrapper de objeto único)
+
+Convención nueva — no retroactiva, no implica reescribir `state.js` ni
+otros archivos existentes que usan variables/funciones sueltas en global
+scope. Aplica de acá en adelante para módulos JS nuevos que sean **puro
+cálculo** (sin estado propio, sin dependencia de DOM): en vez de N
+funciones sueltas en global scope, se agrupan en un único objeto global:
+
+```js
+var nikNombreDelModulo = {
+    funcionUno: function(args) { ... },
+    funcionDos: function(args) { ... }
+};
+```
+
+Motivo: mantiene el criterio ya usado en todo el control remoto (sin
+bundler, sin `import`/`export`, orden de carga vía `<script>` tags — ver
+`core/state.js`), pero evita ensuciar el global scope con un nombre por
+función a medida que el proyecto escala. Paralelo del lado Lua: `dofile`
++ `local M = {}` ... `return M` (ver "Patrón de módulos de lógica
+compartida" más arriba en este documento) — mismo espíritu, mecanismo
+distinto porque el contexto de carga es distinto (Lua resuelve ruta
+relativa bajo demanda; JS depende de que el script tag ya se haya cargado
+antes en el documento).
+
+Caso implementado: `nikTranspose` (`core/music-transpose.js`) —
+transposición de tonalidad/acordes para la feature MusicState (ver
+`IMPL_MusicState.md`).
