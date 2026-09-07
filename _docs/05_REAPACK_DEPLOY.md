@@ -1,45 +1,33 @@
 # Deploy vía ReaPack
 
-Documenta el empaquetado y distribución de scripts a PCs de ensayo (sin
-git ni editor de código instalado) usando ReaPack, con `reapack-index`
-generando el índice desde el mismo repo `Rea-Nik` versionado en
-`04_GIT_TOOLING.md`. El repo de desarrollo vive en `C:\dev\Rea-Nik\`, fuera
-de `%APPDATA%\REAPER` (ver "Entorno de desarrollo" en
-`00_CONTEXTO_GENERAL.md`). No duplica convenciones de nomenclatura ni
-estructura de carpetas (ver `01_CONVENCIONES.md`).
+Empaquetado y distribución de scripts a PCs sin git ni editor de código,
+vía `reapack-index` generando el índice desde el mismo repo `Rea-Nik`. No
+duplica convenciones de nomenclatura/estructura (`01_CONVENCIONES.md`) ni
+setup de git (`04_GIT_TOOLING.md`).
 
 ## Alcance: qué se deploya y qué no
 
-Solo se deploya un subconjunto de `Scripts/Custom/`: hoy, `AutoColor/` y
-`RemoteControl/`. El resto (`RenderWorkflow/`, `TempoTools/`,
-`MvsepImporter/`, `StemFragment/`, `Tests-Debug/`) es uso local únicamente
-y **no necesita exclusión explícita**: `reapack-index` solo indexa
-archivos que tienen el header de metadata al principio (ver abajo) — un
-script sin header simplemente no se convierte en paquete, sin tener que
-listarlo en ningún lado.
+Solo un subconjunto del repo: hoy, `AutoColor/` (script suelto) y
+`RemoteControl/` (metapaquete + `.www`, ver abajo). El resto
+(`RenderWorkflow/`, `TempoTools/`, `MvsepImporter/`, `StemFragment/`,
+`Tests-Debug/`) es uso local: no necesita exclusión explícita, porque
+`reapack-index` solo indexa lo que tiene header de metadata — sin header,
+no hay paquete, sin tener que listarlo en ningún lado.
 
-La carpeta `_docs/` (los `.md` de este proyecto) se excluye del escaneo
-con la flag `--ignore _docs`, para que `reapack-index` ni siquiera la
-revise (no tiene sentido como paquete y evita ruido/validaciones sobre
-archivos que no son código).
+`_docs/` se excluye siempre del escaneo (ver `.reapack-index.conf` más
+abajo) — no tiene sentido como paquete.
 
-## Prerrequisitos (solo en la PC de desarrollo — las PCs de destino no
-necesitan nada de esto, solo ReaPack, que ya viene con REAPER)
+## Prerrequisitos (solo PC de desarrollo; destino solo necesita ReaPack)
 
-- **Ruby**, instalado con RubyInstaller, incluyendo el componente **MSYS2
-  development toolchain** (necesario para compilar `rugged`, dependencia
-  de `reapack-index` con extensión nativa en C). El componente "RI and
-  HTML documentation" no hace falta — es solo documentación de Ruby.
+- **Ruby** (RubyInstaller) con el componente **MSYS2 development
+  toolchain** — necesario para compilar `rugged`, dependencia nativa de
+  `reapack-index`. ("RI and HTML documentation" no hace falta.)
 - **`reapack-index`**: `gem install reapack-index`.
-- **`pandoc`**: `winget install --id JohnMacFarlane.Pandoc` (o instalador
-  en pandoc.org). **Obligatorio, no opcional** — sin él, la conversión
-  del `@about` a RTF falla y bloquea la indexación del paquete entero
-  (no es solo un warning cosmético, a pesar de cómo se ve el mensaje).
+- **`pandoc`**: `winget install --id JohnMacFarlane.Pandoc`. Obligatorio:
+  sin él, la conversión del `@about` a RTF falla y bloquea la indexación
+  del paquete entero (no es un warning cosmético).
 
-## Header de metadata
-
-Cada script a deployar necesita este bloque al principio del archivo,
-antes del código:
+## Header de metadata — script individual
 
 ```lua
 -- @description Nombre corto / descripción visible en ReaPack
@@ -47,97 +35,180 @@ antes del código:
 -- @author Nik
 -- @about
 --   Descripción más larga, puede tener varios párrafos.
---   Para separar párrafos, no dejar una línea `--` completamente vacía
---   (el parser la interpreta como fin del header) — si hace falta
---   separación visual, usar contenido real en esa línea.
+--   No dejar una línea `--` completamente vacía en ningún punto del
+--   header (ni dentro de `@about`) — el parser la interpreta como fin
+--   del header y corta ahí. Si hace falta separación visual, poner
+--   contenido real en esa línea.
 ```
 
-Reglas duras:
-- No puede haber líneas vacías en ningún punto del header (ni siquiera
-  `--` sin contenido después, dentro de un bloque multilínea como
-  `@about`) — corta el parseo ahí mismo.
-- El header tiene que estar comiteado en git para que `reapack-index` lo
-  vea (escanea el historial de commits, no el working directory).
+El header tiene que estar **comiteado** — `reapack-index` escanea el
+historial de git, no el working directory.
 
-Ejemplo real aplicado: `Scripts/Custom/AutoColor/reaper_autocolor_live.lua`.
+Ejemplo real: `AutoColor/reaper_autocolor_live.lua`.
+
+## Metapaquete — varios scripts + módulos bajo una sola entrada
+
+Usar cuando un dominio tiene varios scripts ejecutables que comparten
+módulos `dofile` (caso `RemoteControl/`, hoy con 13 ejecutables + 5
+módulos `common_logic` en una sola entrada de ReaPack).
+
+Un script "ancla" lleva el header con `@metapackage` + `@provides`
+listando **todos** los archivos del grupo:
+
+```lua
+-- @description Nik RemoteControl — Suite completa (control remoto web)
+-- @version 1.4
+-- @author Nik
+-- @metapackage
+-- @provides
+--   [main] OtroScript_1.lua
+--   [main] OtroScript_2.lua
+--   Modulo_common_logic.lua
+--   ../_Shared/OtroModulo_common_logic.lua
+```
+
+- `[main]` en los ejecutables (se registran en Action List); sin tag en
+  los módulos (solo se instalan como archivo, no como acción).
+- **Ningún otro script del grupo lleva header propio** — un archivo target
+  solo puede pertenecer a un paquete.
+
+**Cuidado — migrar un script existente a un metapaquete:** sacarle el
+header propio tiene que ir **en el mismo commit** en que se agrega al
+`@provides` del ancla. Si el header se saca un commit después, o el
+`@provides` se agrega uno antes, `reapack-index` tira
+`'X' conflicts with 'X'` y descarta esa versión entera del índice (no
+aborta el rebuild completo, solo esa entrada).
+
+**Cuidado — scripts legacy que quedan fuera del índice pero siguen en el
+historial de git:** si un path viejo (pre-metapaquete) sigue apareciendo
+como paquete suelto en el rebuild, agregarlo a `.reapack-index.conf`
+(`--ignore <path>`, uno por línea) — se comitea, es config del proceso de
+indexado. No confundir con archivos de config local de cada PC
+(`config.local.js`), que sí son gitignoreados.
+
+## Paquete `.www` — interfaces web (`web/`)
+
+Tipo separado, no efecto colateral de indexar los scripts Lua del mismo
+dominio. El manifiesto necesita **extensión `.www`** (no `.html`):
+
+```
+-- @description Nombre de la interfaz
+-- @author Nik
+-- @version 1.0
+-- @provides
+--   config.js
+--   nombre_interfaz.html
+--   styles.css
+--   core/*.js
+--   modals/*/*.{html,js}
+```
+
+- Wildcards y subcarpetas soportados en `@provides` — no listar archivo
+  por archivo si un patrón cubre la carpeta entera.
+- **ReaPack resuelve solo contra `reaper_www_root/` en destino**,
+  preservando la estructura de subcarpetas del `@provides` — no hace
+  falta redirección (`Original > Target`) ni junction en la PC de
+  destino (el junction de dev es solo porque el repo de dev vive fuera
+  de `%APPDATA%\REAPER`, ver `00_CONTEXTO_GENERAL.md`).
+- Archivos generados por PC (ej. `config.local.js`) van **excluidos** del
+  `@provides` y del repo (gitignore) — nunca deploy de esto vía ReaPack.
+- Al instalar/actualizar, queda como **entrada separada** en el listado
+  de ReaPack junto al metapaquete de scripts del mismo dominio — es
+  esperado, no un bug. Tildar ambas casillas antes de dar Install para
+  instalarlas juntas en un solo paso.
+
+## Mecanismo de config por PC (`config.local.js` + generador)
+
+Cuando el JS de una interfaz `.www` necesita Command IDs que cambian por
+PC (`_RS<hash>`, distinto según dónde ReaPack instaló los scripts en esa
+máquina), un script del propio metapaquete resuelve los IDs reales vía
+`AddRemoveReaScript` + `ReverseNamedCommandLookup` y escribe
+`reaper_www_root/config.local.js` (ver `Nik_RemoteControl_GenerateConfig.lua`
+como implementación de referencia).
+
+- **No se autoejecuta.** Correrlo a mano desde el Action List una vez por
+  PC, después de cada instalación o actualización del paquete.
+- El HTML/JS de la interfaz debe cargar `config.local.js` **después** de
+  cualquier default hardcodeado, y cualquier valor derivado de esos IDs
+  (strings compuestos, closures) debe recalcularse on-demand después de
+  esa carga — no capturarlo en una variable al momento de definir el
+  default, o queda con el valor viejo sin error visible.
+- Pendiente abierto (no bloqueante): buscar alternativa a correr esto
+  manualmente sin caer en "regenerar en cada arranque de REAPER"
+  (Startup Actions de SWS/S&M funciona pero reescribe siempre).
 
 ## Generar y publicar el índice
 
-Desde la raíz del repo (`C:\dev\Rea-Nik`):
+Desde la raíz del repo:
 
 ```powershell
-reapack-index --rebuild --ignore _docs -n "Rea-Nik"
+reapack-index --rebuild
 ```
 
-- `-n "Rea-Nik"` solo hace falta en la primera corrida (fija el nombre
-  del repo mostrado en ReaPack).
-- `--rebuild` fuerza un re-escaneo completo; en corridas normales alcanza
-  con `reapack-index --ignore _docs`.
-- Al final pregunta `Commit the new index? [y/N]` — confirmando con `y`,
-  `reapack-index` comitea el `index.xml` por su cuenta (no hace falta
-  `git add`/`git commit` manual para ese archivo puntual).
+- `--rebuild` fuerza re-escaneo completo del historial; con
+  `.reapack-index.conf` ya en el repo no hace falta repetir `--ignore` a
+  mano.
+- Al final pregunta `Commit the new index? [y/N]` — con `y` comitea
+  `index.xml` solo (no hace falta `git add`/`commit` manual para ese
+  archivo).
+- Push manual después (`reapack-index` no pushea).
 
-Después, push manual (`reapack-index` no pushea):
+**Regla dura, sin excepción:** `reapack-index` versiona por el tag
+`@version` del header, no por contenido ni por commit. **Cualquier
+cambio a un archivo ya indexado exige bump de `@version` en el mismo
+commit** — sin esto, el `index.xml` sigue sirviendo la versión anterior
+en silencio, sin error.
 
-```powershell
-git push
-```
+**Squash merge de una rama de deploy a `main`:** el `index.xml` de la
+rama queda inválido después del squash (sus `<source>` apuntan a hashes
+de commit que el squash elimina). Correr `reapack-index --rebuild` **de
+nuevo, parado en `main`** — no reusar el `index.xml` de la rama — y
+comitear ese resultado ahí.
 
 ## Import en una PC de destino
 
-`Extensions > ReaPack > Import a repository`, con la URL:
+`Extensions > ReaPack > Import a repository`, URL:
 
 ```
 https://github.com/PowerageDc/Rea-Nik/raw/main/index.xml
 ```
 
-Repo tiene que ser **público** — `raw.githubusercontent.com` no soporta
-la autenticación que necesitaría un repo privado, y ReaPack no tiene UI
-para eso. Sin datos sensibles en el repo, no hay problema de exponerlo
-(no queda listado en ningún directorio público de ReaPack salvo
-submission manual, que no se hizo).
+Repo público (`raw.githubusercontent.com` no soporta auth de repo
+privado). Sin datos sensibles en el repo, no hay problema.
 
-`Browse packages` → instalar. Si el script queda auto-registrado en el
-Action List sin tocar nada más, el circuito funcionó completo.
+`Browse packages` → tildar lo necesario → instalar. Confirmar
+auto-registro en Action List (scripts) y/o aparición en
+`reaper_www_root` (interfaces web).
 
 **No instalar vía ReaPack en la PC de desarrollo** — generaría una copia
-duplicada del script en otra ruta (`Scripts/Rea-Nik/...`, bajo el
-resource path de REAPER), separada de la que se edita y versiona en
-`C:\dev\Rea-Nik\...`. El import se prueba en una PC de destino real (o una
-PC de ensayo), nunca sobre la de dev.
+duplicada en `Scripts/Rea-Nik/...`, separada de la que se edita en
+`C:\dev\Rea-Nik\...`. Probar siempre en una PC de destino real.
 
-## Gotchas conocidos
+## Cuidados generales (rápidos, no bloqueantes salvo que se dé el caso)
 
+- **`index.xml` desactualizado tras un push reciente:** antes de asumir
+  bug, esperar unos minutos y reimportar el repo en ReaPack — puede ser
+  cache de CDN de `raw.githubusercontent.com`, se resuelve solo con
+  tiempo. Si seguís viendo esto sistemáticamente varias horas después
+  (no minutos), sospechar primero que el push no llegó a hacerse o
+  quedó en otra rama, antes que cache.
 - **`Rugged::ConfigError: ... is not owned by current user`**: ver
   `04_GIT_TOOLING.md`, gotcha de `safe.directory`.
-- **Caracteres acentuados con mojibake al hacer `cat index.xml` en
-  PowerShell**: casi siempre es solo un problema de visualización de la
-  consola (codepage), no del archivo. Antes de asumir que el archivo está
-  corrupto, abrirlo en VS Code (`code index.xml`) — si ahí se ve bien, no
-  hay nada que arreglar.
-- **Categoría anidada en vez de corta** (`Scripts/Custom/AutoColor` en
-  vez de `AutoColor`): limitación conocida por cómo `reapack-index`
-  deriva la categoría (ruta completa desde la raíz del repo). No afecta
-  funcionalidad — ver pendiente documentado en `00_CONTEXTO_GENERAL.md`.
-- Mover/renombrar un script después de generarle header no cambia nada
-  del lado de ReaPack, pero sí invalida el Command ID local si ya estaba
-  registrado en el Action List de la PC de dev — mismo gotcha de siempre,
-  documentado en `01_CONVENCIONES.md`.
-- **`index.xml` desactualizado en ReaPack tras un push reciente**: no es
-  cache de ReaPack — `raw.githubusercontent.com` cachea contenido unos
-  minutos en su CDN (Fastly), independientemente de lo que haga ReaPack.
-  Confirmado reinstalando el repo en ReaPack (el `.xml` cacheado local
-  desaparece y se regenera en cada import, así que no es persistencia de
-  ReaPack) y confirmando el contenido real servido con
-  `Invoke-WebRequest` directo a la URL — si ahí también sale desactualizado,
-  es cache de GitHub, no bug local. Se resuelve solo con tiempo (esperar
-  unos minutos y reimportar); no hay forma de forzarlo desde ReaPack.
+- **Mojibake en `cat index.xml` desde PowerShell**: casi siempre es la
+  consola (codepage), no el archivo — confirmar abriendo con
+  `code index.xml` antes de asumir corrupción.
+- **"missing tag 'version'"** al indexar: preexistente en todos los
+  paquetes, no bloqueante, ignorar.
+- Mover/renombrar un script después de generarle header no afecta a
+  ReaPack, pero sí invalida su Command ID local si ya estaba registrado
+  en el Action List de la PC de dev (gotcha de siempre, ver
+  `01_CONVENCIONES.md`).
 
-## Pendiente
+## Pendientes
 
-- `RemoteControl/`: scripts que consumen módulos de `_Shared/` vía
-  `dofile` van a necesitar el tag `@provides` en el header para que
-  ReaPack instale también esos módulos junto con el script principal —
-  no resuelto todavía, es el próximo paso.
-- Ver reestructuración de carpetas pendiente (categoría corta) en
-  `00_CONTEXTO_GENERAL.md`.
+- Alternativa a correr el generador de `config.local.js` a mano por PC
+  (ver sección de mecanismo arriba).
+- Decidir si los `commandId` hardcodeados como fallback en `config.js`
+  deben eliminarse (forzar error visible si falta `config.local.js`) o
+  mantenerse con validación explícita — hoy, si falta el archivo
+  generado, el sistema corre igual con el default de dev sin avisar.
