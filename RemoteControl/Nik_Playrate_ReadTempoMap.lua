@@ -52,10 +52,8 @@ if #parts == 0 then
 end
 
 if #timesig_parts == 0 then
-    local ok, num, den = reaper.GetProjectTimeSignature2(proj)
-    if ok then
-        timesig_parts[1] = string.format("%d:%d:%d", 1, num, den)
-    end
+    local num, den = reaper.GetProjectTimeSignature2(proj)
+    timesig_parts[1] = string.format("%d:%d:%d", 1, num, den)
 end
 
 reaper.SetExtState("NikRemote", "tempo_map", table.concat(parts, ","), false)
