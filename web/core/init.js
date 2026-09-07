@@ -140,7 +140,7 @@ function init() {
     wwr_req_recur("TRANSPORT;BEATPOS", 10);
     wwr_req_recur("NTRACK;TRACK;GET/40364", 10);
     wwr_req_recur("MARKER;REGION", 500);
-    wwr_req_recur(NIK_SLOW_POLL, 1000);
+    wwr_req_recur(nikBuildSlowPoll(), 1000);
     window.setInterval(nikCheckProjectNameWatchdog, 1000);
     wwr_start();
     nikPlayrateRequestTempoMap();

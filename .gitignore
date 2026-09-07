@@ -5,3 +5,5 @@ Desktop.ini
 
 # VS Code (config de usuario, si en algún momento se generan)
 .vscode/*.log
+
+config.local.js

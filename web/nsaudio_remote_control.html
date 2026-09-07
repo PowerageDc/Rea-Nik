@@ -22,6 +22,20 @@
     </script>
     <link rel="stylesheet" href="styles.css">
     <script src="config.js"></script>
+    <script>
+        (function () {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "config.local.js", false);
+            try {
+                xhr.send(null);
+                if (xhr.status === 200) {
+                    (0, eval)(xhr.responseText);
+                }
+            } catch (e) {
+                // config.local.js no existe en esta PC (instalación limpia vía ReaPack) — se ignora
+            }
+        })();
+    </script>
     <script src="core/utils.js"></script>
     <script src="core/long-press.js"></script>
     <script src="markers/markers.js"></script>

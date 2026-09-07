@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Rea-Nik" commit="4f00818754ee7b6ab1617c9760763c332fe013be">
+<index version="1" name="Rea-Nik" commit="0ce4aeff493b2ca9a85f080f0d797c903eac2458">
   <category name="AutoColor">
     <reapack name="reaper_autocolor_live.lua" type="script" desc="REAPER Auto Color por instrumento — VERSIÓN LIVE (background)">
       <metadata>
@@ -14,6 +14,138 @@
       </metadata>
       <version name="1.0" author="Nik" time="2026-09-01T03:19:19Z">
         <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/4f00818754ee7b6ab1617c9760763c332fe013be/AutoColor/reaper_autocolor_live.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="RemoteControl">
+    <reapack name="Nik_RemoteState_Poll.lua" type="script" desc="Nik RemoteControl — Suite completa (control remoto web)">
+      <version name="1.0" author="Nik" time="2026-09-05T08:05:46Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/3ae46c6f3fc94ac224b843c560bcb7dd01bb79ca/RemoteControl/Nik_RemoteState_Poll.lua</source>
+      </version>
+      <version name="1.1" author="Nik" time="2026-09-05T10:40:57Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/RemoteControl/Nik_RemoteState_Poll.lua</source>
+        <source file="ActiveProject_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/RemoteControl/ActiveProject_common_logic.lua</source>
+        <source file="MarkerBars_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/RemoteControl/MarkerBars_common_logic.lua</source>
+        <source file="ProjectTabs_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/RemoteControl/ProjectTabs_common_logic.lua</source>
+        <source file="../_Shared/ReaPitchBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/_Shared/ReaPitchBus_common_logic.lua</source>
+        <source file="../_Shared/StemBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/d500c19e7595f20282e86491f54501d24f949862/_Shared/StemBus_common_logic.lua</source>
+      </version>
+      <version name="1.2" author="Nik" time="2026-09-05T22:38:52Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/Nik_RemoteState_Poll.lua</source>
+        <source main="main" file="NikRemote_ReaPitch_SetSemitones.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/NikRemote_ReaPitch_SetSemitones.lua</source>
+        <source main="main" file="NikRemote_ReaPitch_ToggleEnable.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/NikRemote_ReaPitch_ToggleEnable.lua</source>
+        <source main="main" file="NikRemote_PlayRate_Set.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/NikRemote_PlayRate_Set.lua</source>
+        <source main="main" file="NikRemote_PlayRate_TogglePreservePitch.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/NikRemote_PlayRate_TogglePreservePitch.lua</source>
+        <source main="main" file="Nik_TrackVis_Refresh.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/Nik_TrackVis_Refresh.lua</source>
+        <source main="main" file="Nik_Playrate_ReadTempoMap.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/Nik_Playrate_ReadTempoMap.lua</source>
+        <source main="main" file="Nik_ProjectTabs_Read.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/Nik_ProjectTabs_Read.lua</source>
+        <source main="main" file="Nik_ProjectTabs_Select.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/Nik_ProjectTabs_Select.lua</source>
+        <source main="main" file="NikRemote_TabPrev.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/NikRemote_TabPrev.lua</source>
+        <source main="main" file="NikRemote_TabNext.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/NikRemote_TabNext.lua</source>
+        <source main="main" file="Nik_Markers_SeekRelative.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/Nik_Markers_SeekRelative.lua</source>
+        <source file="ActiveProject_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/ActiveProject_common_logic.lua</source>
+        <source file="MarkerBars_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/MarkerBars_common_logic.lua</source>
+        <source file="ProjectTabs_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/RemoteControl/ProjectTabs_common_logic.lua</source>
+        <source file="../_Shared/ReaPitchBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/_Shared/ReaPitchBus_common_logic.lua</source>
+        <source file="../_Shared/StemBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/78c0699a8c7cf1db68b0c5f24acd5747babc6fea/_Shared/StemBus_common_logic.lua</source>
+      </version>
+      <version name="1.3" author="Nik" time="2026-09-06T07:36:39Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/Nik_RemoteState_Poll.lua</source>
+        <source main="main" file="Nik_RemoteControl_GenerateConfig.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/Nik_RemoteControl_GenerateConfig.lua</source>
+        <source main="main" file="NikRemote_ReaPitch_SetSemitones.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/NikRemote_ReaPitch_SetSemitones.lua</source>
+        <source main="main" file="NikRemote_ReaPitch_ToggleEnable.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/NikRemote_ReaPitch_ToggleEnable.lua</source>
+        <source main="main" file="NikRemote_PlayRate_Set.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/NikRemote_PlayRate_Set.lua</source>
+        <source main="main" file="NikRemote_PlayRate_TogglePreservePitch.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/NikRemote_PlayRate_TogglePreservePitch.lua</source>
+        <source main="main" file="Nik_TrackVis_Refresh.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/Nik_TrackVis_Refresh.lua</source>
+        <source main="main" file="Nik_Playrate_ReadTempoMap.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/Nik_Playrate_ReadTempoMap.lua</source>
+        <source main="main" file="Nik_ProjectTabs_Read.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/Nik_ProjectTabs_Read.lua</source>
+        <source main="main" file="Nik_ProjectTabs_Select.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/Nik_ProjectTabs_Select.lua</source>
+        <source main="main" file="NikRemote_TabPrev.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/NikRemote_TabPrev.lua</source>
+        <source main="main" file="NikRemote_TabNext.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/NikRemote_TabNext.lua</source>
+        <source main="main" file="Nik_Markers_SeekRelative.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/Nik_Markers_SeekRelative.lua</source>
+        <source file="ActiveProject_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/ActiveProject_common_logic.lua</source>
+        <source file="MarkerBars_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/MarkerBars_common_logic.lua</source>
+        <source file="ProjectTabs_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/RemoteControl/ProjectTabs_common_logic.lua</source>
+        <source file="../_Shared/ReaPitchBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/_Shared/ReaPitchBus_common_logic.lua</source>
+        <source file="../_Shared/StemBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/f7fe12b7838f91b303e1d884004e0c90c41b4a12/_Shared/StemBus_common_logic.lua</source>
+      </version>
+      <version name="1.4" author="Nik" time="2026-09-06T07:50:33Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/Nik_RemoteState_Poll.lua</source>
+        <source main="main" file="Nik_RemoteControl_GenerateConfig.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/Nik_RemoteControl_GenerateConfig.lua</source>
+        <source main="main" file="NikRemote_ReaPitch_SetSemitones.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/NikRemote_ReaPitch_SetSemitones.lua</source>
+        <source main="main" file="NikRemote_ReaPitch_ToggleEnable.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/NikRemote_ReaPitch_ToggleEnable.lua</source>
+        <source main="main" file="NikRemote_PlayRate_Set.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/NikRemote_PlayRate_Set.lua</source>
+        <source main="main" file="NikRemote_PlayRate_TogglePreservePitch.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/NikRemote_PlayRate_TogglePreservePitch.lua</source>
+        <source main="main" file="Nik_TrackVis_Refresh.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/Nik_TrackVis_Refresh.lua</source>
+        <source main="main" file="Nik_Playrate_ReadTempoMap.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/Nik_Playrate_ReadTempoMap.lua</source>
+        <source main="main" file="Nik_ProjectTabs_Read.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/Nik_ProjectTabs_Read.lua</source>
+        <source main="main" file="Nik_ProjectTabs_Select.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/Nik_ProjectTabs_Select.lua</source>
+        <source main="main" file="NikRemote_TabPrev.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/NikRemote_TabPrev.lua</source>
+        <source main="main" file="NikRemote_TabNext.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/NikRemote_TabNext.lua</source>
+        <source main="main" file="Nik_Markers_SeekRelative.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/Nik_Markers_SeekRelative.lua</source>
+        <source file="ActiveProject_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/ActiveProject_common_logic.lua</source>
+        <source file="MarkerBars_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/MarkerBars_common_logic.lua</source>
+        <source file="ProjectTabs_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/RemoteControl/ProjectTabs_common_logic.lua</source>
+        <source file="../_Shared/ReaPitchBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/_Shared/ReaPitchBus_common_logic.lua</source>
+        <source file="../_Shared/StemBus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/e3a22ff9dff8d6b55be71279a01d323824165d69/_Shared/StemBus_common_logic.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="web">
+    <reapack name="Nik_RemoteControl_WebUI.www" type="webinterface" desc="Nik RemoteControl — Interfaz web (control remoto)">
+      <version name="1.0" author="Nik" time="2026-09-07T01:30:21Z">
+        <source file="config.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/config.js</source>
+        <source file="modal-loader.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modal-loader.js</source>
+        <source file="nsaudio_remote_control.html">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/nsaudio_remote_control.html</source>
+        <source file="styles.css">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/styles.css</source>
+        <source file="core/fader-knob-svg.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/fader-knob-svg.js</source>
+        <source file="core/faders.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/faders.js</source>
+        <source file="core/init.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/init.js</source>
+        <source file="core/long-press.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/long-press.js</source>
+        <source file="core/state.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/state.js</source>
+        <source file="core/tab-ui-memory.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/tab-ui-memory.js</source>
+        <source file="core/tracks-render.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/tracks-render.js</source>
+        <source file="core/utils.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/utils.js</source>
+        <source file="core/vertical-fader.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/vertical-fader.js</source>
+        <source file="core/wwr-dispatch.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/core/wwr-dispatch.js</source>
+        <source file="markers/markers.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/markers/markers.js</source>
+        <source file="modals/marker-browser/marker-browser.html">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/marker-browser/marker-browser.html</source>
+        <source file="modals/marker-browser/marker-browser.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/marker-browser/marker-browser.js</source>
+        <source file="modals/playrate/playrate.html">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/playrate/playrate.html</source>
+        <source file="modals/playrate/playrate.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/playrate/playrate.js</source>
+        <source file="modals/project-tabs/project-tabs.html">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/project-tabs/project-tabs.html</source>
+        <source file="modals/project-tabs/project-tabs.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/project-tabs/project-tabs.js</source>
+        <source file="modals/reapitch/reapitch.html">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/reapitch/reapitch.html</source>
+        <source file="modals/reapitch/reapitch.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/reapitch/reapitch.js</source>
+        <source file="modals/tracksvis/tracksvis.html">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/tracksvis/tracksvis.html</source>
+        <source file="modals/tracksvis/tracksvis.js">https://github.com/PowerageDc/Rea-Nik/raw/1b42bbd908d4d8eae2af88489f97e21cb9515e71/web/modals/tracksvis/tracksvis.js</source>
+      </version>
+      <version name="1.1" author="Nik" time="2026-09-07T02:37:48Z">
+        <source file="config.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/config.js</source>
+        <source file="modal-loader.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modal-loader.js</source>
+        <source file="nsaudio_remote_control.html">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/nsaudio_remote_control.html</source>
+        <source file="styles.css">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/styles.css</source>
+        <source file="core/fader-knob-svg.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/fader-knob-svg.js</source>
+        <source file="core/faders.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/faders.js</source>
+        <source file="core/init.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/init.js</source>
+        <source file="core/long-press.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/long-press.js</source>
+        <source file="core/state.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/state.js</source>
+        <source file="core/tab-ui-memory.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/tab-ui-memory.js</source>
+        <source file="core/tracks-render.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/tracks-render.js</source>
+        <source file="core/utils.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/utils.js</source>
+        <source file="core/vertical-fader.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/vertical-fader.js</source>
+        <source file="core/wwr-dispatch.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/core/wwr-dispatch.js</source>
+        <source file="markers/markers.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/markers/markers.js</source>
+        <source file="modals/marker-browser/marker-browser.html">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/marker-browser/marker-browser.html</source>
+        <source file="modals/marker-browser/marker-browser.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/marker-browser/marker-browser.js</source>
+        <source file="modals/playrate/playrate.html">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/playrate/playrate.html</source>
+        <source file="modals/playrate/playrate.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/playrate/playrate.js</source>
+        <source file="modals/project-tabs/project-tabs.html">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/project-tabs/project-tabs.html</source>
+        <source file="modals/project-tabs/project-tabs.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/project-tabs/project-tabs.js</source>
+        <source file="modals/reapitch/reapitch.html">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/reapitch/reapitch.html</source>
+        <source file="modals/reapitch/reapitch.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/reapitch/reapitch.js</source>
+        <source file="modals/tracksvis/tracksvis.html">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/tracksvis/tracksvis.html</source>
+        <source file="modals/tracksvis/tracksvis.js">https://github.com/PowerageDc/Rea-Nik/raw/0ce4aeff493b2ca9a85f080f0d797c903eac2458/web/modals/tracksvis/tracksvis.js</source>
       </version>
     </reapack>
   </category>

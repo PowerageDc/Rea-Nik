@@ -92,7 +92,7 @@ function nikReaPitchStep(direction) {
 
 function nikOpenReaPitchModal() {
     nikReaPitchEnsureFader();
-    wwr_req(NIK_ONDEMAND_READS);
+    wwr_req(NIK_ONDEMAND_READS());
     document.getElementById("nikReaPitchOverlay").style.display = "flex";
 }
 function nikCloseReaPitchModal() {

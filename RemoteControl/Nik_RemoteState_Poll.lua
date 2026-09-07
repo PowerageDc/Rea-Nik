@@ -1,3 +1,26 @@
+-- @description Nik RemoteControl — Suite completa (control remoto web)
+-- @version 1.4
+-- @author Nik
+-- @metapackage
+-- @provides
+--   [main] .
+--   [main] Nik_RemoteControl_GenerateConfig.lua
+--   [main] NikRemote_ReaPitch_SetSemitones.lua
+--   [main] NikRemote_ReaPitch_ToggleEnable.lua
+--   [main] NikRemote_PlayRate_Set.lua
+--   [main] NikRemote_PlayRate_TogglePreservePitch.lua
+--   [main] Nik_TrackVis_Refresh.lua
+--   [main] Nik_Playrate_ReadTempoMap.lua
+--   [main] Nik_ProjectTabs_Read.lua
+--   [main] Nik_ProjectTabs_Select.lua
+--   [main] NikRemote_TabPrev.lua
+--   [main] NikRemote_TabNext.lua
+--   [main] Nik_Markers_SeekRelative.lua
+--   ActiveProject_common_logic.lua
+--   MarkerBars_common_logic.lua
+--   ProjectTabs_common_logic.lua
+--   ../_Shared/ReaPitchBus_common_logic.lua
+--   ../_Shared/StemBus_common_logic.lua
 -- Nik_RemoteState_Poll.lua
 -- Lee todo el estado que necesita el control remoto (proyecto activo,
 -- playrate/preserve pitch, semitonos/enabled de ReaPitch) y lo escribe a
