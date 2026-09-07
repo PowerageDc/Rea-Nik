@@ -113,7 +113,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
-| Deploy vía ReaPack        | En progreso (AutoColor deployado, RemoteControl pendiente) |
+| Deploy vía ReaPack        | Completo (AutoColor + RemoteControl deployados vía metapaquete + .www) |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -123,3 +123,10 @@ render, pero conviven en el mismo proyecto/entorno):
 - Pitch-shift toggle script (per-stem, mapeable a footswitch MIDI).
 - Parser de nomenclatura alternativa de secciones (V1, V2, PC, C1...) usada en
   otros proyectos — no bloqueante.
+- Control remoto web: decidir si los `commandId` hardcodeados como fallback en
+  `config.js` deben eliminarse (forzar error visible si falta
+  `config.local.js`) o mantenerse con validación explícita — hoy fallan en
+  silencio si el generador no corrió en esa PC (ver `05_REAPACK_DEPLOY.md`).
+- Control remoto web: crear `manifest.json` (+ íconos) para habilitar PWA
+  instalable — referenciado por `nsaudio_remote_control.html` al boot,
+  nunca se llegó a crear (404 preexistente, sin impacto funcional).
