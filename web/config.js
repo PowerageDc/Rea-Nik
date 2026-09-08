@@ -72,6 +72,16 @@ var NIK_LUA_COMMANDS = {
         luaFile: "Nik_ProjectTabs_Select.lua",
         commandId: "_RSb727e02414793872e7398ac26b113906d666d407"
     },
+    // Publica harmony_data/project_key/project_roles/cues_data juntos, en
+    // una sola pasada (mismo trigger: conexión de UI / cambio de proyecto,
+    // ver IMPL_MusicState.md sección 1). Renombrado desde
+    // Nik_MusicState_PublishHarmony.lua (ver IMPL sección 7).
+    // PENDING: falta registrar el script en el Action List de esta PC y
+    // reemplazar este commandId placeholder por el real.
+    musicStatePublishAll: {
+        luaFile: "Nik_MusicState_PublishAll.lua",
+        commandId: "_RS79030cbf502d5745efda6628fa8b10e36f9b898d"
+    },
     // Botones ⏮/⏭ del nikTabBar — van encadenados con la acción nativa 40667
     // (no forman parte del objeto, van hardcodeados junto a este Command ID
     // en el propio onclick). 
