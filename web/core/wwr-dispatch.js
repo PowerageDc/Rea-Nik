@@ -95,6 +95,13 @@ function wwr_onreply(results) {
                             statusDisplay.style.fill = "#a8a8a8";
                         }
                         if (tok[2] != playPosSeconds) { playPosSeconds = tok[2]; }
+
+                        // Crudo, sin importar nikPositionDisplayMode -- a diferencia de
+                        // statusPosition[0] (línea ~78), que solo recibe tok[5] cuando el
+                        // toggle está en "measures". core/music-state.js necesita esto
+                        // siempre disponible para resolver compás/beat actual.
+                        nikLastPositionBeatsStr = tok[5];
+                        
                         // Refresco en vivo del BPM equivalente de Playrate: en proyectos
                         // con mapa de tempo variable, el bpm original vigente cambia según
                         // la sección que está sonando -- no alcanza con refrescar solo

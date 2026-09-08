@@ -19,6 +19,10 @@ var last_transport_state = -1, mouseDown = 0, last_time_str = "",
 // ruler real del proyecto en REAPER.
 var nikPositionDisplayMode = "measures";
 
+// tok[5] cacheado crudo -sin importar modo de display- por wwr-dispatch.js 
+// Consumido en cada tick por music-state.js
+var nikLastPositionBeatsStr = "";
+
 // --- ReaPitch / Playrate / markers (flags de estado runtime) ---
 var nikReaPitchDragging = false;
 var nikPlayrateDragging = false;
