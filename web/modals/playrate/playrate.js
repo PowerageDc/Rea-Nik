@@ -123,7 +123,9 @@ function nikPlayrateRefreshMainReadout(percent) {
 // BPM equivalente desde el arranque, no solo después de haber abierto el
 // popup alguna vez. Reemplaza a nikPlayrateRequestBaseTempo.
 function nikPlayrateRequestTempoMap() {
-    wwr_req(NIK_LUA_COMMANDS.playrateTempoMapRead.commandId + ";GET/EXTSTATE/NikRemote/tempo_map");
+    // timesig_map viaja pegado a tempo_map -- Nik_Playrate_ReadTempoMap.lua publica
+    // los dos en la misma corrida. Lo consume core/music-state.js, no este archivo.
+    wwr_req(NIK_LUA_COMMANDS.playrateTempoMapRead.commandId + ";GET/EXTSTATE/NikRemote/tempo_map;GET/EXTSTATE/NikRemote/timesig_map");
 }
 
 // onchange del campo de BPM: traduce a %, clampea al rango del fader,
@@ -198,7 +200,11 @@ function nikPlayrateUpdateDisplay(val) {
 
 function nikOpenPlayrateModal() {
     nikPlayrateEnsureFader();
-    wwr_req(NIK_ONDEMAND_READS + ";" + NIK_LUA_COMMANDS.playrateTempoMapRead.commandId + ";GET/EXTSTATE/NikRemote/tempo_map");
+    // timesig_map sumado acá para que el coordinador pueda refrescarlo a
+    // mano (abriendo el modal) si edita time signature markers en vivo sin
+    // cambiar de proyecto -- ver nikPlayrateRequestTempoMap para el otro
+    // trigger (boot/cambio de proyecto).
+    wwr_req(NIK_ONDEMAND_READS + ";" + NIK_LUA_COMMANDS.playrateTempoMapRead.commandId + ";GET/EXTSTATE/NikRemote/tempo_map;GET/EXTSTATE/NikRemote/timesig_map");
     document.getElementById("nikPlayrateOverlay").style.display = "flex";
 }
 function nikClosePlayrateModal() {

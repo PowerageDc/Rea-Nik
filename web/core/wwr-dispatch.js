@@ -118,7 +118,8 @@ function wwr_onreply(results) {
                         nikTabMemoryResetRenderCaches();
                         nikTabMemoryRestore(tok[3]);
                         nikCurrentProjectName = tok[3];
-                        nikPlayrateRequestTempoMap(); // el mapa de tempo puede diferir por proyecto
+                        nikPlayrateRequestTempoMap(); // el mapa de tempo puede diferir por proyecto (trae tempo_map + timesig_map)
+                        nikMusicStateRequestAll(); // harmony/key/roles/cues tambien son por-proyecto
                     }
                     nikLastProjectNameUpdate = Date.now();
                     var nameDisplay = document.getElementById("nikActiveProjectName");
@@ -129,6 +130,25 @@ function wwr_onreply(results) {
                 }
                 if (tok[1] == "NikRemote" && tok[2] == "reapitch_enabled") {
                     nikReaPitchUpdateEnabledDisplay(tok[3]);
+                }
+                if (tok[1] == "NikRemote" && tok[2] == "timesig_map") {
+                    nikMusicStateSetTimesigMap(tok[3]);
+                }
+                // MusicState (harmony/key/roles/cues) -- namespace propio,
+                // no vive en NIK_SLOW_POLL: llega on-demand via
+                // nikMusicStateRequestAll() (core/music-state.js), disparado
+                // al conectar / cambiar de proyecto.
+                if (tok[1] == "NikMusicState" && tok[2] == "harmony_data") {
+                    nikMusicStateSetHarmonyData(tok[3]);
+                }
+                if (tok[1] == "NikMusicState" && tok[2] == "project_key") {
+                    nikMusicStateSetProjectKey(tok[3]);
+                }
+                if (tok[1] == "NikMusicState" && tok[2] == "project_roles") {
+                    nikMusicStateSetProjectRoles(tok[3]);
+                }
+                if (tok[1] == "NikMusicState" && tok[2] == "cues_data") {
+                    nikMusicStateSetCuesData(tok[3]);
                 }
                 if (tok[1] == "NikRemote" && tok[2] == "playrate") {
                     nikPlayrateUpdateDisplay(tok[3]);
