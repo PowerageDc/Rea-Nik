@@ -36,14 +36,15 @@ local namespace = Bridge.NAMESPACE
 -- respuesta (protocolo linea-por-registro), lo cual rompe JSON.parse()
 -- del lado del cliente. Confirmado con prueba real -- IMPL seccion 3.
 
+-- project_key / project_roles: ya no se pisan con sample -- el Helper
+-- (MusicState/Nik_MusicState_Helper.lua) escribe datos reales en esas
+-- dos keys desde el paso 3. Este script ahora solo las puentea.
+-- harmony_data / cues_data: siguen con sample hasta que el Helper
+-- tenga esos tabs (pasos 4-5) -- TODO se achica, no desaparece todavia.
 local sample_harmony = '{"12":[{"qn_offset":0.0,"chord":"Cmaj7"},{"qn_offset":2.5,"chord":"Dm7"}],"13":[{"qn_offset":0.0,"chord":"G7"},{"qn_offset":3.75,"chord":"Cmaj7"}]}'
-local sample_project_key = '{"tonic":"G","mode":"major"}'
-local sample_project_roles = '["coordinador","cantantes","guitarristas","bajistas","bateria"]'
 local sample_cues = '{"12":[{"qn_offset":0.0,"roles":["cantantes"],"text":"respirar","duration_qn":2.0}]}'
 
 reaper.SetProjExtState(proj, namespace, "harmony_data", sample_harmony)
-reaper.SetProjExtState(proj, namespace, "project_key", sample_project_key)
-reaper.SetProjExtState(proj, namespace, "project_roles", sample_project_roles)
 reaper.SetProjExtState(proj, namespace, "cues_data", sample_cues)
 
 local ok_count, failed = Bridge.bridgeAll(proj)
