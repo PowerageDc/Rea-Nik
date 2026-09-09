@@ -146,16 +146,23 @@ Ya modificado, deployado y validado por URL directa
 
 ---
 
-## 6. Detección de cambio de proyecto (cliente) — pendiente de implementar
+## 6. Detección de cambio de proyecto (cliente) — cerrado
 
-Acordado pero no implementado: el cliente necesita un identificador de
-proyecto (path del `.rpp`, hash, o timestamp) expuesto vía ExtState para
-comparar en cada poll normal y re-disparar el one-shot si cambió. Mismo
-mecanismo cubre el caso "REAPER se cerró y volvió a abrir".
+Resultó estar **ya implementado** desde la sesión que cerró la sección 12
+(`wwr-dispatch.js`, caso `EXTSTATE`/`NikRemote`/`active_project_name`,
+dispara `nikMusicStateRequestAll()` igual que `nikPlayrateRequestTempoMap()`)
+— lo que faltaba no era la detección en sí, sino que el bridge Lua no
+limpiaba el puente al no encontrar dato. Ver sección 13.5 (Helper UI) para
+el detalle completo del bug y el fix — se dejó documentado ahí en vez de
+acá porque se encontró en el contexto de esa sesión, con los tests que lo
+confirman.
 
-Decisión pendiente: dónde vive la comparación — probablemente
-`core/state.js` o un módulo nuevo `core/music-state.js`, agregando el
-identificador como key más del poll string existente (`NIK_SLOW_POLL`).
+**Validado con test real:** dos proyectos abiertos en tabs distintas de
+REAPER (tonalidades distintas cargadas en cada uno), switch repetido entre
+ambos con la pestaña del control remoto en foco — `GET/EXTSTATE/
+NikMusicState/project_key` refleja siempre el proyecto activo correcto,
+incluyendo el caso "proyecto sin dato guardado" (limpia a vacío, no hereda
+el valor del proyecto anterior).
 
 ---
 
@@ -194,11 +201,13 @@ por lectura real desde el helper de carga cuando exista (sección 8).
 En orden sugerido, no bloqueante entre sí salvo donde se indique:
 
 1. ~~`core/music-state.js` (cliente)~~ — **hecho, ver sección 12.**
-2. **Detección de cambio de proyecto** (sección 6) — necesaria antes de
-   usar esto en un ensayo real con más de un proyecto por sesión.
-3. **Helper UI** para cargar la metadata armónica en `ProjExtState` sin
+2. ~~Detección de cambio de proyecto~~ — **hecho, ver sección 6 y 13.5**
+   (resultó ser un bug de bridge, no una feature faltante).
+3. **Helper UI** para cargar la metadata musical en `ProjExtState` sin
    editar el script a mano — reemplaza el TODO de
-   `Nik_MusicState_PublishHarmony.lua`.
+   `Nik_MusicState_PublishAll.lua`. **En progreso, ver sección 13** —
+   diseño cerrado, pasos 1-3 de 7 implementados y validados (scaffold +
+   captura de cursor, tabs Tonalidad/Roles, bridge reusable + guardado).
 4. **UIs separadas por perfil** (no extensión del remote existente):
    coordinador (ya existe), cantantes (lyrics + datos básicos de la
    canción), instrumentistas (acordes pasados/próximos, indicaciones,
@@ -234,6 +243,15 @@ En orden sugerido, no bloqueante entre sí salvo donde se indique:
   nuevos).
 - **Modificado:** `01_CONVENCIONES.md` (patrón nuevo: módulos JS de puro
   cálculo, wrapper de objeto único).
+- **Nuevo:** `MusicState/Nik_MusicState_Helper.lua` (Helper UI, ver
+  sección 13 — en progreso, pasos 1-3 de 7).
+- **Nuevo:** `_Shared/MusicStateBridge_common_logic.lua` (bridge
+  `ProjExtState` → `ExtState` extraído de `PublishAll`, consumido por
+  ambos scripts).
+- **Modificado:** `MusicState/Nik_MusicState_PublishAll.lua` (usa
+  `MusicStateBridge_common_logic.lua` en vez de bridge inline; dejó de
+  pisar `project_key`/`project_roles` con sample una vez que el Helper
+  escribe datos reales para esas dos keys).
 
 ---
 
@@ -467,3 +485,157 @@ del navegador en la página real del control remoto.
 
 **No probado todavía:** el sentinel `chord: null` (carry-over "apagado")
 con datos reales — el sample hardcodeado no lo incluye.
+
+---
+
+## 13. Helper UI — `Nik_MusicState_Helper.lua` (sesión nueva, en progreso)
+
+Panel nativo ReaImGui (mismo criterio que `Nik_ReaPitchBus_Knob.lua`),
+alcance completo desde el arranque: las 4 piezas de datos (`harmony_data`,
+`project_key`, `project_roles`, `cues_data`) en la misma iteración —no se
+achicó a solo armonía como sugería el punto 3 original de la sección 8.
+
+### 13.1. Estructura de datos en memoria
+
+Arrays planos editables (no keyed-por-compás como el storage final) —
+más simple para tablas ReaImGui por fila. La conversión al JSON keyed
+por compás (formato ya cerrado en sección 4.2) se hace recién al guardar,
+del lado Lua — el Helper arma el JSON, no asume que el cliente lo
+reconstruya.
+
+### 13.2. Layout: 4 tabs + captura de posición por cursor
+
+`ImGui.BeginTabBar`: Tonalidad, Roles, Armonía, Cues. Readout de posición
+del cursor de edición (compás + beat.centésimas) siempre visible arriba de
+los tabs, recalculado cada frame vía `nikMusicStateCaptureCursorPosition()`
+(sección 13.3). Botón "Usar cursor" por fila en Armonía/Cues (pendiente,
+pasos 4-5) llena Compás+Beat automático — el usuario solo tipea
+acorde/texto/roles.
+
+**Navegación (Opción A, cerrada):** botones dedicados ◀▶ Compás / ◀▶
+Marker moviendo el cursor de edición vía API — no atajos de teclado
+(Opción B, descartada para esta iteración: requeriría confirmar que
+ReaImGui captura teclas antes que el keyset global del usuario, y los
+Command IDs de las acciones nativas correspondientes — sin testear,
+no se asume). Pendiente de implementar, paso 6.
+
+### 13.3. Captura de posición del cursor — validado con test real
+
+Función `nikMusicStateCaptureCursorPosition()`, combina
+`TimeMap2_timeToQN` + `TimeMap_QNToMeasures` + `TimeMap_GetMeasureInfo`.
+
+**Gotcha confirmado con test real** (cursor en compás 8, 2/4→4/4,
+posición 8.2.45 según transport de REAPER):
+- `TimeMap_QNToMeasures(proj, qn)` devuelve `measure` **1-indexed**
+  (coincide con el compás que muestra el ruler) — 3 retornos:
+  `measure, qn_start, qn_end`.
+- `TimeMap_GetMeasureInfo(proj, measure)` espera `measure` **0-indexed**
+  — mismo patrón ya documentado para `measurepos` en la sección 5, pero
+  confirmado acá como aplicable también a esta función (no se asume que
+  se extiende a toda la API sin testear cada caso). Hay que restar 1 al
+  valor devuelto por `QNToMeasures` antes de pasarlo a `GetMeasureInfo`.
+- Fórmula de conversión QN↔beat.hundredths (ya validada del lado cliente,
+  sección 12.2) confirmada también en esta dirección (posición → QN):
+  compás 8, beat 2.45, denominador 4 → `qn_offset` esperado 1.45,
+  calculado 1.445422 (diferencia = redondeo del display a centésimas).
+
+Testeado y funcionando en 4/4, 2/4, y 6/8.
+
+### 13.4. Bridge reusable — `_Shared/MusicStateBridge_common_logic.lua`
+
+Extraído de `Nik_MusicState_PublishAll.lua` (que antes tenía el puente
+`ProjExtState → ExtState` inline). Expone `bridgeKey(proj, key)` y
+`bridgeAll(proj)`. Consumido por `PublishAll` y por el botón "Guardar y
+Publicar" del Helper — un solo lugar de verdad para el puente, criterio
+de `01_CONVENCIONES.md` sobre cuándo un módulo entra a `_Shared/`.
+
+### 13.5. Gotcha crítico encontrado y corregido: bridge no limpiaba `ExtState` al fallar
+
+**Síntoma:** un proyecto sin `project_key` guardado en `ProjExtState`
+(tab nuevo sin datos, o proyecto que nunca se abrió con el Helper) reflejaba
+en `GET/EXTSTATE/NikMusicState/project_key` el valor de **otro** proyecto
+—el último que sí tuvo dato publicado exitosamente, sin relación con el
+proyecto activo real.
+
+**Causa:** `bridgeKey()` en su versión original, al no encontrar dato en
+`ProjExtState` (`retval == 0`), simplemente no hacía nada — `return false,
+nil` sin tocar `ExtState`. Como `ExtState` es un store **global** (a
+diferencia de `ProjExtState`, que es por-proyecto), "no escribir nada" no
+significa "vacío" — deja lo que haya quedado del último proyecto que sí
+escribió ahí. Este bug también explica el caso reportado inicialmente
+como "cambio de proyecto no se detecta" (sección 6) — la detección
+funcionaba, el dato que traía estaba corrompido por herencia del proyecto
+anterior.
+
+**Fix:** `bridgeKey()` ahora llama `reaper.DeleteExtState(...)`
+explícitamente cuando no hay dato en `ProjExtState`, en vez de dejar el
+puente intacto.
+
+**Validado con test real:** proyecto con dato guardado (recuerda entre
+aperturas), proyecto sin `ProjExtState` (limpia a vacío), tab unsaved
+(limpia a vacío), edición vía Helper en un proyecto → refleja correcto en
+la URL de consulta. Los 4 casos correctos.
+
+**Principio general (aplica a cualquier bridge similar futuro):** un
+bridge hacia un store global nunca debe asumir que "no escribir" equivale
+a "vacío" — tiene que manejar el caso ausente explícitamente.
+
+### 13.6. Recarga automática al cambiar de project tab
+
+El panel detecta cambio de proyecto activo comparando `reaper.
+EnumProjects(-1)` (puntero) contra el último valor cacheado, en cada
+frame del loop — no hay callback nativo de REAPER para "tab switch" en
+ReaScript estándar, se resuelve por comparación continua (aceptable acá
+porque el loop ya corre a frame rate mientras el panel está abierto,
+distinto de un poll de fondo). Al detectar cambio, recarga `H` completo
+desde `ProjExtState` del proyecto nuevo — **descarta sin avisar** cualquier
+cambio no guardado en el proyecto anterior (default más seguro elegido a
+propósito; un "¿guardar antes de cambiar?" queda pendiente, no bloqueante).
+Mismo mecanismo resuelve gratis la carga inicial al abrir el panel (arranca
+en `nil`, distinto a cualquier proyecto real).
+
+### 13.7. Gotchas de ReaImGui encontrados en esta sesión
+
+- **`ImGui_PushFont` requiere tamaño explícito como tercer argumento**
+  en la versión de ReaImGui que trae REAPER 7.79 (`ctx, font, size`) —
+  firma distinta a versiones más viejas documentadas en ejemplos online.
+- **`ImGuiInputTextFlags_EnterReturnsTrue` cambia la semántica completa
+  del valor de retorno**, no solo agrega Enter como trigger extra: sin la
+  flag, `InputText` sincroniza el buffer devuelto en cada tecla; **con**
+  la flag, solo sincroniza en el momento del Enter. Cualquier flujo que
+  dependa del buffer fuera de ese instante (ej. un botón "Agregar" aparte)
+  queda roto — el widget muestra el texto tipeado (estado interno propio),
+  pero la variable Lua nunca se actualiza hasta el Enter.
+- **`IsItemActive(ctx) and IsKeyPressed(...)` no detecta Enter en un
+  InputText**: el ítem se desactiva en el mismo frame en que se presiona
+  Enter, entonces para cuando se evalúa `IsItemActive` ya es `false`.
+  `IsItemDeactivatedAfterEdit(ctx)` es el patrón correcto — dispara con
+  Enter y también con cualquier pérdida de foco habiendo editado (Tab,
+  click afuera), no distingue la causa. **Pendiente, no bloqueante:**
+  hacer estricto el trigger de "Agregar" en Roles para que distinga Enter
+  real de cualquier deactivation.
+
+### 13.8. Tonalidad: elegir grafía explícita, no derivar por círculo de quintas
+
+A diferencia de la transposición de acordes (sección 10.4, donde sí aplica
+círculo de quintas porque la grafía se **calcula**), `project_key` es dato
+de entrada directo — el usuario ya sabe si la canción está en Db o C#
+(mismo semitono, tonalidades distintas en notación real). El combo de
+tónica expone las 17 grafías posibles (12 naturales/sostenidos + 5
+alternativas bemol) como opciones de texto explícitas, no un criterio
+automático.
+
+### 13.9. Pendiente — pasos 4 a 7
+
+4. Tab Armonía: tabla + botón "Usar cursor" por fila.
+5. Tab Cues: tabla + "Usar cursor" + "Capturar inicio/fin" para
+   `duration_qn` + checkboxes de roles (contra la lista del tab Roles).
+6. Navegación (Opción A, sección 13.2): botones ◀▶ Compás / ◀▶ Marker.
+7. Carga inicial ya resuelta como side-effect de 13.6 — este punto del
+   plan original queda absorbido, no hace falta paso aparte.
+
+**Pendiente aparte, no bloqueante:** revisar por qué
+`Nik_MusicState_PublishAll.lua` da la impresión de correr más seguido de
+lo esperado para ser one-shot (mencionado en sesión, no investigado
+todavía — sospecha: el trigger se dispara más seguido de lo pensado, no
+que haya un loop residente real).
