@@ -25,8 +25,11 @@
 -- carga cuando existan (armonia: IMPL seccion 8.3; roles/cues: sesion
 -- aparte, aun no planificada).
 
+local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
+local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
+
 local proj = 0
-local namespace = "NSAUDIOMUSIC"
+local namespace = Bridge.NAMESPACE
 
 -- JSON en una sola linea a proposito en los 4 casos: el Web Control de
 -- REAPER escapa saltos de linea reales a "\n" literal al servir la
@@ -38,22 +41,14 @@ local sample_project_key = '{"tonic":"G","mode":"major"}'
 local sample_project_roles = '["coordinador","cantantes","guitarristas","bajistas","bateria"]'
 local sample_cues = '{"12":[{"qn_offset":0.0,"roles":["cantantes"],"text":"respirar","duration_qn":2.0}]}'
 
-local function publish(key, sample_value)
-    reaper.SetProjExtState(proj, namespace, key, sample_value)
+reaper.SetProjExtState(proj, namespace, "harmony_data", sample_harmony)
+reaper.SetProjExtState(proj, namespace, "project_key", sample_project_key)
+reaper.SetProjExtState(proj, namespace, "project_roles", sample_project_roles)
+reaper.SetProjExtState(proj, namespace, "cues_data", sample_cues)
 
-    local retval, value_from_proj = reaper.GetProjExtState(proj, namespace, key)
-
-    if retval > 0 and value_from_proj ~= "" then
-        reaper.SetExtState("NikMusicState", key, value_from_proj, false)
-        reaper.ShowConsoleMsg("Nik_MusicState_PublishAll: " .. key .. " publicado OK.\n")
-        return true
-    else
-        reaper.ShowConsoleMsg("Nik_MusicState_PublishAll: no se pudo leer ProjExtState (" .. key .. ").\n")
-        return false
-    end
+local ok_count, failed = Bridge.bridgeAll(proj)
+reaper.ShowConsoleMsg(string.format("Nik_MusicState_PublishAll: %d/%d keys publicadas OK.\n",
+    ok_count, #Bridge.KEYS))
+for _, key in ipairs(failed) do
+    reaper.ShowConsoleMsg("Nik_MusicState_PublishAll: fallo (" .. key .. ").\n")
 end
-
-publish("harmony_data", sample_harmony)
-publish("project_key", sample_project_key)
-publish("project_roles", sample_project_roles)
-publish("cues_data", sample_cues)
