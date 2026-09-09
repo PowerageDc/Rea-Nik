@@ -18,6 +18,10 @@ function M.bridgeKey(proj, key)
         reaper.SetExtState(M.BRIDGE_NAMESPACE, key, value, false)
         return true, value
     end
+    -- Sin dato para este proyecto: limpiar el puente en vez de dejar
+    -- pegado el valor del proyecto anterior (bug real, confirmado con
+    -- caso "tab unsaved hereda project_key de sesion de prueba previa").
+    reaper.DeleteExtState(M.BRIDGE_NAMESPACE, key, false)
     return false, nil
 end
 
