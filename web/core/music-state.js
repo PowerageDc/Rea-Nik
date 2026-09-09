@@ -195,6 +195,13 @@ function nikMusicStateNextChord() {
     return nikMusicStateTransposeChordIfNeeded(nikMusicStateHarmonyFlat[nextIdx].chord);
 }
 
+function nikMusicStateCurrentProjectKey() {
+    if (!nikMusicStateProjectKey) return null;
+    var delta = parseInt(nikReaPitchLastSemitone, 10);
+    if (isNaN(delta)) delta = 0;
+    return nikTranspose.key(nikMusicStateProjectKey.tonic, nikMusicStateProjectKey.mode, delta);
+}
+
 // Ventana de acordes alrededor del vigente -- base del prompter (pasado/
 // futuro, sin límite fijo de 1 hacia atrás/adelante). lookBack/lookForward
 // en cantidad de EVENTOS, no de tiempo.
