@@ -13,15 +13,51 @@ reaper.ImGui_Attach(ctx, font)
 
 local H = {
   key = { tonic_idx = 4, mode_idx = 0 },  -- tonic_idx 4 = "C" (ver TONICS abajo)
-  roles = { 'coordinador', 'cantantes' },
+  roles = {},
   new_role_buf = '',
   save_status = '',
+  last_proj = nil,  -- detecta cambio de project tab, ver loop()
 }
 
 local TONICS = { 'A', 'A#', 'Bb', 'B', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab' }
 local TONICS_STR = table.concat(TONICS, '\0') .. '\0'
 local MODES = { 'major', 'minor' }
 local MODES_STR = 'major\0minor\0'
+
+-- Recarga H desde ProjExtState del proyecto dado. Se usa al abrir el panel
+-- y cada vez que se detecta un cambio de project tab (ver loop()).
+-- Parseo manual (sin libreria JSON): formatos de project_key/project_roles
+-- son simples a proposito, ver IMPL_MusicState.md seccion 4.2/10.2/11.1.
+local function nikMusicStateLoadFromProjExtState(proj)
+  local ok_key, key_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'project_key')
+  if ok_key > 0 and key_json ~= '' then
+    local tonic = key_json:match('"tonic"%s*:%s*"([^"]*)"')
+    local mode = key_json:match('"mode"%s*:%s*"([^"]*)"')
+    if tonic then
+      for i, t in ipairs(TONICS) do
+        if t == tonic then H.key.tonic_idx = i - 1 end
+      end
+    end
+    if mode then
+      for i, m in ipairs(MODES) do
+        if m == mode then H.key.mode_idx = i - 1 end
+      end
+    end
+  end
+
+  local ok_roles, roles_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'project_roles')
+  if ok_roles > 0 and roles_json ~= '' then
+    local roles = {}
+    for role in roles_json:gmatch('"([^"]*)"') do
+      table.insert(roles, role)
+    end
+    H.roles = roles
+  else
+    H.roles = {}
+  end
+
+  -- harmony_data / cues_data: parseo pendiente, se suma en los pasos 4-5.
+end
 
 local function nikMusicStateCaptureCursorPosition()
   local proj = 0
@@ -113,6 +149,13 @@ local function drawRolesTab()
 end
 
 local function loop()
+  local current_proj = reaper.EnumProjects(-1)
+  if current_proj ~= H.last_proj then
+    nikMusicStateLoadFromProjExtState(current_proj)
+    H.last_proj = current_proj
+    H.save_status = 'Proyecto activo cambio -- datos recargados.'
+  end
+
   reaper.ImGui_SetNextWindowSize(ctx, 520, 440, reaper.ImGui_Cond_FirstUseEver())
   reaper.ImGui_PushFont(ctx, font, 16)
   local visible, open = reaper.ImGui_Begin(ctx, 'MusicState Helper', true)
