@@ -7,6 +7,7 @@
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
 local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_logic.lua")
+local RowInputs = dofile(script_dir .. "../_Shared/MusicStateRowInputs_common_logic.lua")
 
 local ctx = reaper.ImGui_CreateContext('MusicState Helper', 0)    -- Context creation, config_flags=0 para desactivar Nav
 local font = reaper.ImGui_CreateFont('sans-serif', 16)
@@ -254,20 +255,7 @@ local function drawArmoniaTab()
       reaper.ImGui_TableNextRow(ctx)
       reaper.ImGui_PushID(ctx, i)
 
-      reaper.ImGui_TableNextColumn(ctx)
-      reaper.ImGui_SetNextItemWidth(ctx, 100)
-      local changed_m
-      changed_m, row.measure = reaper.ImGui_InputInt(ctx, '##compas', row.measure, 1, 10)
-
-      reaper.ImGui_TableNextColumn(ctx)
-      reaper.ImGui_SetNextItemWidth(ctx, 90)
-      local changed_b
-      changed_b, row.beat = reaper.ImGui_InputInt(ctx, '##beat', row.beat, 1, 4)
-
-      reaper.ImGui_TableNextColumn(ctx)
-      reaper.ImGui_SetNextItemWidth(ctx, 100)
-      local changed_h
-      changed_h, row.hundredths = reaper.ImGui_InputInt(ctx, '##centesimas', row.hundredths, 5, 25)
+      RowInputs.drawPositionInputs(ctx, row)
 
       reaper.ImGui_TableNextColumn(ctx)
       reaper.ImGui_SetNextItemWidth(ctx, 100)
@@ -275,11 +263,8 @@ local function drawArmoniaTab()
       changed_c, row.chord = reaper.ImGui_InputText(ctx, '##acorde', row.chord)
 
       reaper.ImGui_TableNextColumn(ctx)
-      if reaper.ImGui_Button(ctx, 'Usar cursor') then
-        local pos = nikMusicStateCaptureCursorPosition()
-        row.measure = pos.measure
-        row.beat = pos.beat
-        row.hundredths = pos.hundredths
+      if RowInputs.drawCursorButton(ctx) then
+        RowInputs.applyCursorToRow(row, nikMusicStateCaptureCursorPosition())
       end
 
       reaper.ImGui_TableNextColumn(ctx)
