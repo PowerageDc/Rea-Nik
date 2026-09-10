@@ -18,6 +18,7 @@ local H = {
   roles = {},
   new_role_buf = '',
   harmony = {},  -- array de {measure, beat, hundredths, chord}; chord == '' -> sentinel null
+  cues = {},  -- array de {measure, beat, hundredths, roles_str, text, duration_qn}
   save_status = '',
   last_proj = nil,  -- detecta cambio de project tab, ver loop()
 }
@@ -115,7 +116,51 @@ local function nikMusicStateLoadFromProjExtState(proj)
     end
   end
 
-  -- cues_data: parseo pendiente, se suma en el proximo paso.
+  -- cues_data: formato con array anidado (roles) dentro de cada evento --
+  -- el regex simple de harmony_data (no-greedy hasta el primer "]") no
+  -- alcanza aca, se rompe con el "]" de roles. Se usa %b[]/%b{} (balance
+  -- nativo de Lua) para el array por compas y para cada objeto.
+  local ok_cues, cues_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'cues_data')
+  H.cues = {}
+  if ok_cues > 0 and cues_json ~= '' then
+    local search_pos = 1
+    while true do
+      local s, bracket_pos, measure_str = cues_json:find('"(%d+)"%s*:%s*%[', search_pos)
+      if not s then break end
+      local array_str = cues_json:match('%b[]', bracket_pos)
+      if not array_str then break end
+      local measure = tonumber(measure_str)
+      local beat_unit_qn = nikMusicStateBeatUnitQN(proj, measure)
+      local inner = array_str:sub(2, -2)
+      local obj_pos = 1
+      while true do
+        local obj_start = inner:find('{', obj_pos)
+        if not obj_start then break end
+        local obj_str = inner:match('%b{}', obj_start)
+        if not obj_str then break end
+        local qn_str = obj_str:match('"qn_offset"%s*:%s*([%d%.]+)')
+        local roles_block = obj_str:match('"roles"%s*:%s*%[(.-)%]')
+        local text = obj_str:match('"text"%s*:%s*"([^"]*)"')
+        local dur_str = obj_str:match('"duration_qn"%s*:%s*([%d%.]+)')
+        local qn_offset = tonumber(qn_str) or 0
+        local beat, hundredths = nikMusicStateQnOffsetToBeat(qn_offset, beat_unit_qn)
+        local roles_list = {}
+        if roles_block then
+          for r in roles_block:gmatch('"([^"]*)"') do table.insert(roles_list, r) end
+        end
+        table.insert(H.cues, {
+          measure = measure,
+          beat = beat,
+          hundredths = hundredths,
+          roles_str = table.concat(roles_list, ','),
+          text = text or '',
+          duration_qn = tonumber(dur_str) or 0,
+        })
+        obj_pos = obj_start + #obj_str
+      end
+      search_pos = bracket_pos + #array_str
+    end
+  end
 end
 
 local function nikMusicStateCaptureCursorPosition()
@@ -180,17 +225,47 @@ local function nikMusicStateSaveAndPublish()
   for _, m in ipairs(measure_parts) do table.insert(measure_jsons, m.json) end
   local harmony_json = '{' .. table.concat(measure_jsons, ',') .. '}'
 
+  -- Mismo criterio que harmony_data (agrupar por compas, ordenar por
+  -- qn_offset dentro de cada compas), con los campos propios de cues.
+  local cues_by_measure = {}
+  for _, row in ipairs(H.cues) do
+    local beat_unit_qn = nikMusicStateBeatUnitQN(proj, row.measure)
+    local qn_offset = nikMusicStateBeatToQnOffset(row.beat, row.hundredths, beat_unit_qn)
+    local roles_parts = {}
+    for role in (row.roles_str or ''):gmatch('[^,]+') do
+      table.insert(roles_parts, string.format('"%s"', role:match('^%s*(.-)%s*$')))
+    end
+    local roles_json = '[' .. table.concat(roles_parts, ',') .. ']'
+    local event_json = string.format('{"qn_offset":%.4g,"roles":%s,"text":"%s","duration_qn":%.4g}',
+      qn_offset, roles_json, row.text or '', row.duration_qn or 0)
+    cues_by_measure[row.measure] = cues_by_measure[row.measure] or {}
+    table.insert(cues_by_measure[row.measure], { qn_offset = qn_offset, json = event_json })
+  end
+
+  local cues_measure_parts = {}
+  for measure, events in pairs(cues_by_measure) do
+    table.sort(events, function(a, b) return a.qn_offset < b.qn_offset end)
+    local event_jsons = {}
+    for _, e in ipairs(events) do table.insert(event_jsons, e.json) end
+    table.insert(cues_measure_parts, { measure = measure,
+      json = string.format('"%d":[%s]', measure, table.concat(event_jsons, ',')) })
+  end
+  table.sort(cues_measure_parts, function(a, b) return a.measure < b.measure end)
+  local cues_measure_jsons = {}
+  for _, m in ipairs(cues_measure_parts) do table.insert(cues_measure_jsons, m.json) end
+  local cues_json = '{' .. table.concat(cues_measure_jsons, ',') .. '}'
+
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'project_key', key_json)
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'project_roles', roles_json)
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'harmony_data', harmony_json)
-  -- cues_data: sin tocar todavia (tab pendiente, proximo paso).
-  -- Nota: esto NO pisa esa key -- SetProjExtState es por-key, no reemplaza el namespace entero.
+  reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'cues_data', cues_json)
 
   local ok_key = Bridge.bridgeKey(proj, 'project_key')
   local ok_roles = Bridge.bridgeKey(proj, 'project_roles')
   local ok_harmony = Bridge.bridgeKey(proj, 'harmony_data')
+  local ok_cues = Bridge.bridgeKey(proj, 'cues_data')
 
-  if ok_key and ok_roles and ok_harmony then
+  if ok_key and ok_roles and ok_harmony and ok_cues then
     H.save_status = 'Guardado OK.'
   else
     H.save_status = 'Error al publicar (ver consola).'
@@ -295,6 +370,79 @@ local function drawArmoniaTab()
   end
 end
 
+local function drawCuesTab()
+  reaper.ImGui_TextDisabled(ctx, '(roles separados por coma; "todos" es un valor valido, sin validar por ahora)')
+  reaper.ImGui_Spacing(ctx)
+
+  local remove_idx = nil
+
+  if reaper.ImGui_BeginTable(ctx, 'cues_table', 8, reaper.ImGui_TableFlags_SizingFixedFit()) then
+    reaper.ImGui_TableSetupColumn(ctx, 'Compas')
+    reaper.ImGui_TableSetupColumn(ctx, 'Beat')
+    reaper.ImGui_TableSetupColumn(ctx, 'Cent.')
+    reaper.ImGui_TableSetupColumn(ctx, 'Roles')
+    reaper.ImGui_TableSetupColumn(ctx, 'Texto')
+    reaper.ImGui_TableSetupColumn(ctx, 'Dur.(QN)')
+    reaper.ImGui_TableSetupColumn(ctx, '')
+    reaper.ImGui_TableSetupColumn(ctx, '')
+    reaper.ImGui_TableHeadersRow(ctx)
+
+    for i, row in ipairs(H.cues) do
+      reaper.ImGui_TableNextRow(ctx)
+      reaper.ImGui_PushID(ctx, i)
+
+      RowInputs.drawPositionInputs(ctx, row)
+
+      reaper.ImGui_TableNextColumn(ctx)
+      reaper.ImGui_SetNextItemWidth(ctx, 120)
+      local changed_r
+      changed_r, row.roles_str = reaper.ImGui_InputText(ctx, '##roles', row.roles_str)
+
+      reaper.ImGui_TableNextColumn(ctx)
+      reaper.ImGui_SetNextItemWidth(ctx, 140)
+      local changed_t
+      changed_t, row.text = reaper.ImGui_InputText(ctx, '##texto', row.text)
+
+      reaper.ImGui_TableNextColumn(ctx)
+      reaper.ImGui_SetNextItemWidth(ctx, 70)
+      local changed_d
+      changed_d, row.duration_qn = reaper.ImGui_InputDouble(ctx, '##duracion', row.duration_qn)
+
+      reaper.ImGui_TableNextColumn(ctx)
+      if RowInputs.drawCursorButton(ctx) then
+        RowInputs.applyCursorToRow(row, nikMusicStateCaptureCursorPosition())
+      end
+
+      reaper.ImGui_TableNextColumn(ctx)
+      if reaper.ImGui_Button(ctx, 'Borrar') then
+        remove_idx = i
+      end
+
+      reaper.ImGui_PopID(ctx)
+    end
+
+    reaper.ImGui_EndTable(ctx)
+  end
+
+  if remove_idx then
+    table.remove(H.cues, remove_idx)
+  end
+
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_Separator(ctx)
+  if reaper.ImGui_Button(ctx, '+ Agregar fila (cursor actual)', 220, 0) then
+    local pos = nikMusicStateCaptureCursorPosition()
+    table.insert(H.cues, {
+      measure = pos.measure,
+      beat = pos.beat,
+      hundredths = pos.hundredths,
+      roles_str = '',
+      text = '',
+      duration_qn = 1.0,
+    })
+  end
+end
+
 local function loop()
   H.consumed_enter = false
 
@@ -353,7 +501,7 @@ local function loop()
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Cues') then
-        reaper.ImGui_TextDisabled(ctx, '(proximo paso)')
+        drawCuesTab()
         reaper.ImGui_EndTabItem(ctx)
       end
       reaper.ImGui_EndTabBar(ctx)
