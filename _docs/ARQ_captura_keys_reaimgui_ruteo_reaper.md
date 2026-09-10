@@ -51,13 +51,26 @@ tecla de forma exclusiva. No hay riesgo de doble disparo.
 
 ### B.1 — Evitar el recuadro de navegación de ImGui
 
-Las flechas por defecto mueven el foco visual entre widgets (Nav de Dear
-ImGui), interfiere con usarlas como atajos propios. Se desactiva por
-ventana, no afecta la lectura de teclas:
+**Corregido tras uso real** (sesión Helper UI, MusicState): la suposición
+original de este documento — que `CreateContext(ctx, 0)` alcanzaba solo —
+era incompleta. Hacen falta **las dos cosas juntas**:
 
 ```lua
+local ctx = reaper.ImGui_CreateContext('Titulo', 0)
+-- ...
 ImGui_Begin(ctx, 'Titulo', true, ImGui_WindowFlags_NoNav())
 ```
+
+`config_flags=0` en `CreateContext` desactiva la feature de navegación a
+nivel de todo el contexto. `WindowFlags_NoNav` en `Begin` es un flag
+**por ventana**, no redundante con el anterior: sin él, en una ventana
+con `TabBar`/`Button` reales se sigue viendo el recuadro celeste
+saltando entre widgets con las flechas, y `Space` con foco en un ítem
+navegable lo activa (ej. cambia de tab) en vez de leerse solo como tecla
+libre. El test aislado original (`test_input_enter_y_teclado_transporte.
+lua`) no tenía `TabBar` ni `Button` en el layout, por eso no expuso el
+caso — confirmado recién al portar el patrón a una UI con esos widgets
+reales.
 
 ### B.2 — Leer teclas y ejecutar acciones nativas
 
