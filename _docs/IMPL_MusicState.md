@@ -205,9 +205,10 @@ En orden sugerido, no bloqueante entre sí salvo donde se indique:
    (resultó ser un bug de bridge, no una feature faltante).
 3. **Helper UI** para cargar la metadata musical en `ProjExtState` sin
    editar el script a mano — reemplaza el TODO de
-   `Nik_MusicState_PublishAll.lua`. **En progreso, ver sección 13** —
-   diseño cerrado, pasos 1-3 de 7 implementados y validados (scaffold +
-   captura de cursor, tabs Tonalidad/Roles, bridge reusable + guardado).
+   `Nik_MusicState_PublishAll.lua`. **Cerrado** — las 4 tabs completas
+   (Tonalidad, Roles, Armonía, Cues), bridge + guardado, navegación por
+   teclado, sentinel `chord:null` validado con dato real. Ver sección 13
+   (diseño base) y sección 14 (sesión que cerró Armonía/Cues/teclado).
 4. **UIs separadas por perfil** (no extensión del remote existente):
    coordinador (ya existe), cantantes (lyrics + datos básicos de la
    canción), instrumentistas (acordes pasados/próximos, indicaciones,
@@ -488,7 +489,7 @@ con datos reales — el sample hardcodeado no lo incluye.
 
 ---
 
-## 13. Helper UI — `Nik_MusicState_Helper.lua` (sesión nueva, en progreso)
+## 13. Helper UI — `Nik_MusicState_Helper.lua` (diseño base, pasos 1-3)
 
 Panel nativo ReaImGui (mismo criterio que `Nik_ReaPitchBus_Knob.lua`),
 alcance completo desde el arranque: las 4 piezas de datos (`harmony_data`,
@@ -505,19 +506,30 @@ reconstruya.
 
 ### 13.2. Layout: 4 tabs + captura de posición por cursor
 
-`ImGui.BeginTabBar`: Tonalidad, Roles, Armonía, Cues. Readout de posición
-del cursor de edición (compás + beat.centésimas) siempre visible arriba de
-los tabs, recalculado cada frame vía `nikMusicStateCaptureCursorPosition()`
-(sección 13.3). Botón "Usar cursor" por fila en Armonía/Cues (pendiente,
-pasos 4-5) llena Compás+Beat automático — el usuario solo tipea
+`ImGui.BeginTabBar`: Tonalidad, Roles, Armonía, Cues — las 4
+implementadas, ver sección 14. Readout de posición del cursor de edición
+(compás + beat.centésimas) siempre visible arriba de los tabs,
+recalculado cada frame vía `nikMusicStateCaptureCursorPosition()`
+(sección 13.3). Botón "Usar cursor" por fila en Armonía/Cues
+**implementado** (`RowInputs.drawCursorButton` + `applyCursorToRow`,
+sección 14.5) — llena Compás+Beat automático, el usuario solo tipea
 acorde/texto/roles.
 
-**Navegación (Opción A, cerrada):** botones dedicados ◀▶ Compás / ◀▶
-Marker moviendo el cursor de edición vía API — no atajos de teclado
-(Opción B, descartada para esta iteración: requeriría confirmar que
-ReaImGui captura teclas antes que el keyset global del usuario, y los
-Command IDs de las acciones nativas correspondientes — sin testear,
-no se asume). Pendiente de implementar, paso 6.
+**Navegación — decisión reabierta con evidencia nueva (sección 14.1).**
+La Opción A (botones dedicados ◀▶) queda **reemplazada** por Opción B
+(atajos de teclado), la misma que acá se había descartado "sin testear".
+Un test aislado (`ARQ_captura_keys_reaimgui_ruteo_reaper.md` +
+`test_input_enter_y_teclado_transporte.lua`) confirmó que ReaImGui
+captura teclas de forma exclusiva con foco en la ventana — el atajo
+nativo de REAPER no se dispara en paralelo, sin riesgo de doble
+ejecución. Implementado y validado en la UI real: Space/Enter
+(transporte play/stop y play/pause), flechas (compás anterior/siguiente,
+marker anterior/siguiente), sin colisión con edición de texto activa
+(guard `IsAnyItemActive` + flag de consumo de un frame para Enter, ver
+sección 14.2). No se agregaron botones ◀▶ dedicados — pendiente evaluar
+si hace falta igual un botón visible para descubribilidad (alguien que
+abra el panel sin conocer los atajos), anotado en el backlog de UX
+(sección 14.8).
 
 ### 13.3. Captura de posición del cursor — validado con test real
 
@@ -611,9 +623,11 @@ en `nil`, distinto a cualquier proyecto real).
   Enter, entonces para cuando se evalúa `IsItemActive` ya es `false`.
   `IsItemDeactivatedAfterEdit(ctx)` es el patrón correcto — dispara con
   Enter y también con cualquier pérdida de foco habiendo editado (Tab,
-  click afuera), no distingue la causa. **Pendiente, no bloqueante:**
-  hacer estricto el trigger de "Agregar" en Roles para que distinga Enter
-  real de cualquier deactivation.
+  click afuera), no distingue la causa. **Resuelto** (sección 14.2):
+  combinar `IsItemDeactivatedAfterEdit` con `IsKeyPressed(Enter)` en el
+  mismo frame distingue Enter real de deactivation por click afuera —
+  extraído a `_Shared/ImGuiInputCommit_common_logic.lua`
+  (`resolveEnterCommit`), aplicado en Roles.
 
 ### 13.8. Tonalidad: elegir grafía explícita, no derivar por círculo de quintas
 
@@ -625,17 +639,211 @@ tónica expone las 17 grafías posibles (12 naturales/sostenidos + 5
 alternativas bemol) como opciones de texto explícitas, no un criterio
 automático.
 
-### 13.9. Pendiente — pasos 4 a 7
+### 13.9. Pasos 4 a 7 — cerrados (sesión de la sección 14)
 
-4. Tab Armonía: tabla + botón "Usar cursor" por fila.
-5. Tab Cues: tabla + "Usar cursor" + "Capturar inicio/fin" para
-   `duration_qn` + checkboxes de roles (contra la lista del tab Roles).
-6. Navegación (Opción A, sección 13.2): botones ◀▶ Compás / ◀▶ Marker.
+4. ~~Tab Armonía: tabla + botón "Usar cursor" por fila.~~ **Hecho,
+   sección 14.3.**
+5. ~~Tab Cues: tabla + "Usar cursor" + roles + `duration_qn`.~~ **Hecho,
+   sección 14.4** — con una diferencia respecto al plan original: roles
+   quedó como texto libre separado por coma, no checkboxes contra la
+   lista de `project_roles` (popup de checkboxes pendiente, backlog UX
+   sección 14.8).
+6. ~~Navegación.~~ **Hecho, pero por Opción B (teclado) en vez de Opción
+   A (botones ◀▶) — ver 13.2 actualizado y sección 14.1.**
 7. Carga inicial ya resuelta como side-effect de 13.6 — este punto del
    plan original queda absorbido, no hace falta paso aparte.
+
+Con esto el plan de 7 pasos de la sección 13 queda completo. Detalle de
+implementación de esta ronda en sección 14.
 
 **Pendiente aparte, no bloqueante:** revisar por qué
 `Nik_MusicState_PublishAll.lua` da la impresión de correr más seguido de
 lo esperado para ser one-shot (mencionado en sesión, no investigado
 todavía — sospecha: el trigger se dispara más seguido de lo pensado, no
 que haya un loop residente real).
+
+---
+
+## 14. Sesión — Atajos de teclado + Armonía + Cues (Helper UI, pasos 4-6 cerrados)
+
+### 14.1. Arquitectura input+teclado — doc aparte, validada con test real
+
+`ARQ_captura_keys_reaimgui_ruteo_reaper.md` (fuera del repo de código,
+doc de arquitectura), basado en `test_input_enter_y_teclado_transporte.
+lua`. Dos patrones:
+
+- **A — commit real de InputText:** `IsItemDeactivatedAfterEdit` +
+  `IsKeyPressed(Enter)` en el mismo frame distingue Enter real de click
+  afuera (que también deactiva sin haber tipeado Enter).
+- **B — teclado como transporte sin robar foco de REAPER:** con foco en
+  la ventana ImGui, un atajo nativo de REAPER no se dispara en paralelo
+  (ReaImGui captura la tecla de forma exclusiva, confirmado). Guard
+  `IsAnyItemActive` para teclas libres (Space) + flag de consumo de un
+  frame para teclas que también commitean un input (Enter, sección
+  B.4 del doc).
+
+**Corrección encontrada al portar a la UI real** (no al test aislado):
+`WindowFlags_NoNav` en `Begin` es necesario **además** de
+`CreateContext(ctx, 0)`, no en vez de — el test aislado no tenía
+`TabBar`/`Button` reales y no expuso el caso. Doc de arquitectura
+corregido (sección B.1).
+
+### 14.2. Módulo `_Shared/ImGuiInputCommit_common_logic.lua`
+
+Extrae los patrones A y B de arriba. Expone `resolveEnterCommit(ctx)`
+(patrón A, devuelve `commit, enter_key`) y `globalKeyPressed(ctx, key,
+consumed)` (patrón B combinado: ventana enfocada + `IsAnyItemActive` +
+flag de consumo opcional). El flag de consumo (`H.consumed_enter`) vive
+en el estado del Helper (`H`), no en el módulo — se resetea al inicio de
+cada `loop()`, el módulo no asume cuántas teclas "consumibles" existen.
+
+Aplicado: commit de Roles (patrón A), atajos globales de transporte y
+navegación en `loop()` (patrón B) — Space/Enter → play-stop/play-pause
+(`CMD_PLAYSTOP` 40044, `CMD_PLAYPAUSE` 40073), flechas → compás anterior/
+siguiente (`CMD_MEASURE_PREV` 41041, `CMD_MEASURE_NEXT` 41040) y marker
+anterior/siguiente (`CMD_MARKER_PREV` 40172, `CMD_MARKER_NEXT` 40173).
+
+### 14.3. Tab Armonía — completo
+
+Fila en memoria: `{measure, beat, hundredths, chord}` — **no** `qn_offset`
+directo, para poder editar Compás/Beat a mano sin pensar en QN. Dos
+funciones de conversión nuevas, inversas entre sí:
+`nikMusicStateBeatUnitQN(proj, measure)` (denominador del compás →
+duración de un beat en QN) + `nikMusicStateQnOffsetToBeat` /
+`nikMusicStateBeatToQnOffset` (esta última cuantiza a la grilla de 0.25,
+sección 4.2). La conversión a `qn_offset` para el JSON final se hace
+recién al guardar, con el timesig propio de cada fila.
+
+Tabla armada con `ImGui_BeginTable` (no `SameLine` con offsets manuales —
+se probó y falla, ver 14.6). "Usar cursor" por fila, "+ Agregar fila
+(cursor actual)" crea con acorde vacío. **Acorde vacío = sentinel
+`chord:null`** al guardar — probado por primera vez con dato real y
+confirmado con el probe script (sección 14.7): `"chord":null` sin
+comillas, recuerda vacío (no como string `"null"`) al reabrir el panel.
+
+### 14.4. Tab Cues — completo
+
+Fila en memoria: `{measure, beat, hundredths, roles_str, text,
+duration_qn}`. Dos decisiones de diseño tomadas esta sesión, distintas
+del plan original de 13.9:
+
+- **`roles_str`: texto libre separado por coma**, no checkboxes contra
+  `project_roles` — evita el problema de ancho variable de una fila de
+  checkboxes y el caso especial de `"todos"`. Sin validar contra
+  `H.roles` (un typo no se detecta) — anotado en backlog UX (14.8), no
+  bloqueante porque la conversión texto→array vive en un solo punto (al
+  guardar) y cambiar el widget más adelante no afecta el resto.
+- **`duration_qn`: `InputDouble` libre en QN, sin cuantizar a la grilla
+  de 0.25.** La grilla de 0.25 es un requisito de **posición**
+  (`qn_offset`), no de duración — no hay ningún consumidor que asuma que
+  `duration_qn` cae en esa grilla (confirmado contra `nikMusicStateActiveCues`,
+  sección 12.2, que solo usa el valor para un cálculo de rango en QN
+  absoluto). Default `1.0` al crear fila nueva (no `0`, para evitar una
+  cue de duración cero y no confundir visualmente con campo vacío).
+
+**Parseo con `%b[]`/`%b{}`** (balance nativo de Lua), no el regex
+no-greedy que usa `harmony_data` — necesario porque cada evento tiene un
+array anidado (`roles`) que rompería un `%[(.-)%]` simple (cortaría en el
+`]` de `roles`, no en el del array externo). Si `harmony_data` alguna vez
+necesita datos más complejos, este es el patrón a portar ahí — no se tocó
+el parseo de harmony en esta sesión, solo se dejó anotado.
+
+Confirmado con probe script: array de `roles` bien formado, sin `\n`
+residual, `proj == bridge` en las 4 keys. El cruce de `duration_qn` sobre
+límite de compás ya estaba validado de punta a punta en sección 12.4 (con
+datos hand-typed) — no se re-testeó específicamente desde el Helper, pero
+el formato que arma el Helper es el mismo ya validado.
+
+### 14.5. Módulo `_Shared/MusicStateRowInputs_common_logic.lua`
+
+Trío de posición (Compás/Beat/Cent.) + botón de cursor, reusado por
+Armonía y Cues. Separado a propósito en piezas chicas, no una función
+monolítica:
+
+- `drawPositionInputs(ctx, row, widths)` — solo los 3 `InputInt`.
+- `drawCursorButton(ctx, label)` — solo el botón (label opcional, para
+  poder cambiarlo por un ícono más adelante sin tocar el resto).
+- `applyCursorToRow(row, pos)` — lógica pura sin ImGui, separada del
+  botón por si en el futuro hace falta aplicar el cursor a más de una
+  fila a la vez.
+
+Motivo de la granularidad: dejar la superficie lista para un eventual
+rediseño de los steppers (nativos +/- vs. flechas verticales apiladas,
+evaluado y pospuesto a sesión de UX batch — no se conmuta automático a
+solo cambiar presentación, implica perder el repeat automático del
+`InputInt` nativo, ver backlog 14.8) sin tener que reabrir Armonía/Cues.
+
+### 14.6. Gotchas de ReaImGui nuevos (suma a 13.7)
+
+- **`InputInt(ctx, label, v, step, step_fast)` con `step`/`step_fast`
+  omitidos no cae en el default de Dear ImGui (`step=1`)** — en el
+  binding de ReaImGui un argumento omitido se resuelve a `0`. Los botones
+  `+`/`-` se dibujan igual, pero cada click suma/resta `0`: parece un bug
+  de estado cuando en realidad es un parámetro faltante.
+- **`SetNextItemWidth` en un `InputInt` con steppers incluye los botones
+  `+`/`-` en el ancho total**, a diferencia de `InputText`/`Combo` donde
+  el ancho pasado es ~equivalente al área de texto. Mismo ancho que un
+  `InputText` de N dígitos deja el número clippeado fuera de vista sin
+  ningún error — el widget funciona perfecto, el valor cambia, solo no
+  se ve. Causó una ronda completa de debugging en esta sesión antes de
+  encontrarse (anchos que funcionaron: 100/90/100 para Compás/Beat/Cent.
+  de 3/2/3 dígitos).
+- **`SameLine(ctx, offset_x)` con offsets manuales para alinear un
+  encabezado de columna contra inputs reales es frágil** — el ancho
+  real renderizado de un `InputInt` con steppers no es predecible a
+  mano (ver punto anterior). Reemplazado por `ImGui_BeginTable` +
+  `TableSetupColumn`/`TableHeadersRow`, que alinea automático.
+- **`WindowFlags_NoNav` en `Begin` es necesario además de
+  `CreateContext(ctx, 0)`**, no en vez de — ver 14.1 y corrección del
+  doc de arquitectura (sección B.1).
+
+### 14.7. Probe script de verificación independiente
+
+`Tests-Debug/Nik_MusicState_ProbeExtState.lua` — lee directo
+`ProjExtState` (`NSAUDIOMUSIC`) y `ExtState` global puenteado
+(`NikMusicState`) para las 4 keys, sin pasar por el parser del Helper
+(verificación independiente, no circular). Confirma por key: valor
+crudo, ausencia de `\n` literal, e igualdad `proj == bridge`. Usado para
+validar el sentinel `chord:null` y el array anidado de `roles` en
+`cues_data` con datos reales.
+
+### 14.8. Backlog UX — sesión batch futura, no bloqueante
+
+Mejoras identificadas, deliberadamente no encaradas ahora (features de
+tabla genérica, conviene aplicarlas a Armonía y Cues juntas en una sola
+pasada en vez de duplicar el trabajo):
+
+- Tabla con sticky header y footer (botón "Guardar y Publicar") fuera
+  del scroll — hoy se scrollea todo junto.
+- Marker asociado por fila: lookup genérico posición→marker anterior,
+  reusable para las dos tabs sin lógica especial por tipo de dato. Para
+  Cues, al tener `duration_qn` (puede cruzar compás/marker, confirmado
+  11.2/12.4), potencialmente se llama dos veces por fila (inicio y
+  inicio+duración) para detectar y mostrar cruce de sección — Armonía
+  solo necesita una llamada (evento puntual, sin duración).
+- Click en fila / botón dedicado → mover el cursor de edición a la
+  posición de esa fila (inverso de "Usar cursor").
+- Validación de rangos: `hundredths` no debería superar 99, `beat` no
+  debería superar la cantidad de beats del compás según su timesig.
+- Popup de checkboxes para `roles_str` en Cues (con "todos" como opción,
+  posiblemente toggle que ignora el resto) — reemplaza el texto libre
+  actual sin tocar el resto de la fila ni el guardado (conversión
+  texto↔array ya centralizada en un solo punto).
+- Atajos de duración en Cues: botones "1 compás"/"2 compases" que
+  calculan `duration_qn` a partir del timesig del compás de inicio,
+  sin sacar la posibilidad de edición manual fina.
+- Evaluar steppers de `InputInt` nativos apilados verticalmente (misma
+  columna x, flecha arriba/abajo) vs. anchos afinados como quedaron
+  ahora — trade-off: tabla más compacta a cambio de perder el repeat
+  automático nativo si se reemplaza por `ArrowButton` propio (ver 14.5).
+
+### 14.9. Archivos tocados en esta sesión
+
+- **Nuevo:** `ARQ_captura_keys_reaimgui_ruteo_reaper.md` (doc de
+  arquitectura, fuera del repo de código).
+- **Nuevo:** `_Shared/ImGuiInputCommit_common_logic.lua`.
+- **Nuevo:** `_Shared/MusicStateRowInputs_common_logic.lua`.
+- **Nuevo:** `Tests-Debug/Nik_MusicState_ProbeExtState.lua`.
+- **Modificado:** `MusicState/Nik_MusicState_Helper.lua` — atajos
+  globales de teclado, `WindowFlags_NoNav`, tabs Armonía y Cues
+  completos (parseo, guardado, tabla).
