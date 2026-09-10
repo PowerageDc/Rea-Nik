@@ -6,6 +6,7 @@
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
+local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_logic.lua")
 
 local ctx = reaper.ImGui_CreateContext('MusicState Helper')
 local font = reaper.ImGui_CreateFont('sans-serif', 16)
@@ -23,6 +24,21 @@ local TONICS = { 'A', 'A#', 'Bb', 'B', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F
 local TONICS_STR = table.concat(TONICS, '\0') .. '\0'
 local MODES = { 'major', 'minor' }
 local MODES_STR = 'major\0minor\0'
+
+local CMD_MEASURE_PREV = 41041
+local CMD_MEASURE_NEXT = 41040
+local CMD_MARKER_PREV  = 40172
+local CMD_MARKER_NEXT  = 40173
+local CMD_PLAYSTOP     = 40044
+local CMD_PLAYPAUSE    = 40073
+
+local KEY_MEASURE_PREV = reaper.ImGui_Key_LeftArrow()
+local KEY_MEASURE_NEXT = reaper.ImGui_Key_RightArrow()
+local KEY_MARKER_PREV  = reaper.ImGui_Key_DownArrow()
+local KEY_MARKER_NEXT  = reaper.ImGui_Key_UpArrow()
+
+-- Context creation, config_flags=0 para desactivar Nav
+local ctx = reaper.ImGui_CreateContext('MusicState Helper', 0)
 
 -- Recarga H desde ProjExtState del proyecto dado. Se usa al abrir el panel
 -- y cada vez que se detecta un cambio de project tab (ver loop()).
@@ -137,18 +153,21 @@ local function drawRolesTab()
   reaper.ImGui_Separator(ctx)
   local changed
   changed, H.new_role_buf = reaper.ImGui_InputText(ctx, 'Nuevo rol', H.new_role_buf)
-  local enter_pressed = reaper.ImGui_IsItemDeactivatedAfterEdit(ctx)
+  local enter_commit, enter_key = InputCommit.resolveEnterCommit(ctx)
+  if enter_commit then H.consumed_enter = true end
 
   reaper.ImGui_SameLine(ctx)
   local add_clicked = reaper.ImGui_Button(ctx, 'Agregar', 80, 0)
 
-  if (enter_pressed or add_clicked) and H.new_role_buf ~= '' then
+  if (enter_commit or add_clicked) and H.new_role_buf ~= '' then
     table.insert(H.roles, H.new_role_buf)
     H.new_role_buf = ''
   end
 end
 
 local function loop()
+  H.consumed_enter = false
+
   local current_proj = reaper.EnumProjects(-1)
   if current_proj ~= H.last_proj then
     nikMusicStateLoadFromProjExtState(current_proj)
@@ -158,7 +177,7 @@ local function loop()
 
   reaper.ImGui_SetNextWindowSize(ctx, 520, 440, reaper.ImGui_Cond_FirstUseEver())
   reaper.ImGui_PushFont(ctx, font, 16)
-  local visible, open = reaper.ImGui_Begin(ctx, 'MusicState Helper', true)
+  local visible, open = reaper.ImGui_Begin(ctx, 'MusicState Helper', true, reaper.ImGui_WindowFlags_NoNav())
 
   if visible then
     local pos = nikMusicStateCaptureCursorPosition()
@@ -170,6 +189,25 @@ local function loop()
     ))
 
     reaper.ImGui_Separator(ctx)
+
+    if InputCommit.globalKeyPressed(ctx, reaper.ImGui_Key_Space(), false) then
+      reaper.Main_OnCommand(CMD_PLAYSTOP, 0)
+    end
+    if InputCommit.globalKeyPressed(ctx, reaper.ImGui_Key_Enter(), H.consumed_enter) then
+      reaper.Main_OnCommand(CMD_PLAYPAUSE, 0)
+    end
+    if InputCommit.globalKeyPressed(ctx, KEY_MEASURE_PREV, false) then
+      reaper.Main_OnCommand(CMD_MEASURE_PREV, 0)
+    end
+    if InputCommit.globalKeyPressed(ctx, KEY_MEASURE_NEXT, false) then
+      reaper.Main_OnCommand(CMD_MEASURE_NEXT, 0)
+    end
+    if InputCommit.globalKeyPressed(ctx, KEY_MARKER_PREV, false) then
+      reaper.Main_OnCommand(CMD_MARKER_PREV, 0)
+    end
+    if InputCommit.globalKeyPressed(ctx, KEY_MARKER_NEXT, false) then
+      reaper.Main_OnCommand(CMD_MARKER_NEXT, 0)
+    end
 
     if reaper.ImGui_BeginTabBar(ctx, 'MusicStateTabs') then
       if reaper.ImGui_BeginTabItem(ctx, 'Tonalidad') then
