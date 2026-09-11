@@ -5,11 +5,18 @@
 -- pasada, ya que comparten el mismo trigger -- conexion de UI /
 -- cambio de proyecto, seccion 1.)
 --
--- One-shot: simula los helpers de carga (aun no implementados, pendiente
--- para sesion aparte) escribiendo datos de prueba en ProjExtState, y
--- luego los puentea a ExtState global para que el Web Control pueda
--- leerlos via GET/EXTSTATE -- ProjExtState no es accesible directo desde
--- ahi (confirmado con Nik_Tests_ExtStateProbe.lua, Tests-Debug/).
+-- One-shot: puentea las 4 piezas de datos de ProjExtState (namespace
+-- NSAUDIOMUSIC, escritas por MusicState/Nik_MusicState_Helper.lua) a
+-- ExtState global -- ProjExtState no es accesible directo desde el Web
+-- Control (confirmado con Nik_Tests_ExtStateProbe.lua, Tests-Debug/).
+-- Ya NO genera ni escribe ningun dato de muestra: el Helper es la unica
+-- fuente de verdad de las 4 keys desde que implementa las 4 tabs
+-- (Tonalidad/Roles/Armonia/Cues) + "Guardar y Publicar" (que ya hace su
+-- propio SetProjExtState + Bridge.bridgeKey por key, sin pasar por este
+-- script). Este script cubre el caso restante: el bridge global quedo
+-- desactualizado (ej. cambio de project tab) sin que el Helper haya
+-- vuelto a guardar nada en el medio -- puro refresco de puente, no una
+-- fuente de datos.
 --
 -- Disparado on-demand (conexion de UI de instrumentista / cambio de
 -- proyecto), no vive en el poll de fondo.
@@ -20,10 +27,6 @@
 --   project_key     -- IMPL seccion 10.2
 --   project_roles   -- IMPL seccion 11.1
 --   cues_data       -- IMPL seccion 11.2
---
--- TODO: reemplazar los 4 sample_* por lectura real desde los helpers de
--- carga cuando existan (armonia: IMPL seccion 8.3; roles/cues: sesion
--- aparte, aun no planificada).
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
@@ -35,17 +38,6 @@ local namespace = Bridge.NAMESPACE
 -- REAPER escapa saltos de linea reales a "\n" literal al servir la
 -- respuesta (protocolo linea-por-registro), lo cual rompe JSON.parse()
 -- del lado del cliente. Confirmado con prueba real -- IMPL seccion 3.
-
--- project_key / project_roles: ya no se pisan con sample -- el Helper
--- (MusicState/Nik_MusicState_Helper.lua) escribe datos reales en esas
--- dos keys desde el paso 3. Este script ahora solo las puentea.
--- harmony_data / cues_data: siguen con sample hasta que el Helper
--- tenga esos tabs (pasos 4-5) -- TODO se achica, no desaparece todavia.
-local sample_harmony = '{"12":[{"qn_offset":0.0,"chord":"Cmaj7"},{"qn_offset":2.5,"chord":"Dm7"}],"13":[{"qn_offset":0.0,"chord":"G7"},{"qn_offset":3.75,"chord":"Cmaj7"}]}'
-local sample_cues = '{"12":[{"qn_offset":0.0,"roles":["cantantes"],"text":"respirar","duration_qn":2.0}]}'
-
-reaper.SetProjExtState(proj, namespace, "harmony_data", sample_harmony)
-reaper.SetProjExtState(proj, namespace, "cues_data", sample_cues)
 
 local ok_count, failed = Bridge.bridgeAll(proj)
 reaper.ShowConsoleMsg(string.format("Nik_MusicState_PublishAll: %d/%d keys publicadas OK.\n",
