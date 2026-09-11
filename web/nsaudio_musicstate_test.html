@@ -63,35 +63,15 @@
 <script src="musicstate-ui/shared/ms-tempo.js"></script>
 <script src="musicstate-ui/shared/ms-section.js"></script>
 <script src="musicstate-ui/shared/ms-dispatch.js"></script>
+<script src="musicstate-ui/instrumentista/instrumentista.js"></script>
 
 <script>
-// Bootstrapping de prueba -- NO es instrumentista.js todavia (ese archivo
-// va a reemplazar este bloque inline cuando exista). Deliberadamente
-// separado de ms-dispatch.js (que no arma polls, solo parsea), ver
-// discusion de la sesion.
-
-function nikMsTestBuildSlowPoll() {
-    // Reusa el script consolidado (ya escribe reapitch_semitone y
-    // active_project_name en cada corrida) -- no un script nuevo, y sin
-    // arrastrar el resto de NIK_ONDEMAND_READS (playrate/preservepitch/
-    // marker_bars/solo-in-front, irrelevantes para este perfil).
-    return NIK_LUA_COMMANDS.statePoll.commandId +
-        ";GET/EXTSTATE/NikRemote/active_project_name" +
-        ";GET/EXTSTATE/NikRemote/reapitch_semitone" +
-        ";GET/EXTSTATE/NikMusicState/publish_version";
-}
+// Bootstrapping real delegado a instrumentista.js (musicstate-ui/instrumentista/),
+// cargado antes de este bloque. Lo que queda acá es exclusivo del panel de
+// debug (refresco del panel crudo) -- no es parte del perfil real.
 
 function nikMsTestInit() {
-    wwr_req_recur("TRANSPORT", 10);
-    wwr_req_recur("MARKER", 500);
-    wwr_req_recur(nikMsTestBuildSlowPoll(), 1000);
-    wwr_start();
-
-    // On-demand, mismo criterio que boot del remoto general (init.js real):
-    // no esperar al primer cambio de proyecto para tener datos.
-    nikMsRequestTempoAndTimesig();
-    if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
-
+    nikInstrumentistaInit();
     window.setInterval(nikMsTestRefreshDebugPanel, 200);
 }
 
