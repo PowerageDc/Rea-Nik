@@ -124,9 +124,9 @@ function nikInstrumentistaRender() {
     var cueBandEl = document.getElementById("msCueBand");
     if (cues.length > 0) {
         cueBandEl.textContent = cues.map(function (c) { return c.text; }).join(" · ");
-        cueBandEl.hidden = false;
+        cueBandEl.classList.add("is-visible");
     } else {
-        cueBandEl.hidden = true;
+        cueBandEl.classList.remove("is-visible");
     }
 }
 

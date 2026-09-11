@@ -156,16 +156,23 @@ html, body {
   right: 0;
   top: calc(50% + (var(--chord-h) / 2) + clamp(28px, 6vh, 48px));
   margin: 0 auto;
-  background: var(--ms-fg);
-  color: var(--ms-bg);
-  font-weight: 700;
-  font-size: clamp(1.1rem, 5vw, 1.5rem);
-  padding: 16px 20px;
+  padding: 16px 20px 0;
   max-width: 480px;
   box-sizing: border-box;
+  border-top: 1px solid var(--ms-divider-color);
+  color: var(--ms-chord-color);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  font-size: clamp(1rem, 4.5vw, 1.35rem);
+  opacity: 0;
+  transition: opacity 400ms ease;
+  pointer-events: none;
 }
 
-.ms-cue-band[hidden],
+.ms-cue-band.is-visible {
+  opacity: 1;
+}
+
 .ms-divider[hidden] {
   display: none;
 }
