@@ -52,6 +52,11 @@ reaper_www_root/
 ├── nsaudio_remote_control.html              ← existente, sin tocar
 ├── nsaudio_musicstate_instrumentista.html   ← shell nuevo
 ├── config.js                                 ← reusado tal cual
+├── config.local.js                           ← reusado tal cual, IMPRESCINDIBLE:
+│                                                sin este script los Command IDs
+│                                                _RS de config.js quedan con el
+│                                                default (de otra PC) y fallan en
+│                                                silencio, sin error en consola
 ├── core/ , markers/ , modals/                ← existentes, sin tocar
 └── musicstate-ui/
     ├── shared/
