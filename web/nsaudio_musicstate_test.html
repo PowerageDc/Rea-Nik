@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MusicState — test dispatcher</title>
+<style>
+  html, body { background:#1a1a1a; color:#D0D0D0; font-family:monospace; margin:0; padding:16px; }
+  h1 { font-size:1em; color:#00D0FF; margin:0 0 12px 0; }
+  .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #333; font-size:0.95em; }
+  .row span:first-child { color:#9A9A9A; }
+  .row span:last-child { color:#EDEDED; text-align:right; max-width:60%; overflow-wrap:break-word; }
+  .warn { color:#FFC107 !important; }
+  #raw { margin-top:16px; font-size:0.8em; color:#5A5A5A; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+
+<h1>MusicState — test crudo del dispatcher (sin UI real todavía)</h1>
+
+<div class="row"><span>Proyecto activo</span><span id="dProject">—</span></div>
+<div class="row"><span>Posición (segundos)</span><span id="dPosSec">—</span></div>
+<div class="row"><span>Posición (compás.beat)</span><span id="dPosBeats">—</span></div>
+<div class="row"><span>Semitono ReaPitch</span><span id="dSemitone">—</span></div>
+<div class="row"><span>Tempo map: cantidad de puntos</span><span id="dTempoCount">—</span></div>
+<div class="row"><span>Tempo vigente (BPM)</span><span id="dTempoAt">—</span></div>
+<div class="row"><span>Markers cargados</span><span id="dMarkerCount">—</span></div>
+<div class="row"><span>Tonalidad del proyecto</span><span id="dProjectKey">—</span></div>
+<div class="row"><span>Roles del proyecto</span><span id="dProjectRoles">—</span></div>
+<div class="row"><span>Acorde actual</span><span id="dCurrentChord">—</span></div>
+<div class="row"><span>Próximo acorde</span><span id="dNextChord">—</span></div>
+
+<div id="raw"></div>
+
+<!-- Orden de carga: main.js (libreria REAPER) primero, despues config.js,
+     despues los modulos reusados sin fork, despues los modulos nuevos de
+     este perfil -- ms-dispatch.js AL FINAL para que su wwr_onreply gane
+     sobre cualquier stub que main.js pueda declarar. -->
+<script src="main.js"></script>
+<script src="config.js"></script>
+<script>
+    (function () {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "config.local.js", false);
+        try {
+            xhr.send(null);
+            if (xhr.status === 200) {
+                (0, eval)(xhr.responseText);
+            }
+        } catch (e) {
+            // config.local.js no existe en esta PC (instalación limpia vía ReaPack) — se ignora
+        }
+    })();
+</script>
+<script src="markers/markers.js"></script>
+<script src="core/music-transpose.js"></script>
+<script src="core/music-state.js"></script>
+<script src="musicstate-ui/shared/ms-tempo.js"></script>
+<script src="musicstate-ui/shared/ms-dispatch.js"></script>
+
+<script>
+// Bootstrapping de prueba -- NO es instrumentista.js todavia (ese archivo
+// va a reemplazar este bloque inline cuando exista). Deliberadamente
+// separado de ms-dispatch.js (que no arma polls, solo parsea), ver
+// discusion de la sesion.
+
+function nikMsTestBuildSlowPoll() {
+    // Reusa el script consolidado (ya escribe reapitch_semitone y
+    // active_project_name en cada corrida) -- no un script nuevo, y sin
+    // arrastrar el resto de NIK_ONDEMAND_READS (playrate/preservepitch/
+    // marker_bars/solo-in-front, irrelevantes para este perfil).
+    return NIK_LUA_COMMANDS.statePoll.commandId +
+        ";GET/EXTSTATE/NikRemote/active_project_name" +
+        ";GET/EXTSTATE/NikRemote/reapitch_semitone";
+}
+
+function nikMsTestInit() {
+    wwr_req_recur("TRANSPORT", 10);
+    wwr_req_recur("MARKER", 500);
+    wwr_req_recur(nikMsTestBuildSlowPoll(), 1000);
+    wwr_start();
+
+    // nikMusicStateRequestAll() NO se llama acá a mano -- ms-dispatch.js ya
+    // la dispara solo con el primer EXTSTATE/active_project_name (pasa de
+    // null al nombre real), igual que hace wwr-dispatch.js real. Llamarla
+    // acá también la duplicaba (de ahí el log doble "4/4 keys publicadas").
+    nikMsRequestTempoAndTimesig();
+
+    window.setInterval(nikMsTestRefreshDebugPanel, 200);
+}
+
+function nikMsTestSafeCall(fn) {
+    try { return (typeof fn === "function") ? fn() : "(no existe: " + fn + ")"; }
+    catch (e) { return "ERROR: " + e.message; }
+}
+
+function nikMsTestRefreshDebugPanel() {
+    console.log(nikMusicStateCurrentProjectKey == null);
+    document.getElementById("dProject").textContent =
+        nikCurrentProjectName ? nikCurrentProjectName.replace(/\.rpp$/i, "") : "—";
+    document.getElementById("dPosSec").textContent = playPosSeconds;
+    document.getElementById("dPosBeats").textContent = nikLastPositionBeatsStr;
+    document.getElementById("dSemitone").textContent = nikReaPitchLastSemitone;
+
+    var tCount = (typeof nikMsTempoMap !== "undefined" && nikMsTempoMap) ? nikMsTempoMap.length : 0;
+    document.getElementById("dTempoCount").textContent = tCount;
+    var tAt = (typeof nikMsTempoAt === "function") ? nikMsTempoAt(parseFloat(playPosSeconds)) : null;
+    document.getElementById("dTempoAt").textContent = (tAt != null) ? Math.round(tAt) : "—";
+
+    document.getElementById("dMarkerCount").textContent =
+        (typeof g_markers !== "undefined" && g_markers) ? g_markers.length : 0;
+
+    // Funciones de core/music-state.js -- llamadas directas, sin pasar por
+    // ninguna UI de perfil todavia (test end-to-end del reuso "tal cual").
+    var key = nikMsTestSafeCall(typeof nikMusicStateCurrentProjectKey === "function" ? nikMusicStateCurrentProjectKey : null);
+    document.getElementById("dProjectKey").textContent = (key && typeof key === "object") ? JSON.stringify(key) : key;
+
+    var roles = (typeof nikMusicStateProjectRoles !== "undefined") ? JSON.stringify(nikMusicStateProjectRoles) : "(variable no encontrada, confirmar nombre real en music-state.js)";
+    document.getElementById("dProjectRoles").textContent = roles;
+
+    var curChord = nikMsTestSafeCall(typeof nikMusicStateCurrentChord === "function" ? nikMusicStateCurrentChord : null);
+    document.getElementById("dCurrentChord").textContent = (curChord && typeof curChord === "object") ? JSON.stringify(curChord) : curChord;
+
+    var nextChord = nikMsTestSafeCall(typeof nikMusicStateNextChord === "function" ? nikMusicStateNextChord : null);
+    document.getElementById("dNextChord").textContent = (nextChord && typeof nextChord === "object") ? JSON.stringify(nextChord) : nextChord;
+
+    document.getElementById("raw").textContent =
+        "g_markers[0..2] crudo: " + JSON.stringify((g_markers || []).slice(0, 3)) +
+        "\nnikMsTempoMap[0..2] crudo: " + JSON.stringify((nikMsTempoMap || []).slice(0, 3));
+}
+
+nikMsTestInit();
+</script>
+
+</body>
+</html>
