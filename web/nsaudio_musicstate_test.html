@@ -25,6 +25,7 @@
 <div class="row"><span>Tempo map: cantidad de puntos</span><span id="dTempoCount">—</span></div>
 <div class="row"><span>Tempo vigente (BPM)</span><span id="dTempoAt">—</span></div>
 <div class="row"><span>Markers cargados</span><span id="dMarkerCount">—</span></div>
+<div class="row"><span>Sección actual</span><span id="dSection">—</span></div>
 <div class="row"><span>Tonalidad del proyecto</span><span id="dProjectKey">—</span></div>
 <div class="row"><span>Roles del proyecto</span><span id="dProjectRoles">—</span></div>
 <div class="row"><span>Acorde actual</span><span id="dCurrentChord">—</span></div>
@@ -52,10 +53,12 @@
         }
     })();
 </script>
+<script src="core/utils.js"></script>
 <script src="markers/markers.js"></script>
 <script src="core/music-transpose.js"></script>
 <script src="core/music-state.js"></script>
 <script src="musicstate-ui/shared/ms-tempo.js"></script>
+<script src="musicstate-ui/shared/ms-section.js"></script>
 <script src="musicstate-ui/shared/ms-dispatch.js"></script>
 
 <script>
@@ -80,11 +83,10 @@ function nikMsTestInit() {
     wwr_req_recur(nikMsTestBuildSlowPoll(), 1000);
     wwr_start();
 
-    // nikMusicStateRequestAll() NO se llama acá a mano -- ms-dispatch.js ya
-    // la dispara solo con el primer EXTSTATE/active_project_name (pasa de
-    // null al nombre real), igual que hace wwr-dispatch.js real. Llamarla
-    // acá también la duplicaba (de ahí el log doble "4/4 keys publicadas").
+    // On-demand, mismo criterio que boot del remoto general (init.js real):
+    // no esperar al primer cambio de proyecto para tener datos.
     nikMsRequestTempoAndTimesig();
+    if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
 
     window.setInterval(nikMsTestRefreshDebugPanel, 200);
 }
@@ -95,7 +97,6 @@ function nikMsTestSafeCall(fn) {
 }
 
 function nikMsTestRefreshDebugPanel() {
-    console.log(nikMusicStateCurrentProjectKey == null);
     document.getElementById("dProject").textContent =
         nikCurrentProjectName ? nikCurrentProjectName.replace(/\.rpp$/i, "") : "—";
     document.getElementById("dPosSec").textContent = playPosSeconds;
@@ -109,6 +110,14 @@ function nikMsTestRefreshDebugPanel() {
 
     document.getElementById("dMarkerCount").textContent =
         (typeof g_markers !== "undefined" && g_markers) ? g_markers.length : 0;
+
+    var section = (typeof nikMsCurrentSection === "function") ? nikMsCurrentSection() : null;
+    var sectionEl = document.getElementById("dSection");
+    if (section) {
+        sectionEl.textContent = section.displayName + (section.resolvedColor ? " (" + section.resolvedColor + ")" : " (sin color de familia)");
+    } else {
+        sectionEl.textContent = "—";
+    }
 
     // Funciones de core/music-state.js -- llamadas directas, sin pasar por
     // ninguna UI de perfil todavia (test end-to-end del reuso "tal cual").

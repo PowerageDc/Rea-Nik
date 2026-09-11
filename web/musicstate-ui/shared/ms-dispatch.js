@@ -147,6 +147,7 @@ function nikMsResetProjectState() {
     if (typeof nikMusicStateSetProjectRoles === "function") nikMusicStateSetProjectRoles(null);
     if (typeof nikMsTempoSetMap === "function") nikMsTempoSetMap(null);
     g_markers = [];
+    if (typeof nikMsSectionOnMarkersUpdated === "function") nikMsSectionOnMarkersUpdated();
     nikReaPitchLastSemitone = "none";
 }
 
