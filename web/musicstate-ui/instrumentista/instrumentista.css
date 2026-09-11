@@ -22,7 +22,8 @@
   --ms-chord-color: #FFB627;
   --ms-divider-color: rgba(242, 240, 234, 0.15);
   --chord-h: clamp(4.5rem, 18vw, 8rem);
-  --section-gap: clamp(12px, 3vh, 24px);
+  --chord-divider-gap: clamp(24px, 10vh, 50px);
+  --divider-label-gap: clamp(6px, 1.5vh, 12px);
 }
 
 html, body {
@@ -100,7 +101,7 @@ html, body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(50% + (var(--chord-h) / 2) + var(--section-gap));
+  bottom: calc(50% + (var(--chord-h) / 2) + var(--chord-divider-gap) + var(--divider-label-gap));
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -111,7 +112,7 @@ html, body {
 
 .ms-mid-divider {
   position: absolute;
-  top: calc(50% - (var(--chord-h) / 2) - (var(--section-gap) / 2));
+  top: calc(50% - (var(--chord-h) / 2) - var(--chord-divider-gap));
   transform: translateY(-50%);
   left: 0;
   right: 0;
