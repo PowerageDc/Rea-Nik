@@ -21,6 +21,7 @@
   --ms-fg-dim: #9A9AA2;
   --ms-chord-color: #FFB627;
   --ms-divider-color: rgba(242, 240, 234, 0.15);
+  --chord-h: clamp(4.5rem, 18vw, 8rem);
 }
 
 html, body {
@@ -33,14 +34,23 @@ html, body {
 }
 
 .ms-screen {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.ms-top-block {
+  position: absolute;
+  top: clamp(28px, 20vh, 140px);
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  box-sizing: border-box;
-  padding: 32px 20px;
-  text-align: center;
+  gap: clamp(10px, 2.5vh, 20px);
 }
 
 .ms-divider {
@@ -72,18 +82,26 @@ html, body {
 }
 
 .ms-section {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(50% + (var(--chord-h) / 2) + clamp(12px, 3vh, 24px));
   font-size: clamp(1.3rem, 6vw, 1.8rem);
   font-weight: 700;
-  margin-bottom: 12px;
 }
 
 .ms-chord-strip {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: var(--chord-h);
+  transform: translateY(-50%);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: clamp(12px, 4vw, 28px);
-  width: 100%;
 }
 
 .ms-chord-slot {
@@ -111,12 +129,16 @@ html, body {
 }
 
 .ms-cue-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + (var(--chord-h) / 2) + clamp(28px, 6vh, 48px));
+  margin: 0 auto;
   background: var(--ms-fg);
   color: var(--ms-bg);
   font-weight: 700;
   font-size: clamp(1.1rem, 5vw, 1.5rem);
   padding: 16px 20px;
-  width: 100%;
   max-width: 480px;
   box-sizing: border-box;
 }

@@ -122,14 +122,11 @@ function nikInstrumentistaRender() {
     var roleFilter = (!role || role === "todos") ? undefined : role;
     var cues = (typeof nikMusicStateActiveCues === "function") ? nikMusicStateActiveCues(roleFilter) : [];
     var cueBandEl = document.getElementById("msCueBand");
-    var cueDividerEl = document.getElementById("msCueDivider");
     if (cues.length > 0) {
         cueBandEl.textContent = cues.map(function (c) { return c.text; }).join(" · ");
         cueBandEl.hidden = false;
-        cueDividerEl.hidden = false;
     } else {
         cueBandEl.hidden = true;
-        cueDividerEl.hidden = true;
     }
 }
 
