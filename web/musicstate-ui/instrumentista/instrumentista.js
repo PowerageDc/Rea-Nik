@@ -145,15 +145,29 @@ function nikInstrumentistaRenderChordStrip() {
     var currentIdx = -1;
     for (var i = 0; i < win.length; i++) { if (win[i].isCurrent) { currentIdx = i; break; } }
 
-    stripEl.innerHTML = "";
+    // Los 5 offsets (-2..2) siempre existen en el DOM, aunque `win` traiga
+    // menos elementos (ej. al principio de la canción, sin acordes previos
+    // todavía) -- así la tira nunca cambia de ancho geométrico y el slot
+    // central se mantiene alineado con el centro real del viewport. El
+    // offset faltante queda como slot vacío (mismo ancho reservado, sin
+    // texto), no se saca del flujo.
+    var byOffset = {};
     for (var j = 0; j < win.length; j++) {
         var offset = (currentIdx === -1) ? 0 : (j - currentIdx);
+        byOffset[offset] = win[j];
+    }
+
+    stripEl.innerHTML = "";
+    for (var o = -2; o <= 2; o++) {
         var slot = document.createElement("span");
         slot.className = "ms-chord-slot";
-        slot.setAttribute("data-offset", String(offset));
+        slot.setAttribute("data-offset", String(o));
+        var entry = byOffset[o];
         // chord === null es el sentinel de silencio explícito (ver
         // core/music-state.js) -- se muestra distinguible de "sin dato".
-        slot.textContent = (win[j].chord === null) ? "—" : win[j].chord;
+        // undefined (offset sin entrada en `win`) se muestra vacío, no "—",
+        // para no competir visualmente con el silencio explícito.
+        slot.textContent = !entry ? "" : (entry.chord === null ? "—" : entry.chord);
         stripEl.appendChild(slot);
     }
 }
