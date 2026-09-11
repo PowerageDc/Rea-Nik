@@ -141,12 +141,9 @@ html, body {
   text-overflow: ellipsis;
 }
 
-#msSectionPrev {
-  text-align: right;
-}
-
+#msSectionPrev,
 #msSectionNext {
-  text-align: left;
+  text-align: center;
 }
 
 .ms-chord-strip {
