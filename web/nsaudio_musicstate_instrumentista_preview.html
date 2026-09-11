@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MusicState — Instrumentista (preview)</title>
+<link rel="stylesheet" href="musicstate-ui/instrumentista/instrumentista.css">
+</head>
+<body>
+
+<div class="ms-screen">
+  <div class="ms-tertiary-row1">
+    <span id="msRole">—</span><span class="ms-sep">·</span><span id="msKey">—</span><span class="ms-sep">·</span><span id="msTempo">—</span>
+  </div>
+  <div class="ms-tertiary-row2" id="msSongName">—</div>
+
+  <div class="ms-section" id="msSection">—</div>
+
+  <div class="ms-chord-current" id="msChordCurrent">—</div>
+  <div class="ms-chord-next" id="msChordNext">—</div>
+
+  <div class="ms-cue-band" id="msCueBand" hidden>—</div>
+</div>
+
+<!-- Mismo orden de carga que nsaudio_musicstate_test.html -->
+<script src="main.js"></script>
+<script src="config.js"></script>
+<script>
+    (function () {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "config.local.js", false);
+        try {
+            xhr.send(null);
+            if (xhr.status === 200) { (0, eval)(xhr.responseText); }
+        } catch (e) {
+            // config.local.js no existe en esta PC (instalación limpia vía ReaPack) — se ignora
+        }
+    })();
+</script>
+<script src="core/utils.js"></script>
+<script src="markers/markers.js"></script>
+<script src="core/music-transpose.js"></script>
+<script src="core/music-state.js"></script>
+<script src="musicstate-ui/shared/ms-tempo.js"></script>
+<script src="musicstate-ui/shared/ms-section.js"></script>
+<script src="musicstate-ui/shared/ms-dispatch.js"></script>
+<script src="musicstate-ui/instrumentista/instrumentista.js"></script>
+
+<script>
+nikInstrumentistaInit();
+nikInstrumentistaStartRenderLoop(200);
+</script>
+
+</body>
+</html>

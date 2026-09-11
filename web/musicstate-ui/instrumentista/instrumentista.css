@@ -1,0 +1,87 @@
+/* instrumentista.css — perfil Instrumentista (MusicState)
+   Layout vertical estático (roadmap punto 3). Sin conmutación por
+   viewport todavía (eso es el punto 4) ni animación de transición de
+   acordes (sub-punto nuevo, después de validar esto contra sala real).
+
+   Paleta pensada para sala de ensayo con tubos LED blancos (no
+   escenario oscuro) -- valores de --ms-fg-dim son el punto más frágil
+   bajo luz directa, primeros candidatos a ajustar si se lavan.
+*/
+
+:root {
+  --ms-bg: #0D0D0F;
+  --ms-fg: #F2F0EA;
+  --ms-fg-dim: #9A9AA2;
+  --ms-chord-color: #FFB627;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ms-bg);
+  color: var(--ms-fg);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  height: 100%;
+}
+
+.ms-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 24px;
+}
+
+.ms-tertiary-row1 {
+  font-size: 0.95rem;
+  color: var(--ms-fg-dim);
+}
+
+.ms-tertiary-row1 .ms-sep {
+  margin: 0 6px;
+  opacity: 0.5;
+}
+
+.ms-tertiary-row2 {
+  font-size: 0.85rem;
+  color: var(--ms-fg-dim);
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  margin-bottom: 20px;
+}
+
+.ms-section {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.ms-chord-current {
+  font-size: 4.5rem;
+  font-weight: 800;
+  color: var(--ms-chord-color);
+  line-height: 1.05;
+}
+
+.ms-chord-next {
+  font-size: 2rem;
+  font-weight: 500;
+  color: var(--ms-fg-dim);
+  margin-top: 6px;
+}
+
+.ms-cue-band {
+  margin-top: auto;
+  background: var(--ms-fg);
+  color: var(--ms-bg);
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 14px 16px;
+}
+
+.ms-cue-band[hidden] {
+  display: none;
+}
