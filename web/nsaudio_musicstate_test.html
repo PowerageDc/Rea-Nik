@@ -11,6 +11,7 @@
   .row span:first-child { color:#9A9A9A; }
   .row span:last-child { color:#EDEDED; text-align:right; max-width:60%; overflow-wrap:break-word; }
   .warn { color:#FFC107 !important; }
+  .invalid { color:#FF5555 !important; }
   #raw { margin-top:16px; font-size:0.8em; color:#5A5A5A; white-space:pre-wrap; }
 </style>
 </head>
@@ -33,6 +34,7 @@
 
 <div class="row"><span>Cues activas (sin filtro)</span><span id="dCuesAll">—</span></div>
 <div class="row"><span>Cues activas (rol manual) — <input id="dCuesRoleInput" type="text" placeholder="ej: cantantes" style="background:#262626;color:#EDEDED;border:1px solid #4A4A4A;font-family:monospace;width:100px;"></span><span id="dCuesRole">—</span></div>
+<div class="row"><span>Rol persistido (localStorage) — <input id="dInstrumentistaRoleInput" type="text" placeholder="ej: guitarra" style="background:#262626;color:#EDEDED;border:1px solid #4A4A4A;font-family:monospace;width:100px;"></span><span id="dInstrumentistaRoleStatus">—</span></div>
 
 <div id="raw"></div>
 
@@ -72,7 +74,17 @@
 
 function nikMsTestInit() {
     nikInstrumentistaInit();
+    nikMsTestInitRoleInput();
     window.setInterval(nikMsTestRefreshDebugPanel, 200);
+}
+
+function nikMsTestInitRoleInput() {
+    var input = document.getElementById("dInstrumentistaRoleInput");
+    var stored = nikInstrumentistaGetRole();
+    if (stored) input.value = stored;
+    input.addEventListener("change", function () {
+        nikInstrumentistaSetRole(input.value);
+    });
 }
 
 function nikMsTestSafeCall(fn) {
@@ -124,6 +136,19 @@ function nikMsTestRefreshDebugPanel() {
     var roleVal = roleInput ? roleInput.value : "";
     var cuesRole = nikMsTestSafeCall(function () { return nikMusicStateActiveCues(roleVal || undefined); });
     document.getElementById("dCuesRole").textContent = JSON.stringify(cuesRole);
+
+    var roleStatusEl = document.getElementById("dInstrumentistaRoleStatus");
+    var storedRole = nikInstrumentistaGetRole();
+    if (!storedRole) {
+        roleStatusEl.textContent = "(sin rol guardado)";
+        roleStatusEl.className = "";
+    } else if (nikInstrumentistaIsRoleValid(storedRole)) {
+        roleStatusEl.textContent = storedRole + " (válido)";
+        roleStatusEl.className = "";
+    } else {
+        roleStatusEl.textContent = storedRole + " (no existe en project_roles)";
+        roleStatusEl.className = "invalid";
+    }
 
     document.getElementById("raw").textContent =
         "g_markers[0..2] crudo: " + JSON.stringify((g_markers || []).slice(0, 3)) +

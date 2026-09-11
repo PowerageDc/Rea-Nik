@@ -32,9 +32,9 @@ sin recargar la página). Detalle de la implementación en
 Orden sugerido (cada uno validado en REAPER real antes de pasar al
 siguiente, mismo modo de trabajo de siempre):
 
-1. [ ] Bootstrapping real (`init()`, polls definitivos — reemplaza el
+1. [x] Bootstrapping real (`init()`, polls definitivos — reemplaza el
        inline de `nsaudio_musicstate_test.html`)
-2. [ ] Selector de rol + persistencia (`localStorage` por dispositivo,
+2. [x] Selector de rol + persistencia (`localStorage` por dispositivo,
        fallback visible en rojo si el rol guardado no existe en
        `project_roles` del proyecto activo — decidido en sesión)
 3. [ ] Layout vertical (jerarquía visual, doc §5)

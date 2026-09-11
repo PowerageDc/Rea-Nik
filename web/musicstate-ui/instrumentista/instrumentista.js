@@ -34,3 +34,21 @@ function nikInstrumentistaInit() {
     nikMsRequestTempoAndTimesig();
     if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
 }
+
+var NIK_INSTRUMENTISTA_ROLE_STORAGE_KEY = "nikInstrumentistaRole";
+
+function nikInstrumentistaGetRole() {
+    try { return window.localStorage.getItem(NIK_INSTRUMENTISTA_ROLE_STORAGE_KEY); }
+    catch (e) { return null; }
+}
+
+function nikInstrumentistaSetRole(role) {
+    try { window.localStorage.setItem(NIK_INSTRUMENTISTA_ROLE_STORAGE_KEY, role); }
+    catch (e) { }
+}
+
+function nikInstrumentistaIsRoleValid(role) {
+    if (!role) return false;
+    if (role === "todos") return true;
+    return nikMusicStateProjectRoles.indexOf(role) !== -1;
+}
