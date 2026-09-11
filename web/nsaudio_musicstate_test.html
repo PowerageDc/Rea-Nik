@@ -31,6 +31,9 @@
 <div class="row"><span>Acorde actual</span><span id="dCurrentChord">—</span></div>
 <div class="row"><span>Próximo acorde</span><span id="dNextChord">—</span></div>
 
+<div class="row"><span>Cues activas (sin filtro)</span><span id="dCuesAll">—</span></div>
+<div class="row"><span>Cues activas (rol manual) — <input id="dCuesRoleInput" type="text" placeholder="ej: cantantes" style="background:#262626;color:#EDEDED;border:1px solid #4A4A4A;font-family:monospace;width:100px;"></span><span id="dCuesRole">—</span></div>
+
 <div id="raw"></div>
 
 <!-- Orden de carga: main.js (libreria REAPER) primero, despues config.js,
@@ -132,6 +135,14 @@ function nikMsTestRefreshDebugPanel() {
 
     var nextChord = nikMsTestSafeCall(typeof nikMusicStateNextChord === "function" ? nikMusicStateNextChord : null);
     document.getElementById("dNextChord").textContent = (nextChord && typeof nextChord === "object") ? JSON.stringify(nextChord) : nextChord;
+
+    var cuesAll = nikMsTestSafeCall(function () { return nikMusicStateActiveCues(); });
+    document.getElementById("dCuesAll").textContent = JSON.stringify(cuesAll);
+
+    var roleInput = document.getElementById("dCuesRoleInput");
+    var roleVal = roleInput ? roleInput.value : "";
+    var cuesRole = nikMsTestSafeCall(function () { return nikMusicStateActiveCues(roleVal || undefined); });
+    document.getElementById("dCuesRole").textContent = JSON.stringify(cuesRole);
 
     document.getElementById("raw").textContent =
         "g_markers[0..2] crudo: " + JSON.stringify((g_markers || []).slice(0, 3)) +
