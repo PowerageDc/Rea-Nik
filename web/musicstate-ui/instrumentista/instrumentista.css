@@ -22,6 +22,7 @@
   --ms-chord-color: #FFB627;
   --ms-divider-color: rgba(242, 240, 234, 0.15);
   --chord-h: clamp(4.5rem, 18vw, 8rem);
+  --section-gap: clamp(12px, 3vh, 24px);
 }
 
 html, body {
@@ -99,11 +100,22 @@ html, body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(50% + (var(--chord-h) / 2) + clamp(12px, 3vh, 24px));
+  bottom: calc(50% + (var(--chord-h) / 2) + var(--section-gap));
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: clamp(10px, 3vw, 20px);
+  gap: clamp(20px, 6vw, 40px);
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.ms-mid-divider {
+  position: absolute;
+  top: calc(50% - (var(--chord-h) / 2) - (var(--section-gap) / 2));
+  transform: translateY(-50%);
+  left: 0;
+  right: 0;
+  margin: 0 auto;
 }
 
 .ms-section-current {
@@ -118,11 +130,12 @@ html, body {
 }
 
 .ms-section-adj {
-  font-size: clamp(0.85rem, 3.2vw, 1.05rem);
+  font-size: clamp(1.2rem, 4vw, 1.3rem);
   font-weight: 500;
   color: var(--ms-fg-dim);
-  opacity: 0.6;
-  flex: 0 0 7ch;
+  opacity: 0.75;
+  flex: 1 1 0;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
