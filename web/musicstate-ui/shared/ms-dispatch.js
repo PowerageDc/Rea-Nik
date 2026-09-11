@@ -60,10 +60,34 @@ function wwr_onreply(results) {
                 if (tok[1] == "NikRemote" && tok[2] == "active_project_name") {
                     if (tok[3] != nikCurrentProjectName) {
                         nikCurrentProjectName = tok[3];
+                        // Limpiar ANTES de re-pedir: si el proyecto nuevo no tiene
+                        // datos propios (pestaña "sin guardar"), el puente Lua no
+                        // tiene ProjExtState de origen para pisar el ExtState global
+                        // -- sin este reset, quedaban colgados los valores del
+                        // proyecto anterior (bug reportado en sesión, causado por
+                        // Nik_RemoteState_Poll.lua ensuciando el dirty flag al
+                        // cerrar la última tab; workaround del lado cliente, no
+                        // toca ese script).
+                        nikMsResetProjectState();
                         // Mismo criterio que el remoto general: re-disparar todo lo
                         // que es por-proyecto al detectar el cambio.
                         if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
                         nikMsRequestTempoAndTimesig();
+                        // Mitigación de carrera (ver sesión): si una respuesta
+                        // rezagada del proyecto anterior llega DESPUÉS del reset,
+                        // repuebla con datos viejos -- no hay forma de detectar esto
+                        // por protocolo (las respuestas no vienen etiquetadas con a
+                        // qué proyecto correspondían). Este segundo pedido, más
+                        // tardío, asume orden de llegada FIFO del lado del server de
+                        // REAPER -- no es una garantía formal, es la mitigación más
+                        // barata posible. Si el problema persiste, hace falta algo
+                        // más robusto (token de generación) o atacar la causa raíz
+                        // del lado Lua (Nik_RemoteState_Poll.lua ensuciando el dirty
+                        // flag).
+                        window.setTimeout(function () {
+                            if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
+                            nikMsRequestTempoAndTimesig();
+                        }, 400);
                     }
                     nikLastProjectNameUpdate = Date.now();
                 }
@@ -110,6 +134,20 @@ function wwr_onreply(results) {
                 break;
         }
     }
+}
+
+// Vuelve todo el estado por-proyecto a "vacío" -- llamado al detectar
+// cambio de active_project_name, antes de re-pedir. Reusa los setters ya
+// existentes de music-state.js/ms-tempo.js pasándoles null/vacío en vez
+// de duplicar la lógica de "qué es un estado vacío" acá.
+function nikMsResetProjectState() {
+    if (typeof nikMusicStateSetHarmonyData === "function") nikMusicStateSetHarmonyData(null);
+    if (typeof nikMusicStateSetCuesData === "function") nikMusicStateSetCuesData(null);
+    if (typeof nikMusicStateSetProjectKey === "function") nikMusicStateSetProjectKey(null);
+    if (typeof nikMusicStateSetProjectRoles === "function") nikMusicStateSetProjectRoles(null);
+    if (typeof nikMsTempoSetMap === "function") nikMsTempoSetMap(null);
+    g_markers = [];
+    nikReaPitchLastSemitone = "none";
 }
 
 // Mismo criterio exacto que la parte no-DOM de nikReaPitchUpdateSemitoneDisplay()
