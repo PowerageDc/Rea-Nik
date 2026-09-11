@@ -105,12 +105,21 @@ function nikInstrumentistaRender() {
     var sectionEl = document.getElementById("msSection");
     var section = (typeof nikMsCurrentSection === "function") ? nikMsCurrentSection() : null;
     if (section) {
-        sectionEl.textContent = "● " + section.displayName;
+        sectionEl.textContent = section.displayName;
         sectionEl.style.color = section.resolvedColor || "";
     } else {
         sectionEl.textContent = "—";
         sectionEl.style.color = "";
     }
+
+    // Previa/próxima -- misma fuente de datos que nikMsCurrentSection()
+    // (nikMsMarkersSorted + nikMsFindSectionIndexAt), un índice antes y
+    // uno después del vigente. Reusa nikMsMarkerChainMap ya resuelto por
+    // ms-section.js -- no se recalcula nada acá, solo se lee.
+    var curIdx = (typeof nikMsFindSectionIndexAt === "function")
+        ? nikMsFindSectionIndexAt(parseFloat(playPosSeconds)) : -1;
+    document.getElementById("msSectionPrev").textContent = nikInstrumentistaAdjacentSectionLabel(curIdx - 1);
+    document.getElementById("msSectionNext").textContent = nikInstrumentistaAdjacentSectionLabel(curIdx + 1);
 
     nikInstrumentistaRenderChordStrip();
 
@@ -128,6 +137,17 @@ function nikInstrumentistaRender() {
     } else {
         cueBandEl.classList.remove("is-visible");
     }
+}
+
+// Nombre de sección en un índice de nikMsMarkersSorted, o "" si el índice
+// cae fuera de rango (no hay previa antes del primer marker, o no hay
+// próxima después del último) -- el slot queda vacío, no "—", para no
+// competir visualmente con el "—" de la sección actual sin dato.
+function nikInstrumentistaAdjacentSectionLabel(idx) {
+    if (idx < 0 || !nikMsMarkersSorted || idx >= nikMsMarkersSorted.length) return "";
+    var row = nikMsMarkersSorted[idx];
+    var resolved = nikMsMarkerChainMap[row[2]];
+    return resolved ? resolved.displayName : "";
 }
 
 // Tira de acordes: 2 hacia atrás + actual + 2 hacia adelante -- punto de

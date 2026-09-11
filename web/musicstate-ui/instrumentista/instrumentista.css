@@ -95,13 +95,45 @@ html, body {
   max-width: 100%;
 }
 
-.ms-section {
+.ms-section-row {
   position: absolute;
   left: 0;
   right: 0;
   bottom: calc(50% + (var(--chord-h) / 2) + clamp(12px, 3vh, 24px));
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: clamp(10px, 3vw, 20px);
+}
+
+.ms-section-current {
   font-size: clamp(1.3rem, 6vw, 1.8rem);
   font-weight: 700;
+  flex: 0 0 auto;
+  max-width: 55vw;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.ms-section-adj {
+  font-size: clamp(0.85rem, 3.2vw, 1.05rem);
+  font-weight: 500;
+  color: var(--ms-fg-dim);
+  opacity: 0.6;
+  flex: 0 0 7ch;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#msSectionPrev {
+  text-align: right;
+}
+
+#msSectionNext {
+  text-align: left;
 }
 
 .ms-chord-strip {
