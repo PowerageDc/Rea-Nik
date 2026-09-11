@@ -14,39 +14,18 @@ probados contra REAPER real vía `nsaudio_musicstate_test.html` (se
 mantiene como herramienta de diagnóstico). Fix de
 `Nik_MusicState_PublishAll.lua` (ya no pisa datos reales con sample).
 
-## Pendiente — refresco automático vía `publish_version`
+## Hecho — refresco automático vía `publish_version`
 
-Diseño cerrado en sesión (ver charla) — contador que solo sube,
-puenteado igual que las otras 4 keys de MusicState, no una fecha.
+Implementado y confirmado en REAPER real (guardar en el Helper con la UI
+de instrumentista ya abierta en el mismo proyecto → refresh automático,
+sin recargar la página). Detalle de la implementación en
+`musicstate_instrumentista.md` §9.
 
-- [ ] **Lua — `Nik_MusicState_Helper.lua`**
-  - [ ] `H.publish_version`, cargado en
-        `nikMusicStateLoadFromProjExtState` (default `0` si la key no
-        existe todavía en `ProjExtState`)
-  - [ ] Incrementar + `SetProjExtState(proj, Bridge.NAMESPACE,
-        'publish_version', ...)` en `nikMusicStateSaveAndPublish`, mismo
-        bloque que las otras 4 `SetProjExtState`
-  - [ ] Sumar `'publish_version'` a `Bridge.KEYS` (o bridge manual
-        análogo) — necesario para que `Nik_MusicState_PublishAll.lua`
-        también lo re-puentee en cambio de tab, no solo al guardar
-- [ ] **JS — `ms-dispatch.js`**
-  - [ ] Sumar `GET/EXTSTATE/NikMusicState/publish_version` al poll
-        consolidado de 1000ms (mismo poll que `active_project_name`/
-        `reapitch_semitone`)
-  - [ ] `var nikMsLastKnownPublishVersion = null;` — reseteada a `null`
-        dentro de `nikMsResetProjectState()` (clave para que la
-        comparación quede acotada al proyecto activo, ver charla de
-        sesión)
-  - [ ] Handler `EXTSTATE`/`publish_version`: primera vez visto en este
-        proyecto → solo cachear, sin refresh extra (el cambio de
-        proyecto ya disparó el suyo). Cambió estando en el mismo
-        proyecto → sí disparar `nikMusicStateRequestAll()`
-- [ ] **Testear**: guardar en el Helper con la UI de instrumentista ya
-      abierta en el mismo proyecto, confirmar refresh en ≤1s sin
-      recargar la página
-- [ ] Una vez confirmado, actualizar `musicstate_instrumentista.md` §8
-      (sacar el pendiente de "gesto de refresh manual" — queda resuelto
-      automático, no por gesto de UI)
+- [ ] **Pendiente de sync de doc** (no bloqueante, ver convención de
+      consolidación en `00_CONTEXTO_GENERAL.md`): `IMPL_MusicState.md`
+      secciones 10-11 listan las 4 keys de `Bridge.KEYS` sin
+      `publish_version` — desactualizado desde este cambio. Sesión
+      aparte para consolidar, no urge.
 
 ## Pendiente — `instrumentista.js`
 

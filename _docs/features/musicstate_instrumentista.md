@@ -84,7 +84,9 @@ la tabla de §2 necesita.
 
 `core/music-state.js`, `core/music-transpose.js`, `markers/markers.js`,
 `config.js` (Command IDs, fuente única — no forkear para evitar
-divergencia con control remoto).
+divergencia con control remoto), `core/utils.js` (`nikLerpColor` —
+dependencia real de `markers.js`, no listada en la primera pasada de este
+doc; confirmada al integrar `ms-section.js`).
 
 ## 4. Selector de rol
 
@@ -171,3 +173,106 @@ tempo/canción).
 - Estructura final de banda terciaria en horizontal (una fila vs. dos).
 - Extraer `ms-tempo.js` a módulo compartido con `playrate.js` si ese
   archivo se refactoriza en el futuro (hoy: duplicación controlada).
+- **RESUELTO** (ver sección 9): `harmony_data`/`project_key`/
+  `project_roles`/`cues_data` ahora se refrescan solos, automático, vía
+  `publish_version` (contador puenteado igual que las otras 4 keys) —
+  sin necesidad de gesto de UI.
+- Gesto de refresh manual para `tempo_map`/`timesig_map` (mapa de tempo/
+  compás) editados en vivo mientras la UI ya está abierta, sin cambio de
+  proyecto de por medio — a diferencia de las 4 keys de arriba, estos dos
+  no pasan por el Bridge/Helper (vienen de
+  `Nik_Playrate_ReadTempoMap.lua`), así que `publish_version` no los
+  cubre. Playrate resuelve esto reusando la apertura del popup como
+  gancho; esta UI no tiene popup (pantalla completa), sigue faltando
+  decidir qué gesto lo dispara — caso de borde chico (editar time
+  signature markers en vivo durante un ensayo es raro), no bloqueante.
+- Semitono `"mixed"` del Stem Bus (ReaPitch): el manejo está escrito
+  (mismo sentinel que `reapitch.js`) pero no probado contra datos reales
+  — solo se vio `"none"` y valores numéricos en sesión.
+- Mitigación de carrera en `nikMsResetProjectState`/re-pedido on-demand
+  (ver sección 9): si el bug de datos colgados de un proyecto anterior
+  reaparece pese al debounce de 400ms, hace falta un token de generación
+  — deliberadamente no implementado todavía, ver sección 9 para el
+  detalle.
+
+## 9. Estado de implementación — `shared/` (dispatcher, tempo, sección)
+
+Sesión de implementación + validación contra REAPER real. Los 3 archivos
+de `musicstate-ui/shared/` (ver arquitectura, sección 3) están escritos y
+probados end-to-end con una herramienta de test dedicada
+(`nsaudio_musicstate_test.html`, en la raíz de `reaper_www_root/` junto a
+`nsaudio_remote_control.html` — panel de debug crudo, no es parte de la
+UI final, se mantiene como herramienta de diagnóstico reusable para
+futuras sesiones de este perfil o de otros perfiles del mismo esquema).
+
+### Decisiones/fixes que salieron en el camino (no previstos en el diseño original)
+
+- **Reset de estado por-proyecto** (`nikMsResetProjectState()`, en
+  `ms-dispatch.js`): al detectar cambio de `active_project_name`, se
+  limpia todo el estado cacheado por-proyecto (armonía, cues, tonalidad,
+  roles, tempo map, markers, semitono) ANTES de re-pedirlo. Necesario
+  porque el puente Lua no tiene nada que puentear si el proyecto nuevo no
+  tiene `ProjExtState` propio (ej. pestaña "sin guardar") — sin este
+  reset, quedaban colgados los valores del proyecto anterior.
+- **Mitigación de carrera**: además del pedido inmediato al detectar
+  cambio de proyecto, se repite el mismo pedido 400ms después
+  (`window.setTimeout`). Causa raíz: una respuesta on-demand rezagada del
+  proyecto anterior puede llegar DESPUÉS del reset y repoblar con datos
+  viejos — el protocolo no etiqueta las respuestas con a qué proyecto
+  correspondían. La mitigación asume orden de llegada FIFO del server de
+  REAPER (no confirmado formalmente) — barata y suficiente por ahora, no
+  bloqueante. Si reaparece el bug de datos colgados pese a esto, la
+  solución robusta (no implementada) es un token de generación por
+  cambio de proyecto.
+- **Fix en `Nik_MusicState_PublishAll.lua`** (fuera de esta UI, pero
+  descubierto por ella): el script seguía escribiendo `sample_harmony`/
+  `sample_cues` hardcodeados sobre `ProjExtState` en cada corrida,
+  pisando los datos reales que el Helper ya había guardado — TODO viejo
+  de la sección 7 del `IMPL_MusicState.md`, nunca cerrado del todo (sí se
+  había cerrado para `project_key`/`project_roles`, no para
+  `harmony_data`/`cues_data`). El script quedó reducido a un wrapper de
+  `Bridge.bridgeAll(proj)`, sin generar ni escribir ningún dato — el
+  Helper es la única fuente de verdad de las 4 keys.
+
+### Validado en sesión contra REAPER real
+
+`TRANSPORT` en vivo, reset/cambio de proyecto (incluido el caso de
+pestaña "sin guardar"), semitono ReaPitch numérico + transposición de
+acordes, tempo map (BPM vigente por posición), markers → sección actual
++ color de familia (incluida cadena `x2`/`x3...`, confirmada con
+proyecto real — los hex cambian correctamente eslabón a eslabón),
+armonía (acorde actual/próximo), tonalidad, roles del proyecto, cues
+(con y sin filtro de rol, sentinel `"todos"` confirmado).
+
+### No probado explícitamente (no bloqueante, ver sección 8)
+
+Semitono `"mixed"`; refresco en caliente de `harmony_data`/`project_key`
+tras editarlos en el Helper sin recargar la página (se asume igual a
+`cues_data`, que sí se confirmó sin refresco automático, por compartir
+el mismo mecanismo on-demand — no verificado explícito).
+
+### Actualización — refresco automático vía `publish_version`
+
+Implementado y confirmado en REAPER real, sesión posterior a la
+validación inicial de arriba: `Nik_MusicState_Helper.lua` incrementa un
+contador (`H.publish_version`, cargado desde `ProjExtState` con default
+`0`) en cada `nikMusicStateSaveAndPublish()`, lo guarda y lo puentea
+igual que las otras 4 keys (`publish_version` sumado a
+`Bridge.KEYS` en `MusicStateBridge_common_logic.lua` —
+`Nik_MusicState_PublishAll.lua` no necesitó ningún cambio, ya itera
+`Bridge.KEYS` genérico). Del lado cliente, `ms-dispatch.js` cachea el
+último valor visto (`nikMsLastKnownPublishVersion`, reseteado a `null`
+en cada cambio de proyecto para que la comparación nunca cruce entre
+proyectos distintos) y dispara `nikMusicStateRequestAll()` solo cuando
+cambia estando en el mismo proyecto — no en la primera vez que se ve un
+valor tras cambiar de proyecto (ese caso ya lo cubre el reset de
+proyecto por su cuenta). Resuelve, de forma automática y sin gesto de
+UI, el pendiente de "harmony_data/project_key/project_roles/cues_data no
+se refrescan solos" que había quedado abierto en la sección 8 — sí queda
+pendiente el caso análogo para `tempo_map`/`timesig_map` (ver sección 8,
+no cubierto por este mecanismo).
+
+**Pendiente de sync de doc, no bloqueante**: `IMPL_MusicState.md`
+secciones 10-11 listan las 4 keys de `Bridge.KEYS` sin `publish_version`
+— desactualizado desde este cambio, a consolidar en sesión aparte (ver
+convención de `00_CONTEXTO_GENERAL.md`).
