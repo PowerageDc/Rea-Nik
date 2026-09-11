@@ -112,10 +112,7 @@ function nikInstrumentistaRender() {
         sectionEl.style.color = "";
     }
 
-    var currentChord = (typeof nikMusicStateCurrentChord === "function") ? nikMusicStateCurrentChord() : null;
-    var nextChord = (typeof nikMusicStateNextChord === "function") ? nikMusicStateNextChord() : null;
-    document.getElementById("msChordCurrent").textContent = currentChord || "—";
-    document.getElementById("msChordNext").textContent = nextChord || "—";
+    nikInstrumentistaRenderChordStrip();
 
     // "todos" no se pasa tal cual a nikMusicStateActiveCues -- esa función
     // trata "sin filtro" como null/undefined (devuelve todas), no como el
@@ -125,11 +122,42 @@ function nikInstrumentistaRender() {
     var roleFilter = (!role || role === "todos") ? undefined : role;
     var cues = (typeof nikMusicStateActiveCues === "function") ? nikMusicStateActiveCues(roleFilter) : [];
     var cueBandEl = document.getElementById("msCueBand");
+    var cueDividerEl = document.getElementById("msCueDivider");
     if (cues.length > 0) {
         cueBandEl.textContent = cues.map(function (c) { return c.text; }).join(" · ");
         cueBandEl.hidden = false;
+        cueDividerEl.hidden = false;
     } else {
         cueBandEl.hidden = true;
+        cueDividerEl.hidden = true;
+    }
+}
+
+// Tira de acordes: 2 hacia atrás + actual + 2 hacia adelante -- punto de
+// partida para el pendiente "cantidad final de slots" del doc de diseño
+// §8, ahora resuelto en 5 (a confirmar que entre cómodo contra chords
+// largos tipo "C#m7b5" en pantallas angostas, ver clamp() en el CSS).
+// Reusa nikMusicStateChordWindow tal cual -- ya trae isCurrent por
+// evento, solo se traduce a offset relativo para el atributo data-offset
+// que usa el CSS (-2..2).
+function nikInstrumentistaRenderChordStrip() {
+    var stripEl = document.getElementById("msChordStrip");
+    if (typeof nikMusicStateChordWindow !== "function") { stripEl.textContent = "—"; return; }
+
+    var win = nikMusicStateChordWindow(2, 2);
+    var currentIdx = -1;
+    for (var i = 0; i < win.length; i++) { if (win[i].isCurrent) { currentIdx = i; break; } }
+
+    stripEl.innerHTML = "";
+    for (var j = 0; j < win.length; j++) {
+        var offset = (currentIdx === -1) ? 0 : (j - currentIdx);
+        var slot = document.createElement("span");
+        slot.className = "ms-chord-slot";
+        slot.setAttribute("data-offset", String(offset));
+        // chord === null es el sentinel de silencio explícito (ver
+        // core/music-state.js) -- se muestra distinguible de "sin dato".
+        slot.textContent = (win[j].chord === null) ? "—" : win[j].chord;
+        stripEl.appendChild(slot);
     }
 }
 

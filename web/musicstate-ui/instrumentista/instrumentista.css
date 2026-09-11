@@ -1,11 +1,18 @@
 /* instrumentista.css — perfil Instrumentista (MusicState)
-   Layout vertical estático (roadmap punto 3). Sin conmutación por
-   viewport todavía (eso es el punto 4) ni animación de transición de
-   acordes (sub-punto nuevo, después de validar esto contra sala real).
+   Layout vertical estático (roadmap punto 3), v2 tras feedback contra
+   dispositivo real: la v1 dejaba ~85% del alto y la mitad del ancho sin
+   usar. Ahora: contenido centrado (horizontal y vertical), tira de
+   acordes de 5 slots (2 atrás + actual + 2 adelante, vía
+   nikMusicStateChordWindow(2,2)), líneas divisoras entre bloques, todo
+   escalado hacia arriba con clamp() para adaptarse al ancho real del
+   dispositivo sin quedar fijo a un tamaño de diseño.
+
+   Sin conmutación por viewport todavía (punto 4) ni animación de
+   transición de acordes (sub-punto nuevo, pendiente de diseñar aparte).
 
    Paleta pensada para sala de ensayo con tubos LED blancos (no
-   escenario oscuro) -- valores de --ms-fg-dim son el punto más frágil
-   bajo luz directa, primeros candidatos a ajustar si se lavan.
+   escenario oscuro) -- --ms-fg-dim es el punto más frágil bajo luz
+   directa, primer candidato a ajustar si se lava.
 */
 
 :root {
@@ -13,6 +20,7 @@
   --ms-fg: #F2F0EA;
   --ms-fg-dim: #9A9AA2;
   --ms-chord-color: #FFB627;
+  --ms-divider-color: rgba(242, 240, 234, 0.15);
 }
 
 html, body {
@@ -27,61 +35,93 @@ html, body {
 .ms-screen {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 24px;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.ms-divider {
+  border: none;
+  border-top: 1px solid var(--ms-divider-color);
+  width: 100%;
+  max-width: 480px;
+  margin: 18px 0;
 }
 
 .ms-tertiary-row1 {
-  font-size: 0.95rem;
+  font-size: clamp(1rem, 4vw, 1.3rem);
   color: var(--ms-fg-dim);
 }
 
 .ms-tertiary-row1 .ms-sep {
-  margin: 0 6px;
+  margin: 0 8px;
   opacity: 0.5;
 }
 
-.ms-tertiary-row2 {
-  font-size: 0.85rem;
+.ms-song-name {
+  font-size: clamp(1.2rem, 5vw, 2rem);
+  font-weight: 500;
   color: var(--ms-fg-dim);
-  opacity: 0.8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
-  margin-bottom: 20px;
+  max-width: 100%;
 }
 
 .ms-section {
-  font-size: 1.3rem;
+  font-size: clamp(1.3rem, 6vw, 1.8rem);
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 
-.ms-chord-current {
-  font-size: 4.5rem;
+.ms-chord-strip {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(12px, 4vw, 28px);
+  width: 100%;
+}
+
+.ms-chord-slot {
   font-weight: 800;
-  color: var(--ms-chord-color);
-  line-height: 1.05;
+  color: var(--ms-fg-dim);
+  opacity: 0.5;
 }
 
-.ms-chord-next {
-  font-size: 2rem;
-  font-weight: 500;
-  color: var(--ms-fg-dim);
-  margin-top: 6px;
+.ms-chord-slot[data-offset="0"] {
+  color: var(--ms-chord-color);
+  font-size: clamp(3rem, 15vw, 6rem);
+  opacity: 1;
+}
+
+.ms-chord-slot[data-offset="-1"],
+.ms-chord-slot[data-offset="1"] {
+  font-size: clamp(1.8rem, 9vw, 3.2rem);
+  opacity: 0.75;
+}
+
+.ms-chord-slot[data-offset="-2"],
+.ms-chord-slot[data-offset="2"] {
+  font-size: clamp(1.2rem, 6vw, 2rem);
+  opacity: 0.5;
 }
 
 .ms-cue-band {
-  margin-top: auto;
   background: var(--ms-fg);
   color: var(--ms-bg);
   font-weight: 700;
-  font-size: 1.1rem;
-  padding: 14px 16px;
+  font-size: clamp(1.1rem, 5vw, 1.5rem);
+  padding: 16px 20px;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
 }
 
-.ms-cue-band[hidden] {
+.ms-cue-band[hidden],
+.ms-divider[hidden] {
   display: none;
 }
