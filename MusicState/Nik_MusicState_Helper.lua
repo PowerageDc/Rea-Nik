@@ -86,6 +86,9 @@ local function nikMusicStateLoadFromProjExtState(proj)
     end
   end
 
+  local ok_ver, ver_str = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'publish_version')
+  H.publish_version = (ok_ver > 0 and tonumber(ver_str)) or 0
+
   local ok_roles, roles_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'project_roles')
   if ok_roles > 0 and roles_json ~= '' then
     local roles = {}
@@ -255,17 +258,21 @@ local function nikMusicStateSaveAndPublish()
   for _, m in ipairs(cues_measure_parts) do table.insert(cues_measure_jsons, m.json) end
   local cues_json = '{' .. table.concat(cues_measure_jsons, ',') .. '}'
 
+  H.publish_version = (H.publish_version or 0) + 1
+
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'project_key', key_json)
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'project_roles', roles_json)
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'harmony_data', harmony_json)
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'cues_data', cues_json)
+  reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'publish_version', tostring(H.publish_version))
 
   local ok_key = Bridge.bridgeKey(proj, 'project_key')
   local ok_roles = Bridge.bridgeKey(proj, 'project_roles')
   local ok_harmony = Bridge.bridgeKey(proj, 'harmony_data')
   local ok_cues = Bridge.bridgeKey(proj, 'cues_data')
+  local ok_ver = Bridge.bridgeKey(proj, 'publish_version')
 
-  if ok_key and ok_roles and ok_harmony and ok_cues then
+  if ok_key and ok_roles and ok_harmony and ok_cues and ok_ver then
     H.save_status = 'Guardado OK.'
   else
     H.save_status = 'Error al publicar (ver consola).'

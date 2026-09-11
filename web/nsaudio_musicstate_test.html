@@ -77,7 +77,8 @@ function nikMsTestBuildSlowPoll() {
     // marker_bars/solo-in-front, irrelevantes para este perfil).
     return NIK_LUA_COMMANDS.statePoll.commandId +
         ";GET/EXTSTATE/NikRemote/active_project_name" +
-        ";GET/EXTSTATE/NikRemote/reapitch_semitone";
+        ";GET/EXTSTATE/NikRemote/reapitch_semitone" +
+        ";GET/EXTSTATE/NikMusicState/publish_version";
 }
 
 function nikMsTestInit() {

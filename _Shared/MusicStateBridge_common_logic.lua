@@ -8,7 +8,7 @@ local M = {}
 
 M.NAMESPACE = "NSAUDIOMUSIC"
 M.BRIDGE_NAMESPACE = "NikMusicState"
-M.KEYS = { "harmony_data", "project_key", "project_roles", "cues_data" }
+M.KEYS = { "harmony_data", "project_key", "project_roles", "cues_data", "publish_version" }
 
 -- Copia una key de ProjExtState a ExtState global.
 -- Retorna: ok (bool), value_or_nil (string)

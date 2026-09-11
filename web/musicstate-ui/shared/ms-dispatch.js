@@ -34,6 +34,11 @@ var nikReaPitchLastSemitone = "none";  // sentinel inicial ("sin dato todavía")
                                         // criterio que reapitch.js: "none"/"mixed" son
                                         // estados válidos del Stem Bus, no se colapsan a 0.
 
+var nikMsLastKnownPublishVersion = null; // último publish_version visto EN EL PROYECTO
+                                          // ACTIVO -- se resetea a null en cada cambio de
+                                          // proyecto (nikMsResetProjectState) para que la
+                                          // comparación nunca cruce entre proyectos.
+
 var g_markers = [];                    // mismo formato que main.js: array de tok completos
                                         // por marker ([.., nombre, id, pos, color]) — layout
                                         // confirmado contra core/wwr-dispatch.js (getValFromAr).
@@ -118,6 +123,20 @@ function wwr_onreply(results) {
                 if (tok[1] == "NikMusicState" && tok[2] == "cues_data") {
                     if (typeof nikMusicStateSetCuesData === "function") nikMusicStateSetCuesData(tok[3]);
                 }
+                if (tok[1] == "NikMusicState" && tok[2] == "publish_version") {
+                    var pv = parseInt(tok[3], 10);
+                    if (!isNaN(pv) && pv !== nikMsLastKnownPublishVersion) {
+                        // Primera vez que vemos una versión en este proyecto (recién
+                        // reseteada por un cambio de proyecto): solo cachear, sin
+                        // refresh extra -- el cambio de proyecto ya disparó el suyo
+                        // propio. Cambió estando en el MISMO proyecto: sí refrescar.
+                        var isFirstSight = (nikMsLastKnownPublishVersion === null);
+                        nikMsLastKnownPublishVersion = pv;
+                        if (!isFirstSight && typeof nikMusicStateRequestAll === "function") {
+                            nikMusicStateRequestAll();
+                        }
+                    }
+                }
                 break;
 
             case "MARKER_LIST":
@@ -146,6 +165,7 @@ function nikMsResetProjectState() {
     if (typeof nikMusicStateSetProjectKey === "function") nikMusicStateSetProjectKey(null);
     if (typeof nikMusicStateSetProjectRoles === "function") nikMusicStateSetProjectRoles(null);
     if (typeof nikMsTempoSetMap === "function") nikMsTempoSetMap(null);
+    nikMsLastKnownPublishVersion = null;
     g_markers = [];
     if (typeof nikMsSectionOnMarkersUpdated === "function") nikMsSectionOnMarkersUpdated();
     nikReaPitchLastSemitone = "none";
