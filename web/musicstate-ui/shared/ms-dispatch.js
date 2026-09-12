@@ -126,13 +126,19 @@ function wwr_onreply(results) {
                 if (tok[1] == "NikMusicState" && tok[2] == "publish_version") {
                     var pv = parseInt(tok[3], 10);
                     if (!isNaN(pv) && pv !== nikMsLastKnownPublishVersion) {
-                        // Primera vez que vemos una versión en este proyecto (recién
-                        // reseteada por un cambio de proyecto): solo cachear, sin
-                        // refresh extra -- el cambio de proyecto ya disparó el suyo
-                        // propio. Cambió estando en el MISMO proyecto: sí refrescar.
-                        var isFirstSight = (nikMsLastKnownPublishVersion === null);
+                        // Antes: se saltaba el refresh en el primer publish_version visto
+                        // tras un reset de proyecto (isFirstSight), asumiendo que el
+                        // requestAll() del cambio de proyecto ya lo cubría. Esa premisa
+                        // es insegura: si se publica armonía nueva antes del próximo tick
+                        // del poll de 1000ms, el primer valor visto post-reset ya es el
+                        // NUEVO, no el viejo -- y el refresh se perdía en silencio (bug
+                        // reportado: no refresca si se publica justo después de abrir un
+                        // proyecto en una tab que estaba "sin guardar" al conectar).
+                        // Se pide siempre que cambie -- costo: algún requestAll()
+                        // ocasionalmente redundante, inocuo comparado con perder un
+                        // refresh real.
                         nikMsLastKnownPublishVersion = pv;
-                        if (!isFirstSight && typeof nikMusicStateRequestAll === "function") {
+                        if (typeof nikMusicStateRequestAll === "function") {
                             nikMusicStateRequestAll();
                         }
                     }
