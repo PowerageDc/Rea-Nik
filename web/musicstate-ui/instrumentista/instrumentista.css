@@ -20,6 +20,7 @@
   --ms-fg: #F2F0EA;
   --ms-fg-dim: #9A9AA2;
   --ms-chord-color: #FFB627;
+  --ms-key-color: #F2F0EA;
   --ms-divider-color: rgba(242, 240, 234, 0.15);
   --chord-h: clamp(4.5rem, 18vw, 8rem);
   --chord-divider-gap: clamp(24px, 10vh, 50px);
@@ -98,9 +99,9 @@ html, body {
 }
 
 .ms-key-tonic-block {
-  position: relative; /* ancla local para la nota -- ya no depende del ancho de ms-tertiary-row1 */
+  position: relative;
   display: inline-block;
-  color: var(--ms-chord-color);
+  color: var(--ms-key-color);
 }
 
 .ms-key-note {
