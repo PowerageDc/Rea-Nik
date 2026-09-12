@@ -103,12 +103,15 @@ html, body {
 .ms-key-tonic-block {
   position: relative;
   display: inline-block;
+  line-height: 1.8; /* strut fijo: aunque el accidental crezca, mientras no supere esto, la caja no cambia de alto */
   color: var(--ms-key-color);
 }
 
 .ms-key-note {
   position: absolute;
+  top: 50%;
   right: 100%;
+  transform: translateY(-50%);
   margin-right: 0.2em;
   color: var(--ms-fg-dim);
 }
@@ -125,7 +128,7 @@ html, body {
 
 .ms-key-tonic-block .ms-key-accidental-flat {
   display: inline-block;
-  font-size: 1em;
+  font-size: 1.2em;
   position: relative;
   top: -0.12em;
 }
