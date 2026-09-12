@@ -170,6 +170,8 @@ html, body {
   white-space: nowrap;
   text-overflow: ellipsis;
   text-align: center;
+  transition: flex-basis 300ms ease, font-size 300ms ease,
+              opacity 300ms ease, color 300ms ease;
 }
 
 .ms-chord-slot[data-offset="0"] {
@@ -191,6 +193,18 @@ html, body {
   font-size: clamp(1.2rem, 6vw, 2rem);
   opacity: 0.5;
   flex: 0 0 3.5ch;
+}
+
+.ms-chord-slot[data-offset="-3"],
+.ms-chord-slot[data-offset="3"] {
+  font-size: clamp(1.2rem, 6vw, 2rem);
+  opacity: 0;
+  flex: 0 0 0ch;
+}
+
+.ms-chord-strip.is-jumping {
+  transition: opacity 150ms ease;
+  opacity: 0;
 }
 
 .ms-cue-divider {
