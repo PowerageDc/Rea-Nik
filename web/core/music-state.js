@@ -30,7 +30,8 @@ var nikMusicStateProjectRoles = [];  // array de strings, sin "todos" (reservado
 // (misma responsabilidad que nikPlayrateSetTempoMap en playrate.js)
 
 function nikMusicStateSetHarmonyData(val) {
-    nikMusicStateHarmonyFlat = nikMusicStateFlattenBarKeyed(nikMusicStateParseJsonSafe(val));
+    var flat = nikMusicStateFlattenBarKeyed(nikMusicStateParseJsonSafe(val));
+    nikMusicStateHarmonyFlat = nikMusicStateExpandHarmonyRepeats(flat);
 }
 
 function nikMusicStateSetCuesData(val) {
@@ -96,6 +97,39 @@ function nikMusicStateFlattenBarKeyed(dataObj) {
     }
     flat.sort(nikMusicStateComparePos);
     return flat;
+}
+
+// Expande el array plano de armonía (sparse por diseño -- una entrada solo
+// donde el acorde cambia, ver Nik_MusicState_Helper.lua) para incluir una
+// entrada virtual por cada compás intermedio sin evento propio, repitiendo
+// el chord (o null, silencio) del evento anterior. Sin esto,
+// nikMusicStateChordWindow camina por índice de evento guardado, no por
+// compás real -- con un acorde sostenido muchos compases, la tira del
+// prompter queda estática (sesión de pulido de instrumentista.js).
+//
+// No expande antes del primer evento ni después del último -- ahí no hay
+// chord previo del cual copiar, queda igual que antes (placeholder vacío
+// en los extremos).
+//
+// Convención de autoría (documentar en la feature): una sección sin
+// armonía cargada todavía debe arrancar con una fila de silencio explícito
+// (Acorde vacío -> null) para cortar el carry del acorde anterior -- sin
+// eso, esta función lo sigue repitiendo compás a compás hasta el próximo
+// evento real, sin forma de distinguir "sostenido a propósito" de "sección
+// sin cargar" (ambos se ven igual: ausencia de eventos en el medio).
+function nikMusicStateExpandHarmonyRepeats(flat) {
+    if (!flat || flat.length < 2) return flat;
+    var expanded = [];
+    for (var i = 0; i < flat.length; i++) {
+        expanded.push(flat[i]);
+        if (i === flat.length - 1) break;
+        var curBar = flat[i].bar;
+        var nextBar = flat[i + 1].bar;
+        for (var b = curBar + 1; b < nextBar; b++) {
+            expanded.push({ bar: b, qn_offset: 0, chord: flat[i].chord, isRepeat: true });
+        }
+    }
+    return expanded;
 }
 
 // --- Posición actual: compás + qn_offset dentro del compás ---
