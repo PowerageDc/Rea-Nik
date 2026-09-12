@@ -174,14 +174,37 @@ function nikInstrumentistaChordSlotText(entry) {
 function nikInstrumentistaComputeOffsets(win) {
     var currentIdx = -1;
     for (var i = 0; i < win.length; i++) { if (win[i].isCurrent) { currentIdx = i; break; } }
-    var result = [];
+
+    // Identidad de referencia para los placeholders (offsets sin acorde
+    // real, típico cerca del principio/final de la canción): se ancla a
+    // la key del acorde vigente, no a un valor fijo -- así, cuando el
+    // vigente cambia (shift real), la key del placeholder "cambia" junto
+    // con él y el diff lo trata como salida+entrada por el mismo
+    // mecanismo de ghost que ya existe para acordes reales, en vez de
+    // dejarlo inmóvil descuadrando el ancho total de la tira.
+    var anchorKey = (currentIdx !== -1) ? nikInstrumentistaChordKey(win[currentIdx]) : "NOCURRENT";
+
+    var byOffset = {};
     for (var j = 0; j < win.length; j++) {
-        var offset = (currentIdx === -1) ? 0 : (j - currentIdx);
-        result.push({
-            key: nikInstrumentistaChordKey(win[j]),
-            offset: offset,
-            text: nikInstrumentistaChordSlotText(win[j])
-        });
+        // La fórmula general ya cubre currentIdx=-1 sin caso especial:
+        // offset = j - (-1) = j+1 -- los acordes antes de que suene el
+        // primero quedan en +1/+2 (próximos), nada vigente todavía. El
+        // caso especial anterior (offset=0 para todos) colapsaba varias
+        // entradas de `win` sobre el mismo offset en `byOffset`, pisándose
+        // entre sí -- es la causa del bug ya anotado en la sesión de
+        // layout ("doble acorde resaltado al inicio de canción").
+        var offset = j - currentIdx;
+        byOffset[offset] = win[j];
+    }
+
+    var result = [];
+    for (var o = -2; o <= 2; o++) {
+        var entry = byOffset[o];
+        if (entry) {
+            result.push({ key: nikInstrumentistaChordKey(entry), offset: o, text: nikInstrumentistaChordSlotText(entry) });
+        } else {
+            result.push({ key: "PH_" + anchorKey + "_" + o, offset: o, text: "" });
+        }
     }
     return result;
 }
@@ -303,7 +326,19 @@ function nikInstrumentistaShiftChordSlots(newList, delta) {
         slot.className = "ms-chord-slot";
         slot.setAttribute("data-offset", String(enterGhostOffset));
         slot.textContent = item.text;
-        stripEl.appendChild(slot);
+
+        // delta=-1 (avanza): entra por la derecha, appendChild ya da la
+        // posición correcta. delta=+1 (retrocede): entra por la
+        // izquierda -- tiene que insertarse como primer hijo, no al
+        // final (ese era el bug: siempre entraba por la derecha sin
+        // importar la dirección, porque el layout es flex normal y usa
+        // orden real del DOM, no data-offset, para decidir posición).
+        if (delta === -1) {
+            stripEl.appendChild(slot);
+        } else {
+            stripEl.insertBefore(slot, stripEl.firstChild);
+        }
+
         nikInstrumentistaChordNodesByKey[item.key] = slot;
         (function (enteringNode, finalOffset) {
             // Forzar reflow antes de cambiar el offset -- si no, el browser
