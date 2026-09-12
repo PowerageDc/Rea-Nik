@@ -42,10 +42,20 @@ function nikMsSectionOnMarkersUpdated() {
 
 // Índice en nikMsMarkersSorted del marker vigente en `posSeconds` -- último
 // con pos <= posSeconds, o -1 si ninguno (posición anterior al primero).
+// EPSILON: tok[2] de TRANSPORT llega truncado a 6 decimales, mientras que la
+// posición de MARKER conserva precisión completa de double -- al aterrizar
+// justo en un marker, el truncamiento puede caer una fracción de microsegundo
+// por debajo del valor exacto del marker, y la comparación estricta fallaba
+// hasta el próximo compás (bug reportado: display se quedaba en la sección
+// anterior hasta avanzar un compás). Margen de 1ms, muy por encima del error
+// de truncamiento real observado (~0.4 microsegundos) y sin relevancia
+// musical a ningún tempo razonable.
+var NIK_MS_SECTION_EPSILON_SEC = 0.001;
+
 function nikMsFindSectionIndexAt(posSeconds) {
     var idx = -1;
     for (var i = 0; i < nikMsMarkersSorted.length; i++) {
-        if (parseFloat(nikMsMarkersSorted[i][3]) <= posSeconds) idx = i;
+        if (parseFloat(nikMsMarkersSorted[i][3]) <= posSeconds + NIK_MS_SECTION_EPSILON_SEC) idx = i;
         else break;
     }
     return idx;
