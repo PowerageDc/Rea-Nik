@@ -159,6 +159,7 @@ html, body {
   justify-content: center;
   flex-wrap: nowrap;
   gap: clamp(12px, 4vw, 28px);
+  transition: opacity 150ms ease;
 }
 
 .ms-chord-slot {

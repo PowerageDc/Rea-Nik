@@ -150,46 +150,211 @@ function nikInstrumentistaAdjacentSectionLabel(idx) {
     return resolved ? resolved.displayName : "";
 }
 
-// Tira de acordes: 2 hacia atrás + actual + 2 hacia adelante -- punto de
-// partida para el pendiente "cantidad final de slots" del doc de diseño
-// §8, ahora resuelto en 5 (a confirmar que entre cómodo contra chords
-// largos tipo "C#m7b5" en pantallas angostas, ver clamp() en el CSS).
-// Reusa nikMusicStateChordWindow tal cual -- ya trae isCurrent por
-// evento, solo se traduce a offset relativo para el atributo data-offset
-// que usa el CSS (-2..2).
+var nikInstrumentistaChordNodesByKey = {};
+var nikInstrumentistaChordPrevWindow = null; // null = todavía no hubo primer render
+var nikInstrumentistaChordJumpPendingList = null;
+
+function nikInstrumentistaChordKey(entry) {
+    return entry.bar + "_" + entry.qn_offset;
+}
+
+// chord === null es el sentinel de silencio explícito (ver
+// core/music-state.js) -- se muestra distinguible de "sin dato".
+// undefined (offset sin entrada en la ventana) se muestra vacío, no "—",
+// para no competir visualmente con el silencio explícito.
+function nikInstrumentistaChordSlotText(entry) {
+    if (!entry) return "";
+    return entry.chord === null ? "—" : entry.chord;
+}
+
+// Traduce la ventana cruda de nikMusicStateChordWindow a la forma que usa
+// el resto de este módulo: key estable por ocurrencia (bar+qn_offset,
+// única incluso si el mismo acorde se repite en la canción), offset
+// relativo -2..2, y el texto ya resuelto (con transposición aplicada).
+function nikInstrumentistaComputeOffsets(win) {
+    var currentIdx = -1;
+    for (var i = 0; i < win.length; i++) { if (win[i].isCurrent) { currentIdx = i; break; } }
+    var result = [];
+    for (var j = 0; j < win.length; j++) {
+        var offset = (currentIdx === -1) ? 0 : (j - currentIdx);
+        result.push({
+            key: nikInstrumentistaChordKey(win[j]),
+            offset: offset,
+            text: nikInstrumentistaChordSlotText(win[j])
+        });
+    }
+    return result;
+}
+
+function nikInstrumentistaSameStructure(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+        if (a[i].key !== b[i].key || a[i].offset !== b[i].offset) return false;
+    }
+    return true;
+}
+
+// Determina si la ventana nueva es un shift limpio de ±1 respecto a la
+// anterior: las keys en común deben tener todas el mismo delta de offset,
+// y ese delta debe ser exactamente ±1. Sin overlap, con deltas
+// inconsistentes entre sí, o con delta de magnitud >1 -> no es shift
+// limpio, se resuelve como salto (sección nueva, cursor movido lejos).
+function nikInstrumentistaDetectShift(prevList, newList) {
+    var prevByKey = {};
+    for (var i = 0; i < prevList.length; i++) prevByKey[prevList[i].key] = prevList[i].offset;
+
+    var delta = null;
+    var commonCount = 0;
+    for (var j = 0; j < newList.length; j++) {
+        var key = newList[j].key;
+        if (!(key in prevByKey)) continue;
+        commonCount++;
+        var d = newList[j].offset - prevByKey[key];
+        if (delta === null) delta = d;
+        else if (d !== delta) return null;
+    }
+    if (commonCount === 0) return null;
+    if (delta !== 1 && delta !== -1) return null;
+    return delta;
+}
+
+// Reconstrucción completa de los 5 slots visibles (offset -2..2), igual
+// criterio que la versión original: los 5 offsets siempre existen en el
+// DOM aunque `newList` traiga menos elementos, para que el ancho
+// geométrico de la tira nunca cambie. `withFade` envuelve el swap en el
+// fade de `.is-jumping` (ver CSS) -- se usa para el caso de salto, no
+// para el primer render (ahí no hay nada previo que desvanecer).
+function nikInstrumentistaRebuildChordSlots(newList, withFade) {
+    var stripEl = document.getElementById("msChordStrip");
+
+    function doRebuild(list) {
+        stripEl.innerHTML = "";
+        nikInstrumentistaChordNodesByKey = {};
+        var byOffset = {};
+        for (var i = 0; i < list.length; i++) byOffset[list[i].offset] = list[i];
+        for (var o = -2; o <= 2; o++) {
+            var slot = document.createElement("span");
+            slot.className = "ms-chord-slot";
+            slot.setAttribute("data-offset", String(o));
+            var item = byOffset[o];
+            slot.textContent = item ? item.text : "";
+            stripEl.appendChild(slot);
+            if (item) nikInstrumentistaChordNodesByKey[item.key] = slot;
+        }
+    }
+
+    if (!withFade) { doRebuild(newList); return; }
+
+    // Si ya hay un fade de salto en curso (saltos seguidos muy rápido),
+    // no se agrega un segundo listener -- quedaría huérfano, porque el
+    // navegador no vuelve a disparar transitionend si la opacity ya está
+    // en 0. Alcanza con actualizar cuál es la ventana "pendiente": el
+    // listener ya armado la usa cuando dispare.
+    nikInstrumentistaChordJumpPendingList = newList;
+    if (stripEl.classList.contains("is-jumping")) return;
+
+    stripEl.classList.add("is-jumping");
+    var onFadeOut = function (ev) {
+        if (ev.propertyName !== "opacity") return;
+        stripEl.removeEventListener("transitionend", onFadeOut);
+        doRebuild(nikInstrumentistaChordJumpPendingList);
+        nikInstrumentistaChordJumpPendingList = null;
+        stripEl.classList.remove("is-jumping");
+    };
+    stripEl.addEventListener("transitionend", onFadeOut);
+}
+
+// Shift limpio de ±1: no se reconstruye nada, se reetiquetan los data-offset
+// de los nodos existentes (dispara la transición CSS sola) y se maneja el
+// ciclo de vida del nodo que entra/sale por los offsets fantasma (±3).
+// delta = -1: avanza (el actual pasa a anterior) -> entra por la derecha.
+// delta = +1: retrocede -> entra por la izquierda.
+function nikInstrumentistaShiftChordSlots(newList, delta) {
+    var stripEl = document.getElementById("msChordStrip");
+    var newByKey = {};
+    for (var i = 0; i < newList.length; i++) newByKey[newList[i].key] = newList[i];
+
+    var enterGhostOffset = (delta === -1) ? 3 : -3;
+    var exitGhostOffset = (delta === -1) ? -3 : 3;
+
+    for (var key in nikInstrumentistaChordNodesByKey) {
+        if (!nikInstrumentistaChordNodesByKey.hasOwnProperty(key)) continue;
+        var node = nikInstrumentistaChordNodesByKey[key];
+        if (newByKey[key]) {
+            node.setAttribute("data-offset", String(newByKey[key].offset));
+        } else {
+            node.setAttribute("data-offset", String(exitGhostOffset));
+            (function (leavingNode, leavingKey) {
+                var onLeave = function (ev) {
+                    if (ev.propertyName !== "flex-basis" && ev.propertyName !== "opacity") return;
+                    leavingNode.removeEventListener("transitionend", onLeave);
+                    if (leavingNode.parentNode) leavingNode.parentNode.removeChild(leavingNode);
+                    delete nikInstrumentistaChordNodesByKey[leavingKey];
+                };
+                leavingNode.addEventListener("transitionend", onLeave);
+            })(node, key);
+        }
+    }
+
+    for (var j = 0; j < newList.length; j++) {
+        var item = newList[j];
+        if (nikInstrumentistaChordNodesByKey[item.key]) continue; // ya existía, contemplado arriba
+        var slot = document.createElement("span");
+        slot.className = "ms-chord-slot";
+        slot.setAttribute("data-offset", String(enterGhostOffset));
+        slot.textContent = item.text;
+        stripEl.appendChild(slot);
+        nikInstrumentistaChordNodesByKey[item.key] = slot;
+        (function (enteringNode, finalOffset) {
+            // Forzar reflow antes de cambiar el offset -- si no, el browser
+            // puede coalescer ambos cambios de estilo en el mismo frame y
+            // la transición no llega a dispararse (arranca ya en el valor final).
+            void enteringNode.offsetWidth;
+            requestAnimationFrame(function () {
+                enteringNode.setAttribute("data-offset", String(finalOffset));
+            });
+        })(slot, item.offset);
+    }
+}
+
+// Misma estructura (mismas ocurrencias en las mismas posiciones) pero
+// texto distinto -- único motivo posible: cambio de transposición
+// (ReaPitch semitonos) en caliente, sin mover el cursor. Se actualiza el
+// texto en el lugar, sin animar posición (no es un shift real).
+function nikInstrumentistaRefreshTextInPlace(newList) {
+    for (var i = 0; i < newList.length; i++) {
+        var item = newList[i];
+        var node = nikInstrumentistaChordNodesByKey[item.key];
+        if (node && node.textContent !== item.text) node.textContent = item.text;
+    }
+}
+
 function nikInstrumentistaRenderChordStrip() {
     var stripEl = document.getElementById("msChordStrip");
     if (typeof nikMusicStateChordWindow !== "function") { stripEl.textContent = "—"; return; }
 
     var win = nikMusicStateChordWindow(2, 2);
-    var currentIdx = -1;
-    for (var i = 0; i < win.length; i++) { if (win[i].isCurrent) { currentIdx = i; break; } }
+    var newList = nikInstrumentistaComputeOffsets(win);
 
-    // Los 5 offsets (-2..2) siempre existen en el DOM, aunque `win` traiga
-    // menos elementos (ej. al principio de la canción, sin acordes previos
-    // todavía) -- así la tira nunca cambia de ancho geométrico y el slot
-    // central se mantiene alineado con el centro real del viewport. El
-    // offset faltante queda como slot vacío (mismo ancho reservado, sin
-    // texto), no se saca del flujo.
-    var byOffset = {};
-    for (var j = 0; j < win.length; j++) {
-        var offset = (currentIdx === -1) ? 0 : (j - currentIdx);
-        byOffset[offset] = win[j];
+    if (nikInstrumentistaChordPrevWindow === null) {
+        nikInstrumentistaRebuildChordSlots(newList, false);
+        nikInstrumentistaChordPrevWindow = newList;
+        return;
     }
 
-    stripEl.innerHTML = "";
-    for (var o = -2; o <= 2; o++) {
-        var slot = document.createElement("span");
-        slot.className = "ms-chord-slot";
-        slot.setAttribute("data-offset", String(o));
-        var entry = byOffset[o];
-        // chord === null es el sentinel de silencio explícito (ver
-        // core/music-state.js) -- se muestra distinguible de "sin dato".
-        // undefined (offset sin entrada en `win`) se muestra vacío, no "—",
-        // para no competir visualmente con el silencio explícito.
-        slot.textContent = !entry ? "" : (entry.chord === null ? "—" : entry.chord);
-        stripEl.appendChild(slot);
+    if (nikInstrumentistaSameStructure(nikInstrumentistaChordPrevWindow, newList)) {
+        nikInstrumentistaRefreshTextInPlace(newList);
+        nikInstrumentistaChordPrevWindow = newList;
+        return;
     }
+
+    var delta = nikInstrumentistaDetectShift(nikInstrumentistaChordPrevWindow, newList);
+    if (delta === null) {
+        nikInstrumentistaRebuildChordSlots(newList, true);
+    } else {
+        nikInstrumentistaShiftChordSlots(newList, delta);
+    }
+    nikInstrumentistaChordPrevWindow = newList;
 }
 
 function nikInstrumentistaStartRenderLoop(intervalMs) {
