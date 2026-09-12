@@ -113,7 +113,7 @@ html, body {
 
 .ms-key-tonic-block .ms-key-accidental-sharp {
   display: inline-block;
-  font-size: 0.55em;
+  font-size: 0.7em;
   transform: scaleY(1.25);
   transform-origin: bottom center;
   position: relative;
@@ -123,7 +123,7 @@ html, body {
 
 .ms-key-tonic-block .ms-key-accidental-flat {
   display: inline-block;
-  font-size: 0.6em;
+  font-size: 1em;
   position: relative;
   top: -0.12em;
 }

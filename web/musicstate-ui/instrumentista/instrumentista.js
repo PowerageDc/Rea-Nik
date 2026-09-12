@@ -83,8 +83,10 @@ function nikInstrumentistaFormatKeyTonicHtml(key) {
 
     var html = "<span>" + m[1] + "</span>";
     if (m[2]) {
-        var accClass = (m[2] === "#") ? "ms-key-accidental-sharp" : "ms-key-accidental-flat";
-        html += '<span class="' + accClass + '">' + m[2] + "</span>";
+        var isSharp = (m[2] === "#");
+        var accClass = isSharp ? "ms-key-accidental-sharp" : "ms-key-accidental-flat";
+        var accGlyph = isSharp ? "♯" : "♭";
+        html += '<span class="' + accClass + '">' + accGlyph + "</span>";
     }
     if (key.mode === "minor") {
         html += '<span class="ms-key-minor">m</span>';
