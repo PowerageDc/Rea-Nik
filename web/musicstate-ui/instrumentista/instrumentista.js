@@ -74,12 +74,25 @@ function nikInstrumentistaIsRoleValid(role) {
 // contra el string real que devuelve nikTranspose para modos no
 // estándar (dórico, mixolidio, etc.), no debería aparecer en el uso
 // actual pero no se descarta.
-var NIK_INSTRUMENTISTA_MODE_ABBREV = { major: "maj", minor: "min" };
+var NIK_INSTRUMENTISTA_KEY_TONIC_REGEX = /^([A-G])([#b]?)$/;
 
-function nikInstrumentistaFormatKey(key) {
-    if (!key) return "—";
-    var mode = NIK_INSTRUMENTISTA_MODE_ABBREV[key.mode] || (key.mode ? key.mode.slice(0, 3) : "");
-    return "♪ " + key.tonic + " " + mode;
+function nikInstrumentistaFormatKeyTonicHtml(key) {
+    if (!key || !key.tonic) return "—";
+    var m = NIK_INSTRUMENTISTA_KEY_TONIC_REGEX.exec(key.tonic);
+    if (!m) return nikInstrumentistaEscapeHtml(key.tonic); // fallback si el formato no matchea
+
+    var html = "<span>" + m[1] + "</span>";
+    if (m[2]) {
+        var accClass = (m[2] === "#") ? "ms-key-accidental-sharp" : "ms-key-accidental-flat";
+        html += '<span class="' + accClass + '">' + m[2] + "</span>";
+    }
+    if (key.mode === "minor") {
+        html += '<span class="ms-key-minor">m</span>';
+    }
+    // major: no se agrega nada. Cualquier otro modo (dórico, mixolidio...):
+    // tampoco se agrega nada por ahora -- no confirmado contra un caso real,
+    // igual que el fallback que reemplaza.
+    return html;
 }
 
 function nikInstrumentistaFormatTempo() {
@@ -96,7 +109,7 @@ function nikInstrumentistaRender() {
     var role = nikInstrumentistaGetRole();
 
     document.getElementById("msRole").textContent = role || "(sin rol)";
-    document.getElementById("msKey").textContent = nikInstrumentistaFormatKey(
+    document.getElementById("msKeyTonicText").innerHTML = nikInstrumentistaFormatKeyTonicHtml(
         (typeof nikMusicStateCurrentProjectKey === "function") ? nikMusicStateCurrentProjectKey() : null
     );
     document.getElementById("msTempo").textContent = nikInstrumentistaFormatTempo();

@@ -64,8 +64,9 @@ html, body {
 }
 
 .ms-tertiary-row1 {
+  position: relative;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   align-items: baseline;
   width: 100vw;
   margin-left: calc(50% - 50vw);
@@ -79,12 +80,60 @@ html, body {
   text-align: left;
 }
 
-.ms-tertiary-row1 #msKey {
-  text-align: center;
-}
-
 .ms-tertiary-row1 #msTempo {
   text-align: right;
+}
+
+.ms-key-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  font-weight: 700;
+}
+
+.ms-key-tonic-block {
+  position: relative; /* ancla local para la nota -- ya no depende del ancho de ms-tertiary-row1 */
+  display: inline-block;
+  color: var(--ms-chord-color);
+}
+
+.ms-key-note {
+  position: absolute;
+  right: 100%;
+  margin-right: 0.2em;
+  color: var(--ms-fg-dim);
+}
+
+.ms-key-tonic-block .ms-key-accidental-sharp {
+  display: inline-block;
+  font-size: 0.55em;
+  transform: scaleY(1.25);
+  transform-origin: bottom center;
+  position: relative;
+  top: -0.38em;
+  margin: 0 0 0 0.08em;
+}
+
+.ms-key-tonic-block .ms-key-accidental-flat {
+  display: inline-block;
+  font-size: 0.6em;
+  position: relative;
+  top: -0.12em;
+}
+
+.ms-key-tonic-block .ms-key-minor {
+  display: inline-block;
+  font-size: 0.75em;
+  transform: scaleX(0.7);
+  transform-origin: bottom center;
+  position: relative;
+  margin: 0 0 0 -0.1em;
 }
 
 .ms-song-name {
