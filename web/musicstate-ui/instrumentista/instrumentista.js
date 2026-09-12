@@ -287,6 +287,15 @@ function nikInstrumentistaRebuildChordSlots(newList, withFade) {
     stripEl.addEventListener("transitionend", onFadeOut);
 }
 
+function nikInstrumentistaFindInsertBeforeNode(stripEl, offset) {
+    var children = stripEl.children;
+    for (var i = 0; i < children.length; i++) {
+        var childOffset = parseInt(children[i].getAttribute("data-offset"), 10);
+        if (childOffset > offset) return children[i];
+    }
+    return null;
+}
+
 // Shift limpio de ±1: no se reconstruye nada, se reetiquetan los data-offset
 // de los nodos existentes (dispara la transición CSS sola) y se maneja el
 // ciclo de vida del nodo que entra/sale por los offsets fantasma (±3).
@@ -319,36 +328,39 @@ function nikInstrumentistaShiftChordSlots(newList, delta) {
         }
     }
 
-    for (var j = 0; j < newList.length; j++) {
+    // Los nodos continuos (ya existían y siguen existiendo) no se tocan acá
+    // -- solo se les cambió data-offset arriba, y eso alcanza para que la
+    // transición CSS corra sola sin reinsertarlos en el DOM. Solo los nodos
+    // nuevos se insertan, usando como referencia el próximo nodo continuo (o
+    // ya insertado en esta misma pasada) a su derecha en newList -- no la
+    // dirección de delta, que era la causa del bug anterior.
+    var nextNode = null;
+    for (var j = newList.length - 1; j >= 0; j--) {
         var item = newList[j];
-        if (nikInstrumentistaChordNodesByKey[item.key]) continue; // ya existía, contemplado arriba
+        var existing = nikInstrumentistaChordNodesByKey[item.key];
+
+        if (existing) {
+            nextNode = existing;
+            continue;
+        }
+
         var slot = document.createElement("span");
         slot.className = "ms-chord-slot";
         slot.setAttribute("data-offset", String(enterGhostOffset));
         slot.textContent = item.text;
 
-        // delta=-1 (avanza): entra por la derecha, appendChild ya da la
-        // posición correcta. delta=+1 (retrocede): entra por la
-        // izquierda -- tiene que insertarse como primer hijo, no al
-        // final (ese era el bug: siempre entraba por la derecha sin
-        // importar la dirección, porque el layout es flex normal y usa
-        // orden real del DOM, no data-offset, para decidir posición).
-        if (delta === -1) {
-            stripEl.appendChild(slot);
-        } else {
-            stripEl.insertBefore(slot, stripEl.firstChild);
-        }
+        if (nextNode) stripEl.insertBefore(slot, nextNode);
+        else stripEl.appendChild(slot);
 
         nikInstrumentistaChordNodesByKey[item.key] = slot;
         (function (enteringNode, finalOffset) {
-            // Forzar reflow antes de cambiar el offset -- si no, el browser
-            // puede coalescer ambos cambios de estilo en el mismo frame y
-            // la transición no llega a dispararse (arranca ya en el valor final).
             void enteringNode.offsetWidth;
             requestAnimationFrame(function () {
                 enteringNode.setAttribute("data-offset", String(finalOffset));
             });
         })(slot, item.offset);
+
+        nextNode = slot;
     }
 }
 
