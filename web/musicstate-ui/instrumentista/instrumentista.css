@@ -27,6 +27,8 @@
   --chord-h: clamp(4.5rem, 18vw, 8rem);
   --chord-divider-gap: clamp(24px, 10vh, 50px);
   --divider-label-gap: clamp(6px, 1.5vh, 12px);
+  --ms-song-to-divider-gap: 15px;  /* subí/bajá este número: nombre <-> divider */
+  --ms-divider-to-row-gap: 25px;   /* subí/bajá este número: divider <-> fila rol/tonalidad/tempo */
 }
 
 html, body {
@@ -49,13 +51,13 @@ html, body {
 
 .ms-top-block {
   position: absolute;
-  top: clamp(28px, 20vh, 140px);
+  top: clamp(28px, 30vh, 140px);
   left: 0;
   right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(10px, 2.5vh, 20px);
+  gap: 0; /* el espaciado ahora lo controlan las dos variables de arriba, no este gap */
 }
 
 .ms-divider {
@@ -150,6 +152,11 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  margin-bottom: var(--ms-song-to-divider-gap);
+}
+
+.ms-top-divider {
+  margin: 0 0 var(--ms-divider-to-row-gap) 0;
 }
 
 .ms-tertiary-row1 .ms-tempo-number {
