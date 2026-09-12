@@ -167,6 +167,33 @@ function nikInstrumentistaChordSlotText(entry) {
     return entry.chord === null ? "—" : entry.chord;
 }
 
+function nikInstrumentistaEscapeHtml(str) {
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+var NIK_INSTRUMENTISTA_CHORD_REGEX =
+    /^([A-G])([#b]?)(maj7|maj|m7b5|dim7|dim|aug|m)?(\d+)?(sus2|sus4|add9|add11|add13)?(\/[A-G][#b]?)?$/;
+
+function nikInstrumentistaFormatChordHtml(text) {
+    if (!text) return "";
+    var m = NIK_INSTRUMENTISTA_CHORD_REGEX.exec(text);
+    if (!m) return nikInstrumentistaEscapeHtml(text);
+
+    var html = '<span class="chord-part-root">' + m[1] + "</span>";
+    if (m[2]) {
+        var accClass = (m[2] === "#") ? "chord-part-sharp" : "chord-part-flat";
+        html += '<span class="' + accClass + '">' + m[2] + "</span>";
+    }
+    if (m[3]) {
+        var qualityClass = (m[3] === "m") ? "chord-part-quality-minor" : "chord-part-quality";
+        html += '<span class="' + qualityClass + '">' + m[3] + "</span>";
+    }
+    if (m[4]) html += '<span class="chord-part-number">' + m[4] + "</span>";
+    if (m[5]) html += '<span class="chord-part-sub">' + m[5] + "</span>";
+    if (m[6]) html += '<span class="chord-part-bass">' + m[6] + "</span>";
+    return html;
+}
+
 // Traduce la ventana cruda de nikMusicStateChordWindow a la forma que usa
 // el resto de este módulo: key estable por ocurrencia (bar+qn_offset,
 // única incluso si el mismo acorde se repite en la canción), offset
@@ -260,7 +287,8 @@ function nikInstrumentistaRebuildChordSlots(newList, withFade) {
             slot.className = "ms-chord-slot";
             slot.setAttribute("data-offset", String(o));
             var item = byOffset[o];
-            slot.textContent = item ? item.text : "";
+            slot.dataset.chordRaw = item ? item.text : "";
+            slot.innerHTML = item ? nikInstrumentistaFormatChordHtml(item.text) : "";
             stripEl.appendChild(slot);
             if (item) nikInstrumentistaChordNodesByKey[item.key] = slot;
         }
@@ -347,7 +375,8 @@ function nikInstrumentistaShiftChordSlots(newList, delta) {
         var slot = document.createElement("span");
         slot.className = "ms-chord-slot";
         slot.setAttribute("data-offset", String(enterGhostOffset));
-        slot.textContent = item.text;
+        slot.dataset.chordRaw = item.text;
+        slot.innerHTML = nikInstrumentistaFormatChordHtml(item.text);
 
         if (nextNode) stripEl.insertBefore(slot, nextNode);
         else stripEl.appendChild(slot);
@@ -372,7 +401,10 @@ function nikInstrumentistaRefreshTextInPlace(newList) {
     for (var i = 0; i < newList.length; i++) {
         var item = newList[i];
         var node = nikInstrumentistaChordNodesByKey[item.key];
-        if (node && node.textContent !== item.text) node.textContent = item.text;
+        if (node && node.dataset.chordRaw !== item.text) {
+            node.dataset.chordRaw = item.text;
+            node.innerHTML = nikInstrumentistaFormatChordHtml(item.text);
+        }
     }
 }
 

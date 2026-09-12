@@ -175,6 +175,55 @@ html, body {
               opacity 300ms ease, color 300ms ease;
 }
 
+.ms-chord-slot .chord-part-sharp {
+  display: inline-block;
+  font-size: 0.55em;
+  transform: scaleY(1.25);
+  transform-origin: bottom center;
+  position: relative;
+  top: -0.38em;
+  margin: 0 0 0 0.08em;
+}
+
+.ms-chord-slot .chord-part-flat {
+  display: inline-block;
+  font-size: 0.6em;
+  position: relative;
+  top: -0.12em;
+}
+
+.ms-chord-slot .chord-part-quality-minor {
+  display: inline-block;
+  font-size: 0.75em;
+  transform: scaleX(0.7);
+  transform-origin: bottom center;
+  position: relative;
+  margin: 0 0 0 -0.1em;
+}
+
+.ms-chord-slot .chord-part-quality {
+  font-size: 0.7em;
+}
+
+.ms-chord-slot .chord-part-number {
+  font-size: 0.55em;
+  vertical-align: sub;
+}
+
+.ms-chord-slot .chord-part-sub {
+  font-size: 0.5em;
+  /* vertical-align: sub; */
+  display: inline-block;
+  position: relative;
+  transform: scaleX(0.7);
+  transform-origin: bottom right;
+  margin: 0 0 0 -0.6em;
+}
+
+.ms-chord-slot .chord-part-bass {
+  font-size: 0.7em;
+}
+
 .ms-chord-slot[data-offset="0"] {
   color: var(--ms-chord-color);
   font-size: clamp(3rem, 15vw, 6rem);
