@@ -100,7 +100,8 @@ function nikInstrumentistaFormatKeyTonicHtml(key) {
 function nikInstrumentistaFormatTempo() {
     var pos = parseFloat(playPosSeconds);
     var bpm = (typeof nikMsTempoAt === "function") ? nikMsTempoAt(pos) : null;
-    return (bpm != null) ? Math.round(bpm) + " BPM" : "—";
+    if (bpm == null) return "—";
+    return '<span class="ms-tempo-number">' + Math.round(bpm) + "</span> BPM";
 }
 
 function nikInstrumentistaFormatSongName() {
@@ -114,7 +115,7 @@ function nikInstrumentistaRender() {
     document.getElementById("msKeyTonicText").innerHTML = nikInstrumentistaFormatKeyTonicHtml(
         (typeof nikMusicStateCurrentProjectKey === "function") ? nikMusicStateCurrentProjectKey() : null
     );
-    document.getElementById("msTempo").textContent = nikInstrumentistaFormatTempo();
+    document.getElementById("msTempo").innerHTML = nikInstrumentistaFormatTempo();
     document.getElementById("msSongName").textContent = nikInstrumentistaFormatSongName();
 
     var sectionEl = document.getElementById("msSection");

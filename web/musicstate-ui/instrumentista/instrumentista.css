@@ -21,6 +21,8 @@
   --ms-fg-dim: #9A9AA2;
   --ms-chord-color: #FFB627;
   --ms-key-color: #F2F0EA;
+  --ms-tempo-number-color: #F2F0EA;
+  --ms-song-name-color: #C7C5BE;
   --ms-divider-color: rgba(242, 240, 234, 0.15);
   --chord-h: clamp(4.5rem, 18vw, 8rem);
   --chord-divider-gap: clamp(24px, 10vh, 50px);
@@ -140,11 +142,15 @@ html, body {
 .ms-song-name {
   font-size: clamp(1.2rem, 5vw, 2rem);
   font-weight: 500;
-  color: var(--ms-fg-dim);
+  color: var(--ms-song-name-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+
+.ms-tertiary-row1 .ms-tempo-number {
+  color: var(--ms-tempo-number-color);
 }
 
 .ms-section-row {
