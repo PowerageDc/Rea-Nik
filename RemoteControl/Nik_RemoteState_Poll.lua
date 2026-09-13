@@ -1,5 +1,5 @@
 -- @description Nik RemoteControl — Suite completa (control remoto web)
--- @version 1.4
+-- @version 1.7
 -- @author Nik
 -- @metapackage
 -- @provides

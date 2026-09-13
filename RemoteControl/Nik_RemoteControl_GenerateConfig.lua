@@ -15,6 +15,7 @@ local SCRIPTS = {
   { key = "tabPrev",                     file = "NikRemote_TabPrev.lua" },
   { key = "tabNext",                     file = "NikRemote_TabNext.lua" },
   { key = "preMarkerSeek",               file = "Nik_Markers_SeekRelative.lua" },
+  { key = "musicStatePublishAll",        file = "Nik_MusicState_PublishAll.lua", dir = "../MusicState/" },
 }
 
 local lines = {
@@ -25,7 +26,17 @@ local lines = {
 local failed = {}
 
 for _, entry in ipairs(SCRIPTS) do
-  local abs_path = script_dir .. entry.file
+  local function normalize_path(path)
+    path = path:gsub("\\", "/")
+    while true do
+      local collapsed, n = path:gsub("/[^/]+/%.%./", "/", 1)
+      if n == 0 then break end
+      path = collapsed
+    end
+    return path
+  end
+
+  local abs_path = normalize_path(script_dir .. (entry.dir or "") .. entry.file)
   local numeric_id = reaper.AddRemoveReaScript(true, 0, abs_path, true)
 
   if numeric_id == 0 then

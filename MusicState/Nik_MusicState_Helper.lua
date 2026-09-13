@@ -1,8 +1,17 @@
--- Nik_MusicState_Helper.lua
--- Panel nativo ReaImGui para cargar metadata musical (harmony, key, roles, cues)
--- en ProjExtState sin editar el script de publish a mano.
--- Paso 3: + extraccion de bridge reusable, + boton "Guardar y Publicar"
--- (Tonalidad y Roles unicamente -- Armonia y Cues en los proximos pasos).
+-- @description Nik MusicState — Suite completa (metadata musical + publish)
+-- @version 1.0
+-- @author Nik
+-- @metapackage
+-- @provides
+--   [main] Nik_MusicState_PublishAll.lua
+--   ../_Shared/ImGuiInputCommit_common_logic.lua
+--   ../_Shared/MusicStateBridge_common_logic.lua
+--   ../_Shared/MusicStateRowInputs_common_logic.lua
+-- @about
+--   Panel nativo ReaImGui para cargar y publicar metadata musical
+--   (tonalidad, roles, armonia, cues) en ProjExtState, mas el script
+--   que puentea esos datos a ExtState global para que la UI web de
+--   instrumentista los consuma.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
