@@ -8,6 +8,7 @@
 --   ../_Shared/MusicStateBridge_common_logic.lua
 --   ../_Shared/MusicStateRowInputs_common_logic.lua
 --   MusicStateTonalidad_common_logic.lua
+--   MusicStateRoles_common_logic.lua
 -- @about
 --   Panel nativo ReaImGui para cargar y publicar metadata musical
 --   (tonalidad, roles, armonia, cues) en ProjExtState, mas el script
@@ -19,6 +20,7 @@ local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lu
 local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_logic.lua")
 local RowInputs = dofile(script_dir .. "../_Shared/MusicStateRowInputs_common_logic.lua")
 local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
+local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
 
 local ctx = reaper.ImGui_CreateContext('MusicState Helper', 0)    -- Context creation, config_flags=0 para desactivar Nav
 local font = reaper.ImGui_CreateFont('sans-serif', 16)
@@ -302,39 +304,6 @@ local function nikMusicStateSaveAndPublish()
   end
 end
 
-local function drawRolesTab()
-  reaper.ImGui_Text(ctx, 'Roles configurados para este proyecto:')
-  reaper.ImGui_TextDisabled(ctx, '("todos" es implicito, no se lista aca)')
-  reaper.ImGui_Spacing(ctx)
-
-  local remove_idx = nil
-  for i, role in ipairs(H.roles) do
-    reaper.ImGui_Text(ctx, role)
-    reaper.ImGui_SameLine(ctx)
-    if reaper.ImGui_Button(ctx, 'Quitar##role' .. i) then
-      remove_idx = i
-    end
-  end
-  if remove_idx then
-    table.remove(H.roles, remove_idx)
-  end
-
-  reaper.ImGui_Spacing(ctx)
-  reaper.ImGui_Separator(ctx)
-  local changed
-  changed, H.new_role_buf = reaper.ImGui_InputText(ctx, 'Nuevo rol', H.new_role_buf)
-  local enter_commit, enter_key = InputCommit.resolveEnterCommit(ctx)
-  if enter_commit then H.consumed_enter = true end
-
-  reaper.ImGui_SameLine(ctx)
-  local add_clicked = reaper.ImGui_Button(ctx, 'Agregar', 80, 0)
-
-  if (enter_commit or add_clicked) and H.new_role_buf ~= '' then
-    table.insert(H.roles, H.new_role_buf)
-    H.new_role_buf = ''
-  end
-end
-
 local function drawArmoniaTab()
   reaper.ImGui_TextDisabled(ctx, '(acorde vacio = silencio explicito / sentinel "null")')
   reaper.ImGui_Spacing(ctx)
@@ -517,7 +486,7 @@ local function loop()
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Roles') then
-        drawRolesTab()
+        Roles.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Armonia') then
