@@ -7,6 +7,7 @@
 --   ../_Shared/ImGuiInputCommit_common_logic.lua
 --   ../_Shared/MusicStateBridge_common_logic.lua
 --   ../_Shared/MusicStateRowInputs_common_logic.lua
+--   MusicStateTonalidad_common_logic.lua
 -- @about
 --   Panel nativo ReaImGui para cargar y publicar metadata musical
 --   (tonalidad, roles, armonia, cues) en ProjExtState, mas el script
@@ -17,6 +18,7 @@ local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
 local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_logic.lua")
 local RowInputs = dofile(script_dir .. "../_Shared/MusicStateRowInputs_common_logic.lua")
+local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 
 local ctx = reaper.ImGui_CreateContext('MusicState Helper', 0)    -- Context creation, config_flags=0 para desactivar Nav
 local font = reaper.ImGui_CreateFont('sans-serif', 16)
@@ -198,6 +200,18 @@ local function nikMusicStateCaptureCursorPosition()
   }
 end
 
+-- Tabla de dependencias compartidas que el contenedor le pasa a cada modulo
+-- de tab -- se arma una sola vez aca, nunca dofile por modulo de tab (ver
+-- IMPL_MusicState.md, sesion modularizacion). Se va extendiendo a medida
+-- que se extraigan Roles/Armonia/Cues.
+local helpers = {
+  TONICS_STR = TONICS_STR,
+  MODES_STR = MODES_STR,
+  captureCursorPosition = nikMusicStateCaptureCursorPosition,
+  RowInputs = RowInputs,
+  InputCommit = InputCommit,
+}
+
 -- Arma los JSON compactos y los escribe en ProjExtState + puente a ExtState.
 local function nikMusicStateSaveAndPublish()
   local proj = 0
@@ -286,12 +300,6 @@ local function nikMusicStateSaveAndPublish()
   else
     H.save_status = 'Error al publicar (ver consola).'
   end
-end
-
-local function drawTonalidadTab()
-  local changed
-  changed, H.key.tonic_idx = reaper.ImGui_Combo(ctx, 'Tonica', H.key.tonic_idx, TONICS_STR)
-  changed, H.key.mode_idx = reaper.ImGui_Combo(ctx, 'Modo', H.key.mode_idx, MODES_STR)
 end
 
 local function drawRolesTab()
@@ -505,7 +513,7 @@ local function loop()
 
     if reaper.ImGui_BeginTabBar(ctx, 'MusicStateTabs') then
       if reaper.ImGui_BeginTabItem(ctx, 'Tonalidad') then
-        drawTonalidadTab()
+        Tonalidad.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Roles') then
