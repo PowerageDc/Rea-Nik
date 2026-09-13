@@ -1,0 +1,4 @@
+{
+  "diagnostics.globals": ["reaper"],
+  "runtime.version": "Lua 5.4"
+}
