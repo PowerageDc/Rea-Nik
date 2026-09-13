@@ -9,6 +9,7 @@
 --   ../_Shared/MusicStateRowInputs_common_logic.lua
 --   MusicStateTonalidad_common_logic.lua
 --   MusicStateRoles_common_logic.lua
+--   MusicStateArmonia_common_logic.lua
 -- @about
 --   Panel nativo ReaImGui para cargar y publicar metadata musical
 --   (tonalidad, roles, armonia, cues) en ProjExtState, mas el script
@@ -21,6 +22,7 @@ local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_log
 local RowInputs = dofile(script_dir .. "../_Shared/MusicStateRowInputs_common_logic.lua")
 local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
+local Armonia = dofile(script_dir .. "MusicStateArmonia_common_logic.lua")
 
 local ctx = reaper.ImGui_CreateContext('MusicState Helper', 0)    -- Context creation, config_flags=0 para desactivar Nav
 local font = reaper.ImGui_CreateFont('sans-serif', 16)
@@ -304,65 +306,6 @@ local function nikMusicStateSaveAndPublish()
   end
 end
 
-local function drawArmoniaTab()
-  reaper.ImGui_TextDisabled(ctx, '(acorde vacio = silencio explicito / sentinel "null")')
-  reaper.ImGui_Spacing(ctx)
-
-  local remove_idx = nil
-
-  if reaper.ImGui_BeginTable(ctx, 'harmony_table', 6, reaper.ImGui_TableFlags_SizingFixedFit()) then
-    reaper.ImGui_TableSetupColumn(ctx, 'Compas')
-    reaper.ImGui_TableSetupColumn(ctx, 'Beat')
-    reaper.ImGui_TableSetupColumn(ctx, 'Cent.')
-    reaper.ImGui_TableSetupColumn(ctx, 'Acorde')
-    reaper.ImGui_TableSetupColumn(ctx, '')
-    reaper.ImGui_TableSetupColumn(ctx, '')
-    reaper.ImGui_TableHeadersRow(ctx)
-
-    for i, row in ipairs(H.harmony) do
-      reaper.ImGui_TableNextRow(ctx)
-      reaper.ImGui_PushID(ctx, i)
-
-      RowInputs.drawPositionInputs(ctx, row)
-
-      reaper.ImGui_TableNextColumn(ctx)
-      reaper.ImGui_SetNextItemWidth(ctx, 100)
-      local changed_c
-      changed_c, row.chord = reaper.ImGui_InputText(ctx, '##acorde', row.chord)
-
-      reaper.ImGui_TableNextColumn(ctx)
-      if RowInputs.drawCursorButton(ctx) then
-        RowInputs.applyCursorToRow(row, nikMusicStateCaptureCursorPosition())
-      end
-
-      reaper.ImGui_TableNextColumn(ctx)
-      if reaper.ImGui_Button(ctx, 'Borrar') then
-        remove_idx = i
-      end
-
-      reaper.ImGui_PopID(ctx)
-    end
-
-    reaper.ImGui_EndTable(ctx)
-  end
-
-  if remove_idx then
-    table.remove(H.harmony, remove_idx)
-  end
-
-  reaper.ImGui_Spacing(ctx)
-  reaper.ImGui_Separator(ctx)
-  if reaper.ImGui_Button(ctx, '+ Agregar fila (cursor actual)', 220, 0) then
-    local pos = nikMusicStateCaptureCursorPosition()
-    table.insert(H.harmony, {
-      measure = pos.measure,
-      beat = pos.beat,
-      hundredths = pos.hundredths,
-      chord = '',
-    })
-  end
-end
-
 local function drawCuesTab()
   reaper.ImGui_TextDisabled(ctx, '(roles separados por coma; "todos" es un valor valido, sin validar por ahora)')
   reaper.ImGui_Spacing(ctx)
@@ -490,7 +433,7 @@ local function loop()
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Armonia') then
-        drawArmoniaTab()
+        Armonia.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Cues') then
