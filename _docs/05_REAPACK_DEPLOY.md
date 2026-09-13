@@ -203,6 +203,90 @@ duplicada en `Scripts/Rea-Nik/...`, separada de la que se edita en
   ReaPack, pero sí invalida su Command ID local si ya estaba registrado
   en el Action List de la PC de dev (gotcha de siempre, ver
   `01_CONVENCIONES.md`).
+- **Command ID duplicado en Action List para el mismo script:** si
+  `Nik_RemoteControl_GenerateConfig.lua` resuelve la ruta de un script
+  que vive fuera de `RemoteControl/` concatenando un `dir` con `..` sin
+  normalizar (ej. `RemoteControl/../MusicState/archivo.lua`), REAPER
+  registra esa ruta como una identidad distinta a la ruta canónica con
+  la que ReaPack ya había instalado el mismo archivo — resultado: dos
+  entradas en Action List para el mismo script, con Command IDs
+  distintos, y el `commandId` que termina en `config.local.js` puede no
+  ser el estable. El generador debe colapsar `..` antes de llamar a
+  `AddRemoveReaScript`.
+
+## Rama temporal + squash para deploys iterativos
+
+Cuando un deploy requiere varias iteraciones de prueba en destino real
+(sala de ensayo, PC de test) antes de confirmar que todo funciona, no
+conviene iterar directo en `main` — cada fix intermedio exige su propio
+bump de `@version` (regla dura, ver más abajo), y esos bumps transitorios
+quedan como ruido permanente en el `index.xml` de producción aunque el
+bug que los motivó ya no exista.
+
+Patrón: rama temporal para toda la iteración, squash merge a `main` al
+confirmar.
+
+1. Crear rama, deployar ahí, iterar (fix → bump → rebuild → push → probar
+   en destino) las veces que haga falta.
+2. Al confirmar que funciona: `git checkout main`, luego
+   `git merge --squash <rama>`.
+3. Sacar el `index.xml` de la rama del stage — se regenera fresco después,
+   no se arrastra: `git restore --staged index.xml && git checkout --
+   index.xml`.
+4. Commit único en `main` describiendo el estado final (no el camino).
+5. `reapack-index --rebuild` parado en `main`.
+6. Push, luego borrar la rama (local y remoto).
+
+Por qué esto no genera inconsistencia entre el commit final y las
+versiones que terminan en el índice: el número de `@version` vive en el
+header del archivo fuente, no en el mensaje de commit ni en el
+`index.xml`. El squash trae los archivos con el valor de versión que
+tengan en ese momento (el final, tras todas las iteraciones) — no
+resetea nada. `reapack-index --rebuild` lee esos headers en `HEAD` de
+`main`, así que el índice resultante coincide exactamente con el commit
+final, sin rastro de las versiones intermedias que solo existieron en la
+rama descartada.
+
+## Auditar alcance de un deploy sin doc confiable
+
+Cuando la documentación de una feature no refleja todos los cambios
+(desarrollo por avance, doc progresiva sin consolidar), no alcanza con
+pedir un listado de carpetas — no distingue qué cambió desde el último
+deploy ni quién depende de qué. La fuente confiable es git, contra el
+commit del último deploy publicado (visible en el propio `index.xml`,
+campo `commit` de la versión más reciente de cada paquete afectado).
+
+1. **Diff sin acotar carpeta, primero.** Acotar de entrada a las
+   carpetas "esperadas" puede esconder un dominio nuevo entero:
+```powershell
+   git diff --stat <commit_ultimo_deploy>..HEAD
+```
+2. **`--name-status` para separar altas/bajas/modificaciones:**
+```powershell
+   git diff --name-status <commit_ultimo_deploy>..HEAD
+```
+   `A` = candidato a nuevo `@provides` o paquete nuevo. `M` = ya
+   indexado, solo necesita bump de `@version`. `D` = sacar del
+   `@provides` si estaba, o `--ignore` si es legacy en el historial.
+3. **Grep amplio para encontrar consumidores reales de un módulo
+   compartido nuevo — nunca acotar el grep a la carpeta "obvia".**
+   Caso real: un módulo en `_Shared/` resultó consumido también por el
+   dispatcher de otro dominio ya deployado, no solo por la feature
+   nueva — un grep acotado a la carpeta de la feature nueva no lo
+   mostró; ampliar a la raíz del repo sí:
+```powershell
+   git grep -n "<nombre_del_modulo_o_funcion>" -- "*.lua"
+   git grep -n "<nombre_de_la_funcion_js>"
+```
+4. **No asumir "solo consumo" en una UI nueva sin comprobar side-effects.**
+   Una UI que parece de solo lectura puede disparar un `commandId` al
+   conectarse (one-shot de refresh) — confirmar con el grep del punto 3
+   antes de descartar que necesite entrada en el generador de config
+   (`Nik_RemoteControl_GenerateConfig.lua`).
+5. **Un módulo compartido nuevo puede necesitar resolución de ruta
+   distinta en el generador de config** si el script que lo consume no
+   vive en la misma carpeta que el generador (`RemoteControl/`) — no
+   asumir que `script_dir .. entry.file` alcanza para todo.
 
 ## Pendientes
 
