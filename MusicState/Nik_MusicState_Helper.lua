@@ -206,6 +206,18 @@ local function nikMusicStateCaptureCursorPosition()
   }
 end
 
+-- Convierte measure/beat/hundredths de una fila a tiempo de proyecto y
+-- mueve el cursor de edicion ahi (scroll de arrange incluido). Usado por
+-- el boton "Ir" de Armonia/Cues.
+local function nikMusicStateMoveCursorToRow(row)
+  local proj = 0
+  local beat_unit_qn = nikMusicStateBeatUnitQN(proj, row.measure)
+  local qn_offset = nikMusicStateBeatToQnOffset(row.beat, row.hundredths, beat_unit_qn)
+  local _, qn_start = reaper.TimeMap_GetMeasureInfo(proj, row.measure - 1)
+  local time = reaper.TimeMap2_QNToTime(proj, qn_start + qn_offset)
+  reaper.SetEditCurPos(time, true, false)
+end
+
 -- Tabla de dependencias compartidas que el contenedor le pasa a cada modulo
 -- de tab -- se arma una sola vez aca, nunca dofile por modulo de tab (ver
 -- IMPL_MusicState.md, sesion modularizacion). Se va extendiendo a medida
@@ -216,6 +228,12 @@ local helpers = {
   captureCursorPosition = nikMusicStateCaptureCursorPosition,
   RowInputs = RowInputs,
   InputCommit = InputCommit,
+  moveCursorToRow = nikMusicStateMoveCursorToRow,
+  -- Alto que el contenedor reserva DESPUES del TabBar (Separator + boton
+  -- "Guardar y Publicar" + texto de estado) -- las tabs con tabla+scroll
+  -- (Armonia, Cues) tienen que restarlo del alto disponible, si no la
+  -- tabla se come ese espacio y aparece un scroll exterior no deseado.
+  getListFooterReserveH = function() return reaper.ImGui_GetFrameHeightWithSpacing(ctx) * 2 end,
 }
 
 -- Arma los JSON compactos y los escribe en ProjExtState + puente a ExtState.

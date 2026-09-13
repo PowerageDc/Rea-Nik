@@ -9,12 +9,22 @@ function M.draw(ctx, H, helpers)
   reaper.ImGui_Spacing(ctx)
 
   local remove_idx = nil
+  local navigate_row = nil
 
-  if reaper.ImGui_BeginTable(ctx, 'harmony_table', 6, reaper.ImGui_TableFlags_SizingFixedFit()) then
+  local _, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
+  local own_footer_h = reaper.ImGui_GetFrameHeightWithSpacing(ctx) * 2
+  local container_footer_h = helpers.getListFooterReserveH()
+  local table_h = math.max(avail_h - own_footer_h - container_footer_h, 60)
+
+  local table_flags = reaper.ImGui_TableFlags_SizingFixedFit() | reaper.ImGui_TableFlags_ScrollY()
+
+  if reaper.ImGui_BeginTable(ctx, 'harmony_table', 7, table_flags, 0, table_h) then
+    reaper.ImGui_TableSetupScrollFreeze(ctx, 0, 1)
     reaper.ImGui_TableSetupColumn(ctx, 'Compas')
     reaper.ImGui_TableSetupColumn(ctx, 'Beat')
     reaper.ImGui_TableSetupColumn(ctx, 'Cent.')
     reaper.ImGui_TableSetupColumn(ctx, 'Acorde')
+    reaper.ImGui_TableSetupColumn(ctx, '')
     reaper.ImGui_TableSetupColumn(ctx, '')
     reaper.ImGui_TableSetupColumn(ctx, '')
     reaper.ImGui_TableHeadersRow(ctx)
@@ -36,6 +46,11 @@ function M.draw(ctx, H, helpers)
       end
 
       reaper.ImGui_TableNextColumn(ctx)
+      if reaper.ImGui_Button(ctx, 'Ir') then
+        navigate_row = row
+      end
+
+      reaper.ImGui_TableNextColumn(ctx)
       if reaper.ImGui_Button(ctx, 'Borrar') then
         remove_idx = i
       end
@@ -44,6 +59,10 @@ function M.draw(ctx, H, helpers)
     end
 
     reaper.ImGui_EndTable(ctx)
+  end
+
+  if navigate_row then
+    helpers.moveCursorToRow(navigate_row)
   end
 
   if remove_idx then

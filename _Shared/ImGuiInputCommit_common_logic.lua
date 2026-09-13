@@ -21,7 +21,11 @@ end
 function M.globalKeyPressed(ctx, key, consumed)
   if consumed then return false end
   if reaper.ImGui_IsAnyItemActive(ctx) then return false end
-  if not reaper.ImGui_IsWindowFocused(ctx) then return false end
+  -- ChildWindows: una tabla con TableFlags_ScrollY crea una ventana hija
+  -- interna para su region de scroll -- sin este flag, IsWindowFocused()
+  -- en la ventana raiz da false apenas el foco cae ahi adentro, rompiendo
+  -- los atajos globales (ver sesion UX Armonia, sticky table).
+  if not reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows()) then return false end
   return reaper.ImGui_IsKeyPressed(ctx, key, false)
 end
 
