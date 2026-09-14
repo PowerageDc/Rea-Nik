@@ -106,6 +106,12 @@ Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
 Convención aplica de acá en adelante para scripts nuevos; evaluar rename de
 los existentes en otra sesión, sin apuro.
 
+**Otra excepción documentada:** `Nik_ImGui_Template.lua` (en
+`Tests-Debug/ImGui/`) — `Template` no es una acción/verbo, no sigue
+`Nik_<Dominio>_<Acción>` al pie de la letra. Detalle de la infraestructura
+de testing de ImGui (módulos, workflow, gotchas del lenguaje) en
+`02_IMGUI_LUA_NOTAS.md`.
+
 ## Estructura de subcarpetas (raíz del repo, `C:\dev\Rea-Nik\`)
 
 Cada dominio funcional vive en su propia subcarpeta, nombrada en PascalCase
