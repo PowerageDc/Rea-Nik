@@ -102,6 +102,22 @@ function M.draw(ctx, H, helpers)
       H._armonia_scroll_target_idx = nearest_idx
     end
 
+    -- Fila "activa" para highlight: la ULTIMA fila de TODO H.harmony (no
+    -- solo la seccion actual -- cubre el caso de recien entrar a una
+    -- seccion sin acorde propio todavia, sigue sonando el carry-over de la
+    -- fila anterior) con tiempo <= tiempo del cursor. exact=true si el
+    -- cursor cae justo sobre esa fila (igualdad estricta measure/beat/
+    -- hundredths, son enteros -- no hace falta tolerancia).
+    local active_idx, active_exact = nil, false
+    for i, row in ipairs(H.harmony) do
+      if helpers.rowToTime(row) <= cursor_time then
+        active_idx = i
+        active_exact = (row.measure == cursor_pos.measure and row.beat == cursor_pos.beat and row.hundredths == cursor_pos.hundredths)
+      else
+        break
+      end
+    end
+
     local ordered_groups = {}
     if #unsectioned.rows > 0 then table.insert(ordered_groups, unsectioned) end
     for _, g in ipairs(section_groups) do
@@ -135,6 +151,11 @@ function M.draw(ctx, H, helpers)
             local i, row = entry.idx, entry.row
             reaper.ImGui_TableNextRow(ctx)
             reaper.ImGui_PushID(ctx, i)
+
+            if i == active_idx then
+              local color = active_exact and 0x3FBF3FA0 or 0x3FBF3F40  -- verde: solido en match exacto, tenue en carry-over
+              reaper.ImGui_TableSetBgColor(ctx, reaper.ImGui_TableBgTarget_RowBg0(), color)
+            end
 
             helpers.RowInputs.drawPositionInputs(ctx, row)
 
