@@ -40,39 +40,78 @@ function M.draw(ctx, H, helpers)
 
   local body_visible = reaper.ImGui_BeginChild(ctx, 'harmony_body', 0, body_h, 0, reaper.ImGui_WindowFlags_NoNav())
   if body_visible then
-    if reaper.ImGui_BeginTable(ctx, 'harmony_table', 7, table_flags) then
-      setupHarmonyColumns(ctx)
+    local sections = helpers.getSections()
 
-      for i, row in ipairs(H.harmony) do
-        reaper.ImGui_TableNextRow(ctx)
-        reaper.ImGui_PushID(ctx, i)
+    -- Cada fila va a la ULTIMA seccion cuyo marker es anterior o igual a su
+    -- tiempo. Sin marker anterior -> "unsectioned". Se agrupa por indice de
+    -- seccion (no por nombre) porque la nomenclatura estandar repite
+    -- nombres (INTRO, PRECORO aparecen 2 veces, ver 01_CONVENCIONES.md).
+    local section_groups = {}
+    for s_idx = 1, #sections do
+      section_groups[s_idx] = { name = sections[s_idx].name, rows = {} }
+    end
+    local unsectioned = { name = 'Sin seccion', rows = {} }
 
-        helpers.RowInputs.drawPositionInputs(ctx, row)
-
-        reaper.ImGui_TableNextColumn(ctx)
-        reaper.ImGui_SetNextItemWidth(ctx, 100)
-        local changed_c
-        changed_c, row.chord = reaper.ImGui_InputText(ctx, '##acorde', row.chord)
-
-        reaper.ImGui_TableNextColumn(ctx)
-        if helpers.RowInputs.drawCursorButton(ctx) then
-          helpers.RowInputs.applyCursorToRow(row, helpers.captureCursorPosition())
+    for i, row in ipairs(H.harmony) do
+      local row_time = helpers.rowToTime(row)
+      local assigned = nil
+      for s_idx = #sections, 1, -1 do
+        if sections[s_idx].time <= row_time then
+          assigned = s_idx
+          break
         end
-
-        reaper.ImGui_TableNextColumn(ctx)
-        if reaper.ImGui_Button(ctx, 'Ir', COLUMN_WIDTHS.go_btn - 8, 0) then
-          navigate_row = row
-        end
-
-        reaper.ImGui_TableNextColumn(ctx)
-        if reaper.ImGui_Button(ctx, 'Borrar', COLUMN_WIDTHS.delete_btn - 8, 0) then
-          remove_idx = i
-        end
-
-        reaper.ImGui_PopID(ctx)
       end
+      local target = assigned and section_groups[assigned] or unsectioned
+      table.insert(target.rows, { idx = i, row = row })
+    end
 
-      reaper.ImGui_EndTable(ctx)
+    local ordered_groups = {}
+    if #unsectioned.rows > 0 then table.insert(ordered_groups, unsectioned) end
+    for _, g in ipairs(section_groups) do
+      if #g.rows > 0 then table.insert(ordered_groups, g) end
+    end
+
+    for g_idx, group in ipairs(ordered_groups) do
+      reaper.ImGui_PushID(ctx, g_idx)
+      local header_label = string.format('%s (%d)', group.name, #group.rows)
+      if reaper.ImGui_CollapsingHeader(ctx, header_label) then
+        if reaper.ImGui_BeginTable(ctx, 'harmony_group_table', 7, table_flags) then
+          setupHarmonyColumns(ctx)
+
+          for _, entry in ipairs(group.rows) do
+            local i, row = entry.idx, entry.row
+            reaper.ImGui_TableNextRow(ctx)
+            reaper.ImGui_PushID(ctx, i)
+
+            helpers.RowInputs.drawPositionInputs(ctx, row)
+
+            reaper.ImGui_TableNextColumn(ctx)
+            reaper.ImGui_SetNextItemWidth(ctx, 100)
+            local changed_c
+            changed_c, row.chord = reaper.ImGui_InputText(ctx, '##acorde', row.chord)
+
+            reaper.ImGui_TableNextColumn(ctx)
+            if helpers.RowInputs.drawCursorButton(ctx) then
+              helpers.RowInputs.applyCursorToRow(row, helpers.captureCursorPosition())
+            end
+
+            reaper.ImGui_TableNextColumn(ctx)
+            if reaper.ImGui_Button(ctx, 'Ir', COLUMN_WIDTHS.go_btn - 8, 0) then
+              navigate_row = row
+            end
+
+            reaper.ImGui_TableNextColumn(ctx)
+            if reaper.ImGui_Button(ctx, 'Borrar', COLUMN_WIDTHS.delete_btn - 8, 0) then
+              remove_idx = i
+            end
+
+            reaper.ImGui_PopID(ctx)
+          end
+
+          reaper.ImGui_EndTable(ctx)
+        end
+      end
+      reaper.ImGui_PopID(ctx)
     end
   end
   reaper.ImGui_EndChild(ctx)

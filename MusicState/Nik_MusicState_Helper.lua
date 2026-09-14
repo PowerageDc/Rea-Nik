@@ -206,16 +206,41 @@ local function nikMusicStateCaptureCursorPosition()
   }
 end
 
--- Convierte measure/beat/hundredths de una fila a tiempo de proyecto y
--- mueve el cursor de edicion ahi (scroll de arrange incluido). Usado por
--- el boton "Ir" de Armonia/Cues.
-local function nikMusicStateMoveCursorToRow(row)
+-- Convierte measure/beat/hundredths de una fila (Armonia/Cues) a tiempo de
+-- proyecto absoluto. Separado de nikMusicStateMoveCursorToRow para poder
+-- reusarlo al agrupar filas por seccion (ver helpers.getSections).
+local function nikMusicStateRowToTime(row)
   local proj = 0
   local beat_unit_qn = nikMusicStateBeatUnitQN(proj, row.measure)
   local qn_offset = nikMusicStateBeatToQnOffset(row.beat, row.hundredths, beat_unit_qn)
   local _, qn_start = reaper.TimeMap_GetMeasureInfo(proj, row.measure - 1)
-  local time = reaper.TimeMap2_QNToTime(proj, qn_start + qn_offset)
-  reaper.SetEditCurPos(time, true, false)
+  return reaper.TimeMap2_QNToTime(proj, qn_start + qn_offset)
+end
+
+-- Mueve el cursor de edicion de REAPER a la posicion de una fila (scroll de
+-- arrange incluido). Usado por el boton "Ir" de Armonia/Cues.
+local function nikMusicStateMoveCursorToRow(row)
+  reaper.SetEditCurPos(nikMusicStateRowToTime(row), true, false)
+end
+
+-- Escanea markers del proyecto (excluye regiones) y devuelve una lista
+-- ordenada por tiempo: { {name=, time=}, ... }. No filtra por nomenclatura
+-- (ver 01_CONVENCIONES.md) -- cualquier marker cuenta como seccion, para no
+-- bloquear la nomenclatura alternativa abreviada (V1, V2, PC...) todavia
+-- sin parser. Nombres repetidos (ej. "INTRO" x2) quedan como instancias
+-- separadas -- el llamador agrupa por indice, no por nombre.
+local function nikMusicStateGetSections()
+  local proj = 0
+  local sections = {}
+  local _, num_markers, num_regions = reaper.CountProjectMarkers(proj)
+  for i = 0, num_markers + num_regions - 1 do
+    local _, is_region, pos, _, name = reaper.EnumProjectMarkers3(proj, i)
+    if not is_region then
+      table.insert(sections, { name = (name ~= '' and name) or '(sin nombre)', time = pos })
+    end
+  end
+  table.sort(sections, function(a, b) return a.time < b.time end)
+  return sections
 end
 
 -- Tabla de dependencias compartidas que el contenedor le pasa a cada modulo
@@ -229,6 +254,8 @@ local helpers = {
   RowInputs = RowInputs,
   InputCommit = InputCommit,
   moveCursorToRow = nikMusicStateMoveCursorToRow,
+  rowToTime = nikMusicStateRowToTime,
+  getSections = nikMusicStateGetSections,
   -- Alto que el contenedor reserva DESPUES del TabBar (Separator + boton
   -- "Guardar y Publicar" + texto de estado) -- las tabs con tabla+scroll
   -- (Armonia, Cues) tienen que restarlo del alto disponible, si no la
