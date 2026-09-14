@@ -56,6 +56,22 @@ function M.draw(ctx, H, helpers)
   if body_visible then
     local sections = helpers.getSections()
 
+    -- Etapa 2 (auto-scroll): si la seccion del cursor de REAPER cambio desde
+    -- el frame anterior, se fuerza apertura + se guarda a que seccion hay
+    -- que scrollear (la fila mas cercana se calcula mas abajo, una vez
+    -- agrupadas las filas). Comparte H._armonia_force_open_id con
+    -- "+ Agregar fila" -- ambos casos son "esta seccion se abre este frame
+    -- si o si"; no colisionan porque Agregar corre al final de M.draw,
+    -- despues de que esto ya se consumio este frame.
+    local cursor_pos = helpers.captureCursorPosition()
+    local cursor_time = helpers.rowToTime(cursor_pos)
+    local cursor_section_idx = findSectionIdx(sections, cursor_time) or 0
+    local section_changed = H._armonia_last_section_idx ~= cursor_section_idx
+    if section_changed then
+      H._armonia_force_open_id = cursor_section_idx
+      H._armonia_last_section_idx = cursor_section_idx
+    end
+
     -- Cada fila va a la ULTIMA seccion cuyo marker es anterior o igual a su
     -- tiempo. Sin marker anterior -> "unsectioned". Se agrupa por indice de
     -- seccion (no por nombre) porque la nomenclatura estandar repite
@@ -72,6 +88,18 @@ function M.draw(ctx, H, helpers)
       local assigned = findSectionIdx(sections, helpers.rowToTime(row))
       local target = assigned and section_groups[assigned] or unsectioned
       table.insert(target.rows, { idx = i, row = row })
+    end
+
+    if section_changed then
+      local target_group = (cursor_section_idx == 0) and unsectioned or section_groups[cursor_section_idx]
+      local nearest_idx, nearest_diff = nil, nil
+      for _, entry in ipairs(target_group.rows) do
+        local diff = math.abs(helpers.rowToTime(entry.row) - cursor_time)
+        if not nearest_diff or diff < nearest_diff then
+          nearest_idx, nearest_diff = entry.idx, diff
+        end
+      end
+      H._armonia_scroll_target_idx = nearest_idx
     end
 
     local ordered_groups = {}
@@ -128,6 +156,11 @@ function M.draw(ctx, H, helpers)
             reaper.ImGui_TableNextColumn(ctx)
             if reaper.ImGui_Button(ctx, 'Borrar', COLUMN_WIDTHS.delete_btn - 8, 0) then
               remove_idx = i
+            end
+
+            if H._armonia_scroll_target_idx == i then
+              reaper.ImGui_SetScrollHereY(ctx)
+              H._armonia_scroll_target_idx = nil
             end
 
             reaper.ImGui_PopID(ctx)
