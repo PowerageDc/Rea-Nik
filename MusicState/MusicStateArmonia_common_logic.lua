@@ -17,6 +17,20 @@ local function setupHarmonyColumns(ctx)
   reaper.ImGui_TableSetupColumn(ctx, '', fixed, COLUMN_WIDTHS.delete_btn)
 end
 
+-- Devuelve el indice (dentro de `sections`, orden cronologico) de la ULTIMA
+-- seccion cuyo marker es anterior o igual a `time`, o nil si no hay ninguna
+-- (el tiempo cae antes del primer marker -> "Sin seccion"). Compartido
+-- entre el agrupado de filas existentes y "+ Agregar fila" (necesita saber
+-- a que seccion va la fila nueva, para forzar su apertura si esta colapsada).
+local function findSectionIdx(sections, time)
+  for s_idx = #sections, 1, -1 do
+    if sections[s_idx].time <= time then
+      return s_idx
+    end
+  end
+  return nil
+end
+
 function M.draw(ctx, H, helpers)
   reaper.ImGui_TextDisabled(ctx, '(acorde vacio = silencio explicito / sentinel "null")')
   reaper.ImGui_Spacing(ctx)
@@ -55,14 +69,7 @@ function M.draw(ctx, H, helpers)
     H._armonia_seen_groups = H._armonia_seen_groups or {}
 
     for i, row in ipairs(H.harmony) do
-      local row_time = helpers.rowToTime(row)
-      local assigned = nil
-      for s_idx = #sections, 1, -1 do
-        if sections[s_idx].time <= row_time then
-          assigned = s_idx
-          break
-        end
-      end
+      local assigned = findSectionIdx(sections, helpers.rowToTime(row))
       local target = assigned and section_groups[assigned] or unsectioned
       table.insert(target.rows, { idx = i, row = row })
     end
@@ -76,9 +83,14 @@ function M.draw(ctx, H, helpers)
     for _, group in ipairs(ordered_groups) do
       reaper.ImGui_PushID(ctx, group.stable_id)
 
-      if not H._armonia_seen_groups[group.stable_id] then
+      local force_open = (not H._armonia_seen_groups[group.stable_id])
+        or (H._armonia_force_open_id == group.stable_id)
+      if force_open then
         reaper.ImGui_SetNextItemOpen(ctx, true)
-        H._armonia_seen_groups[group.stable_id] = true
+      end
+      H._armonia_seen_groups[group.stable_id] = true
+      if H._armonia_force_open_id == group.stable_id then
+        H._armonia_force_open_id = nil  -- consumido: no se repite en frames siguientes
       end
 
       -- "###header" fija el ID del CollapsingHeader a algo que no depende
@@ -147,6 +159,8 @@ function M.draw(ctx, H, helpers)
       hundredths = pos.hundredths,
       chord = '',
     })
+    local sections = helpers.getSections()
+    H._armonia_force_open_id = findSectionIdx(sections, helpers.rowToTime(pos)) or 0
   end
 end
 
