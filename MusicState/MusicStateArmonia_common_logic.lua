@@ -48,9 +48,11 @@ function M.draw(ctx, H, helpers)
     -- nombres (INTRO, PRECORO aparecen 2 veces, ver 01_CONVENCIONES.md).
     local section_groups = {}
     for s_idx = 1, #sections do
-      section_groups[s_idx] = { name = sections[s_idx].name, rows = {} }
+      section_groups[s_idx] = { name = sections[s_idx].name, rows = {}, stable_id = s_idx }
     end
-    local unsectioned = { name = 'Sin seccion', rows = {} }
+    local unsectioned = { name = 'Sin seccion', rows = {}, stable_id = 0 }
+
+    H._armonia_seen_groups = H._armonia_seen_groups or {}
 
     for i, row in ipairs(H.harmony) do
       local row_time = helpers.rowToTime(row)
@@ -71,9 +73,20 @@ function M.draw(ctx, H, helpers)
       if #g.rows > 0 then table.insert(ordered_groups, g) end
     end
 
-    for g_idx, group in ipairs(ordered_groups) do
-      reaper.ImGui_PushID(ctx, g_idx)
-      local header_label = string.format('%s (%d)', group.name, #group.rows)
+    for _, group in ipairs(ordered_groups) do
+      reaper.ImGui_PushID(ctx, group.stable_id)
+
+      if not H._armonia_seen_groups[group.stable_id] then
+        reaper.ImGui_SetNextItemOpen(ctx, true)
+        H._armonia_seen_groups[group.stable_id] = true
+      end
+
+      -- "###header" fija el ID del CollapsingHeader a algo que no depende
+      -- del texto visible -- el conteo "(%d)" puede cambiar (agregar/borrar
+      -- fila) sin que ImGui lo trate como un widget nuevo y pierda el
+      -- estado abierto/cerrado. El stable_id en el PushID de arriba ya
+      -- garantiza que no colisiona entre grupos.
+      local header_label = string.format('%s (%d)###header', group.name, #group.rows)
       if reaper.ImGui_CollapsingHeader(ctx, header_label) then
         if reaper.ImGui_BeginTable(ctx, 'harmony_group_table', 7, table_flags) then
           setupHarmonyColumns(ctx)
