@@ -14,23 +14,36 @@ M.DEFAULT_WIDTHS = { measure = 100, beat = 90, hundredths = 100 }
 -- Asume que el caller ya hizo TableNextRow()/PushID() antes de invocar
 -- esta funcion, y que las 3 columnas siguientes le corresponden a esto.
 -- Muta row.measure/row.beat/row.hundredths in-place.
+-- Devuelve "active" (algun campo de la fila tiene foco este frame), no
+-- "committed" -- IsItemDeactivatedAfterEdit en un InputInt con steppers
+-- +/- disparo falsos positivos a mitad de tipeo en pruebas reales (bug:
+-- reordenar con la fila todavia enfocada le corre el indice de PushID,
+-- pierde el foco). El llamador detecta "termino de editar" por
+-- TRANSICION de active entre frames (activo -> no activo), no por este
+-- evento puntual -- ver resortAndFocusRow en MusicStateArmonia.
 function M.drawPositionInputs(ctx, row, widths)
   widths = widths or M.DEFAULT_WIDTHS
+  local active = false
 
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.measure or M.DEFAULT_WIDTHS.measure)
   local _, measure = reaper.ImGui_InputInt(ctx, '##compas', row.measure, 1, 10)
   row.measure = measure
+  active = active or reaper.ImGui_IsItemActive(ctx)
 
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.beat or M.DEFAULT_WIDTHS.beat)
   local _, beat = reaper.ImGui_InputInt(ctx, '##beat', row.beat, 1, 4)
   row.beat = beat
+  active = active or reaper.ImGui_IsItemActive(ctx)
 
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.hundredths or M.DEFAULT_WIDTHS.hundredths)
   local _, hundredths = reaper.ImGui_InputInt(ctx, '##centesimas', row.hundredths, 5, 25)
   row.hundredths = hundredths
+  active = active or reaper.ImGui_IsItemActive(ctx)
+
+  return active
 end
 
 -- Solo el boton -- devuelve true si se clickeo este frame. label opcional

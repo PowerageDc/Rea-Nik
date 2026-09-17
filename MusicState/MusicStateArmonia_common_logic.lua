@@ -31,12 +31,55 @@ local function findSectionIdx(sections, time)
   return nil
 end
 
+-- Tiempo de una fila para AGRUPADO/highlight -- congelado mientras la fila
+-- esta en edicion (H._armonia_active_row), en vez de leer el valor en vivo
+-- de row.measure/beat/hundredths (que el InputInt muta tecla por tecla).
+-- Sin esto, cada digito tipeado puede recolocar la fila en otro
+-- CollapsingHeader a mitad de edicion -- le corre el PushID y pierde el
+-- foco de inmediato (bug real, confirmado: fallaba salvo que la fila ya
+-- fuera la primera del colapsable, caso en que un digito de mas no la
+-- saca de grupo). El snapshot se toma al ENTRAR en edicion (ver bloque
+-- post-EndChild) y se descarta al salir, momento en que resortAndFocusRow
+-- ya usa el valor final real, no este congelado.
+local function activeAwareRowTime(H, helpers, row)
+  if row == H._armonia_active_row then
+    return H._armonia_active_row_time
+  end
+  return helpers.rowToTime(row)
+end
+
+-- Reordena H.harmony cronologicamente y deja la fila dada enfocada: fuerza
+-- apertura de la seccion que le corresponde AHORA (puede haber cambiado si
+-- se edito el compas) y su scroll. Llamar SIEMPRE despues de EndChild, nunca
+-- durante el loop de filas -- correr el indice de una fila con foco activo
+-- a mitad de edicion le hace perder el foco (PushID(ctx, i) usa ese indice).
+-- target_row se ubica por identidad de tabla, no por indice viejo -- el
+-- indice es justo lo que el sort corre. Garantiza el orden cronologico que
+-- asume el loop de "fila activa" mas abajo.
+local function resortAndFocusRow(H, helpers, target_row)
+  table.sort(H.harmony, function(a, b) return helpers.rowToTime(a) < helpers.rowToTime(b) end)
+
+  local new_idx = nil
+  for i, row in ipairs(H.harmony) do
+    if row == target_row then
+      new_idx = i
+      break
+    end
+  end
+  if not new_idx then return end
+
+  local sections = helpers.getSections()
+  H._armonia_force_open_id = findSectionIdx(sections, helpers.rowToTime(target_row)) or 0
+  H._armonia_scroll_target_idx = new_idx
+end
+
 function M.draw(ctx, H, helpers)
   reaper.ImGui_TextDisabled(ctx, '(acorde vacio = silencio explicito / sentinel "null")')
   reaper.ImGui_Spacing(ctx)
 
   local remove_idx = nil
   local navigate_row = nil
+  local active_row_this_frame = nil  -- fila (si alguna) con foco en algun campo de posicion, ESTE frame
 
   local _, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
   local header_h = reaper.ImGui_GetFrameHeightWithSpacing(ctx)
@@ -85,7 +128,7 @@ function M.draw(ctx, H, helpers)
     H._armonia_seen_groups = H._armonia_seen_groups or {}
 
     for i, row in ipairs(H.harmony) do
-      local assigned = findSectionIdx(sections, helpers.rowToTime(row))
+      local assigned = findSectionIdx(sections, activeAwareRowTime(H, helpers, row))
       local target = assigned and section_groups[assigned] or unsectioned
       table.insert(target.rows, { idx = i, row = row })
     end
@@ -94,7 +137,7 @@ function M.draw(ctx, H, helpers)
       local target_group = (cursor_section_idx == 0) and unsectioned or section_groups[cursor_section_idx]
       local nearest_idx, nearest_diff = nil, nil
       for _, entry in ipairs(target_group.rows) do
-        local diff = math.abs(helpers.rowToTime(entry.row) - cursor_time)
+        local diff = math.abs(activeAwareRowTime(H, helpers, entry.row) - cursor_time)
         if not nearest_diff or diff < nearest_diff then
           nearest_idx, nearest_diff = entry.idx, diff
         end
@@ -110,7 +153,7 @@ function M.draw(ctx, H, helpers)
     -- hundredths, son enteros -- no hace falta tolerancia).
     local active_idx, active_exact = nil, false
     for i, row in ipairs(H.harmony) do
-      if helpers.rowToTime(row) <= cursor_time then
+      if activeAwareRowTime(H, helpers, row) <= cursor_time then
         active_idx = i
         active_exact = (row.measure == cursor_pos.measure and row.beat == cursor_pos.beat and row.hundredths == cursor_pos.hundredths)
       else
@@ -157,7 +200,9 @@ function M.draw(ctx, H, helpers)
               reaper.ImGui_TableSetBgColor(ctx, reaper.ImGui_TableBgTarget_RowBg0(), color)
             end
 
-            helpers.RowInputs.drawPositionInputs(ctx, row)
+            if helpers.RowInputs.drawPositionInputs(ctx, row) then
+              active_row_this_frame = row
+            end
 
             reaper.ImGui_TableNextColumn(ctx)
             reaper.ImGui_SetNextItemWidth(ctx, 100)
@@ -203,18 +248,38 @@ function M.draw(ctx, H, helpers)
     table.remove(H.harmony, remove_idx)
   end
 
+  -- Transicion de foco entre frames (no evento puntual de "commit", ver
+  -- nota en drawPositionInputs). Dos casos, no excluyentes si el foco
+  -- salta de una fila a otra en el mismo frame:
+  -- - SALE de edicion (habia activa, ya no es la misma): recalcula con el
+  --   valor FINAL real (ya no el congelado) y recien ahi reordena. Si esa
+  --   fila ya se borro este mismo frame (remove_idx), resortAndFocusRow no
+  --   la encuentra por identidad en H.harmony y no hace nada.
+  -- - ENTRA en edicion (fila nueva activa): congela su tiempo ANTES de que
+  --   el proximo frame la empiece a mutar por tipeo -- esto es lo que
+  --   evita el churn de grupo/PushID mientras el foco sigue activo.
+  if active_row_this_frame ~= H._armonia_active_row then
+    if H._armonia_active_row then
+      resortAndFocusRow(H, helpers, H._armonia_active_row)
+    end
+    if active_row_this_frame then
+      H._armonia_active_row_time = helpers.rowToTime(active_row_this_frame)
+    end
+    H._armonia_active_row = active_row_this_frame
+  end
+
   reaper.ImGui_Spacing(ctx)
   reaper.ImGui_Separator(ctx)
   if reaper.ImGui_Button(ctx, '+ Agregar fila (cursor actual)', 220, 0) then
     local pos = helpers.captureCursorPosition()
-    table.insert(H.harmony, {
+    local new_row = {
       measure = pos.measure,
       beat = pos.beat,
       hundredths = pos.hundredths,
       chord = '',
-    })
-    local sections = helpers.getSections()
-    H._armonia_force_open_id = findSectionIdx(sections, helpers.rowToTime(pos)) or 0
+    }
+    table.insert(H.harmony, new_row)
+    resortAndFocusRow(H, helpers, new_row)
   end
 end
 
