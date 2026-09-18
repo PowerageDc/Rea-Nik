@@ -76,7 +76,21 @@ end
 -- qn_offset (desde el downbeat del compas) -> beat.hundredths para mostrar
 -- en la tabla. Inverso de nikMusicStateBeatToQnOffset.
 local function nikMusicStateQnOffsetToBeat(qn_offset, beat_unit_qn)
-  local beat_index = math.floor(qn_offset / beat_unit_qn) + 1
+  -- Snap a la grilla de 0.25 QN (misma resolucion que redondea
+  -- nikMusicStateBeatToQnOffset en la direccion inversa) ANTES de floor().
+  -- Sin esto, ruido de punto flotante acumulado (sumas/restas de QN a lo
+  -- largo de cursor_qn + delta_qn en un pegado, ver MusicStateArmonia)
+  -- puede dejar un valor como 0.999999999996 en vez de 1.0 exacto justo en
+  -- un limite de beat -- floor() lo manda al beat ANTERIOR, y el resto
+  -- (casi un beat entero) redondea a hundredths=100 en vez de 0. Bug real,
+  -- confirmado: pegado de filas corria el beat hacia atras, y el clamp de
+  -- RowInputs (0-99) terminaba pisando ese 100 a 99 de forma permanente en
+  -- cuanto la fila se renderizaba una vez -- por eso dos filas de origen
+  -- DISTINTO podian terminar con la misma posicion "corrupta" identica.
+  -- El dato solo tiene resolucion de semicorchea de todos modos, este snap
+  -- no descarta precision real, solo ruido de representacion.
+  qn_offset = math.floor(qn_offset / 0.25 + 0.5) * 0.25
+  local beat_index = math.floor(qn_offset / beat_unit_qn + 1e-7) + 1
   local remainder_qn = qn_offset - (beat_index - 1) * beat_unit_qn
   local hundredths = math.floor((remainder_qn / beat_unit_qn) * 100 + 0.5)
   return beat_index, hundredths
@@ -214,6 +228,15 @@ local function nikMusicStateCaptureCursorPosition()
   }
 end
 
+-- QN absoluto del cursor de edicion -- a diferencia de qn_offset en
+-- nikMusicStateCaptureCursorPosition (relativo al inicio del compas), este
+-- es el QN completo, necesario para anclar el pegado de filas (ver
+-- MusicStateArmonia, boton "Pegar en cursor").
+local function nikMusicStateCaptureCursorQN()
+  local proj = 0
+  return reaper.TimeMap2_timeToQN(proj, reaper.GetCursorPosition())
+end
+
 -- Convierte measure/beat/hundredths de una fila (Armonia/Cues) a tiempo de
 -- proyecto absoluto. Separado de nikMusicStateMoveCursorToRow para poder
 -- reusarlo al agrupar filas por seccion (ver helpers.getSections).
@@ -223,6 +246,34 @@ local function nikMusicStateRowToTime(row)
   local qn_offset = nikMusicStateBeatToQnOffset(row.beat, row.hundredths, beat_unit_qn)
   local _, qn_start = reaper.TimeMap_GetMeasureInfo(proj, row.measure - 1)
   return reaper.TimeMap2_QNToTime(proj, qn_start + qn_offset)
+end
+
+-- QN absoluto de una fila -- mismo calculo que rowToTime pero sin el
+-- ultimo paso (QNToTime). El copiado de filas necesita la DISTANCIA en QN
+-- entre filas seleccionadas (ver MusicStateArmonia, boton "Copiar
+-- seleccion"), no un tiempo de reloj -- asi la separacion "musical" entre
+-- filas copiadas se preserva aunque origen y destino tengan tempo/compas
+-- distinto. qnToRow (inverso) llega en la etapa de "Pegar".
+local function nikMusicStateRowToQN(row)
+  local proj = 0
+  local beat_unit_qn = nikMusicStateBeatUnitQN(proj, row.measure)
+  local qn_offset = nikMusicStateBeatToQnOffset(row.beat, row.hundredths, beat_unit_qn)
+  local _, qn_start = reaper.TimeMap_GetMeasureInfo(proj, row.measure - 1)
+  return qn_start + qn_offset
+end
+
+-- Inverso de nikMusicStateRowToQN: QN absoluto -> {measure, beat,
+-- hundredths}. TimeMap_QNToMeasures ya da measure + qn_start del compas
+-- que contiene ese QN, asi que el resultado siempre cae dentro del rango
+-- valido de esa metrica -- a diferencia de la edicion manual (RowInputs),
+-- ESTA conversion no necesita clamp de getMaxBeats, es derivacion directa
+-- de un tiempo real, no tecleo libre.
+local function nikMusicStateQnToRow(qn)
+  local proj = 0
+  local measure, qn_start = reaper.TimeMap_QNToMeasures(proj, qn)
+  local beat_unit_qn = nikMusicStateBeatUnitQN(proj, measure)
+  local beat, hundredths = nikMusicStateQnOffsetToBeat(qn - qn_start, beat_unit_qn)
+  return { measure = measure, beat = beat, hundredths = hundredths }
 end
 
 -- Mueve el cursor de edicion de REAPER a la posicion de una fila (scroll de
@@ -265,6 +316,9 @@ local helpers = {
   rowToTime = nikMusicStateRowToTime,
   getSections = nikMusicStateGetSections,
   getMaxBeats = function(measure) return nikMusicStateTimesigNum(0, measure) end,
+  rowToQN = nikMusicStateRowToQN,
+  qnToRow = nikMusicStateQnToRow,
+  captureCursorQN = nikMusicStateCaptureCursorQN,
   -- Alto que el contenedor reserva DESPUES del TabBar (Separator + boton
   -- "Guardar y Publicar" + texto de estado) -- las tabs con tabla+scroll
   -- (Armonia, Cues) tienen que restarlo del alto disponible, si no la
@@ -372,7 +426,7 @@ local function loop()
     H.save_status = 'Proyecto activo cambio -- datos recargados.'
   end
 
-  reaper.ImGui_SetNextWindowSize(ctx, 520, 440, reaper.ImGui_Cond_FirstUseEver())
+  reaper.ImGui_SetNextWindowSize(ctx, 774, 894, reaper.ImGui_Cond_FirstUseEver())
   reaper.ImGui_PushFont(ctx, font, 16)
   local visible, open = reaper.ImGui_Begin(ctx, 'MusicState Helper', true, reaper.ImGui_WindowFlags_NoNav())
 

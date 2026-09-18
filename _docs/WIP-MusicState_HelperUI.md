@@ -213,12 +213,15 @@ por cambio de sección del cursor, y "+ Agregar fila" (para saber a qué
 sección forzar apertura). Si se extrae el módulo compartido con Cues,
 migra junto con `rowToTime`.
 
-### Supuesto no verificado formalmente
+### Orden cronológico de `H.harmony`: garantizado (ver sección 4)
 
-El loop que busca la fila "activa" para highlight asume que `H.harmony` está
-ordenado cronológicamente (corta con `break` en la primera fila posterior al
-cursor). Si en algún momento se permite insertar filas fuera de orden, este
-loop necesita cambiar a recorrido completo sin `break`.
+El loop que busca la fila "activa" para highlight corta con `break` en la
+primera fila posterior al cursor -- **requiere** que `H.harmony` esté
+ordenado cronológicamente. En la sesión de esta sección era un supuesto sin
+verificar; a partir de la sesión de ordenamiento/copiar-pegar (sección 4)
+es una invariante activamente mantenida por `resortAndFocusRow`, disparada
+tanto al agregar una fila como al terminar de editar el trío de posición de
+una existente. El loop no cambió.
 
 ### Pendiente de calibración (no bloqueante, cosmético)
 
@@ -229,23 +232,159 @@ poco el highlight de fondo — pendiente evaluar si conviene pasar los
 widgets a variantes con fondo transparente, o si alcanza con el ajuste de
 color/alfa.
 
-## 4. Pendientes
+## 4. Ordenamiento automático, validación de rango, y copiar/pegar de filas (implementado)
+
+Atacaba tres pendientes de la sesión anterior (ítems #2 y el cosmético de
+autoscroll), y terminó agregando dos bugfixes no anticipados. Todo en
+`MusicStateArmonia_common_logic.lua` salvo donde se indica.
+
+### Ordenamiento automático + fix de autoscroll al agregar
+
+- `H.harmony` se reordena cronológicamente al agregar una fila y al
+  terminar de editar el trío de posición (Compás/Beat/Cent.) de una fila
+  existente -- función `resortAndFocusRow(H, helpers, target_row)`: ordena,
+  ubica `target_row` **por identidad de tabla** (nunca por índice viejo --
+  el índice es justo lo que el sort corre), fuerza apertura de la sección
+  que le corresponde ahora y su scroll (`SetScrollHereY`).
+- Resuelve también el cosmético de autoscroll: antes, "+ Agregar fila"
+  solo forzaba apertura de sección pero nunca seteaba
+  `H._armonia_scroll_target_idx` -- unificado con `resortAndFocusRow`,
+  ahora ambos casos comparten el mismo comportamiento de foco.
+- `table.sort` no es estable: dos filas con tiempo idéntico pueden
+  intercambiar orden entre sí de un sort a otro. Cosmético, no afecta
+  highlight ni agrupado.
+
+### Gotcha real: reordenar a mitad de tipeo rompe el foco
+
+`drawPositionInputs` **no** devuelve un evento de commit puntual
+(`IsItemDeactivatedAfterEdit` disparaba falso positivo con el primer
+keypress en un `InputInt` con steppers +/-, confirmado en pruebas reales --
+perdía el foco al primer dígito). Devuelve `active` (si algún campo de la
+fila tiene foco ese frame); el llamador detecta "terminó de editar" por
+**transición** de `active` entre frames (`H._armonia_active_row`, la fila
+activa el frame anterior), nunca por un evento de un solo frame.
+
+Segundo nivel del mismo problema: el **agrupado por sección** leía
+`row.measure`/`beat`/`hundredths` en vivo -- un solo dígito tipeado podía
+recolocar la fila en otro `CollapsingHeader` a mitad de edición, corriendo
+su `PushID` y perdiendo el foco de nuevo (bug confirmado: solo fallaba si
+la fila editada *no* era la primera de su colapsable -- un dígito de más
+no la sacaba de grupo en ese caso). Fix: `activeAwareRowTime(H, helpers,
+row)` devuelve un tiempo **congelado** (capturado al entrar en edición)
+mientras la fila sigue activa, en vez del valor en vivo -- usado por el
+agrupado, el nearest-row del autoscroll, y el highlight de fila activa. El
+reorden real (con el valor final) recién corre cuando la fila pierde el
+foco.
+
+### Validación de rango: Beat sin 0, Hundredths 0-99
+
+`drawPositionInputs` (`MusicStateRowInputs_common_logic.lua`) clampea el
+valor devuelto por `InputInt` -- sin distinguir tecleo vs. steppers +/-,
+ImGui no expone esa distinción en el valor de retorno, así que un solo
+`clamp` cubre ambos casos. Hundredths: siempre 0-99. Beat: mínimo 1,
+máximo según `get_max_beats(row.measure)` (parámetro opcional, `nil` =
+sin tope -- así queda compatible con Cues, que todavía no lo pasa, ver
+Pendientes). El máximo real sale de `helpers.getMaxBeats(measure)` ->
+`TimeMap_GetMeasureInfo` (`timesig_num`), expuesto desde
+`Nik_MusicState_Helper.lua`. Se evalúa con `row.measure` ya actualizado
+ese mismo frame (el campo Compás se dibuja antes que Beat), así que
+cambiar ambos a la vez valida contra la métrica nueva. Efecto esperado
+(no bug): bajar el compás a una métrica con menos beats puede hacer bajar
+el valor de Beat solo.
+
+Alcance deliberado: prevención en el input, no auto-normalización/rollover
+al compás siguiente (evita tener que recalcular `measure` y reasignar
+sección en el momento).
+
+### Bugfix crítico: precisión de punto flotante en QN→beat
+
+`nikMusicStateQnOffsetToBeat` (`Nik_MusicState_Helper.lua`) no snapeaba el
+QN de entrada antes de `floor()`. Ruido de punto flotante acumulado podía
+dejar un offset como `0.999999999996` en vez de `1.0` exacto justo en un
+límite de beat -- `floor()` lo mandaba al beat **anterior**, con el resto
+(casi un beat entero) redondeando a `hundredths=100`. El clamp de
+`RowInputs` (0-99, ver arriba) pisaba ese `100` a `99` de forma
+**permanente** en cuanto la fila se renderizaba una vez -- filas de origen
+distinto podían terminar colapsadas en la misma posición corrupta
+(confirmado en pruebas: pegar 7 filas con beats en límites exactos
+resultó en solo 4 posiciones distintas). Fix: snap a grilla de 0.25 QN
+antes de `floor()`, mismo criterio que ya usa `nikMusicStateBeatToQnOffset`
+en la dirección inversa -- no pierde precisión real (el dato no tiene más
+resolución que semicorchea), descarta solo ruido de representación.
+Afecta a **toda** conversión QN→beat, no solo paste: también la carga de
+`harmony_data`/`cues_data` guardado.
+
+### Copiar/pegar bloque de filas, anclado al cursor (QN-relativo)
+
+Diseño agnóstico a secciones (reutiliza `resortAndFocusRow` sin cambios).
+
+**Selección** (columna checkbox nueva -- header/body pasan de 7 a 8
+columnas en `COLUMN_WIDTHS`/`setupHarmonyColumns`): rango contiguo por 2
+clicks. Click en fila A arranca ancla (`H._armonia_selection_anchor`);
+click en fila B completa el rango `[A..B]` por posición en `H.harmony`
+(cronológico, garantizado); click en la misma fila cancela; con un rango
+ya completo, click en cualquier fila descarta todo y arranca ancla nueva.
+Lógica en `toggleSelection(H, row)` -- el checkbox es solo gatillo de
+click, no fuente de verdad del estado. Estilo: `PushStyleColor` sobre
+`FrameBg`/`FrameBgHovered`/`FrameBgActive`/`Border` con alfa bajo cuando
+la fila **no** está seleccionada (`row.selected` falsy), para que las
+tildadas resalten por contraste sin un "disabled" real.
+
+**Copiar** (botón "Copiar selección (N)"): arma `H._armonia_clipboard` =
+array de `{delta_qn, chord}`, relativo en QN a la fila cronológicamente
+más temprana de la selección (`delta_qn=0` en esa). QN, no tiempo de
+reloj ni measure/beat crudo -- preserva la separación "musical" entre
+filas aunque origen/destino tengan tempo o compás distinto. Requiere
+`helpers.rowToQN(row)` (nuevo, `Nik_MusicState_Helper.lua`). El clipboard
+persiste hasta la próxima copia (se puede pegar N veces).
+
+**Pegar** (botón "Pegar en cursor (N)", misma línea que Agregar/Copiar):
+`helpers.qnToRow(cursor_qn + delta_qn)` (nuevo, inverso de `rowToQN` --
+usa `TimeMap_QNToMeasures`, cae en rango válido sin necesitar el clamp de
+`getMaxBeats`) reconstruye cada fila candidata. `cursor_qn` viene de
+`helpers.captureCursorQN()` (nuevo -- QN absoluto, a diferencia del
+`qn_offset` relativo al compás que ya daba `captureCursorPosition`).
+`findPositionCollisions(H, candidates)` detecta candidatos que coinciden
+exacto (measure/beat/hundredths, mismo criterio que el highlight de fila
+activa) con filas existentes, dedupe por identidad. Sin colisión, pega
+directo. Con colisión, `BeginPopupModal` ("Sobrescribir y pegar" borra
+solo las filas puntuales colisionadas, no todo el rango / "Cancelar" no
+pega nada). `applyPaste` centraliza remove+insert+`resortAndFocusRow`
+(apuntando siempre a `candidates[1]`, `delta_qn=0` por construcción).
+
+### Campos de estado agregados a `H` (namespace `_armonia_*`), además de los ya listados en la sección 3
+
+| Campo | Qué guarda |
+|---|---|
+| `H._armonia_active_row` | fila (referencia) con foco en algún campo de posición, frame anterior -- dispara el reorden por transición |
+| `H._armonia_active_row_time` | tiempo congelado de `H._armonia_active_row`, capturado al entrar en edición -- usado por agrupado/autoscroll/highlight mientras esa fila sigue activa |
+| `H._armonia_selection_anchor` | fila que arrancó un rango de selección, en espera de completarse con un segundo click |
+| `H._armonia_clipboard` | array `{delta_qn, chord}` de la última copia -- persiste hasta la próxima |
+| `H._armonia_paste_pending` | `{candidates, collisions}` mientras el modal de conflicto está abierto -- se limpia al cerrar (Sobrescribir o Cancelar) |
+
+Además, cada fila de `H.harmony` puede tener `row.selected` (bool,
+truthy/nil) -- estado de selección visual, no persiste a
+ProjExtState/JSON (no forma parte del formato guardado por
+`nikMusicStateSaveAndPublish`).
+
+## 5. Pendientes
 
 1. **Aplicar el patrón de la sección 2 (dos tablas + `BeginChild` con
    `NoNav`) a la tab Cues** — hoy no tiene sticky header implementado
    todavía; cuando se agregue, previsiblemente comparte el mismo bug de Nav
    si se usara `ScrollY` directo.
-2. **Copiar bloque de filas** (multi-selección por rango + copiar/pegar
-   anclado al cursor) — diseñado agnóstico a secciones, aplica tanto a
-   Armonía como a Cues.
+2. **Cues: `drawPositionInputs` con firma vieja** — el cambio de firma
+   (parámetro `get_max_beats` agregado al final, ver sección 4) es
+   compatible hacia atrás, Cues sigue funcionando, pero sin tope de Beat
+   hasta que se actualice ese call site para pasar `helpers.getMaxBeats`.
 3. **Extraer módulo compartido de "lista posicionada"** (Armonía + Cues) a
    `_Shared/` — según `01_CONVENCIONES.md`, corresponde recién cuando hay
-   un segundo consumidor real. Ahora que Armonía tiene una implementación
-   completa (agrupado + auto-scroll + highlight, no solo el trío de
-   posición de `MusicStateRowInputs_common_logic.lua`), conviene esperar a
-   que Cues tenga su propia versión (pendiente #1) para ver qué generaliza
-   limpio y qué es específico de cada tab, en vez de adivinar la
-   abstracción de antemano.
+   un segundo consumidor real. Con Armonía ya completa (agrupado +
+   auto-scroll + highlight + ordenamiento + selección + copiar/pegar, ver
+   sección 4), conviene esperar a que Cues tenga su propia versión
+   (pendiente #1, y probablemente su propio copiar/pegar) para ver qué
+   generaliza limpio y qué es específico de cada tab, en vez de adivinar
+   la abstracción de antemano.
 4. **Particulares de Cues** sobre la base del punto 3: botón "Usar
    selección de tiempo" para `duration_qn` (vía `GetSet_LoopTimeRange`).
 5. **Calibración cosmética del highlight** (ver sección 3, colores y
