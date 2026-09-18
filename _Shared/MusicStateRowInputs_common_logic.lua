@@ -9,6 +9,13 @@ local M = {}
 
 M.DEFAULT_WIDTHS = { measure = 100, beat = 90, hundredths = 100 }
 
+-- Lua no trae clamp built-in.
+local function clamp(v, lo, hi)
+  if v < lo then return lo end
+  if v > hi then return hi end
+  return v
+end
+
 -- Dibuja los 3 InputInt (Compas/Beat/Cent.) en 3 columnas consecutivas de
 -- una tabla ya abierta -- llama TableNextColumn() 3 veces, una por campo.
 -- Asume que el caller ya hizo TableNextRow()/PushID() antes de invocar
@@ -21,7 +28,18 @@ M.DEFAULT_WIDTHS = { measure = 100, beat = 90, hundredths = 100 }
 -- pierde el foco). El llamador detecta "termino de editar" por
 -- TRANSICION de active entre frames (activo -> no activo), no por este
 -- evento puntual -- ver resortAndFocusRow en MusicStateArmonia.
-function M.drawPositionInputs(ctx, row, widths)
+-- get_max_beats: funcion opcional (measure) -> timesig_num del compas dado
+-- (ver helpers.getMaxBeats), usada para topear Beat. Se llama con
+-- row.measure YA ACTUALIZADO en este mismo frame (el campo Compas se
+-- dibuja arriba) -- si measure y beat cambian el mismo frame, valida
+-- contra la metrica nueva, no la vieja. nil = sin tope superior (compat
+-- con callers que todavia no la pasan, ej. Cues por ahora).
+-- Beat: minimo 1 siempre (nunca 0). Hundredths: 0..99 siempre. El clamp
+-- corre sobre el valor YA devuelto por InputInt, sin importar si vino de
+-- tecleo o de los steppers +/- del propio widget -- ImGui no distingue
+-- el origen en el valor de retorno, asi que no hace falta codigo aparte
+-- por caso.
+function M.drawPositionInputs(ctx, row, widths, get_max_beats)
   widths = widths or M.DEFAULT_WIDTHS
   local active = false
 
@@ -34,13 +52,14 @@ function M.drawPositionInputs(ctx, row, widths)
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.beat or M.DEFAULT_WIDTHS.beat)
   local _, beat = reaper.ImGui_InputInt(ctx, '##beat', row.beat, 1, 4)
-  row.beat = beat
+  local max_beats = get_max_beats and get_max_beats(row.measure)
+  row.beat = clamp(beat, 1, max_beats or beat)
   active = active or reaper.ImGui_IsItemActive(ctx)
 
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.hundredths or M.DEFAULT_WIDTHS.hundredths)
   local _, hundredths = reaper.ImGui_InputInt(ctx, '##centesimas', row.hundredths, 5, 25)
-  row.hundredths = hundredths
+  row.hundredths = clamp(hundredths, 0, 99)
   active = active or reaper.ImGui_IsItemActive(ctx)
 
   return active

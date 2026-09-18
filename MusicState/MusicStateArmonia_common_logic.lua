@@ -200,7 +200,7 @@ function M.draw(ctx, H, helpers)
               reaper.ImGui_TableSetBgColor(ctx, reaper.ImGui_TableBgTarget_RowBg0(), color)
             end
 
-            if helpers.RowInputs.drawPositionInputs(ctx, row) then
+            if helpers.RowInputs.drawPositionInputs(ctx, row, nil, helpers.getMaxBeats) then
               active_row_this_frame = row
             end
 

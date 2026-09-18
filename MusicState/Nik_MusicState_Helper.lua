@@ -65,6 +65,14 @@ local function nikMusicStateBeatUnitQN(proj, measure)
   return 4 / timesig_denom
 end
 
+-- timesig_num del compas dado -- maximo valido para el campo Beat de una
+-- fila (Armonia/Cues), ver MusicStateRowInputs_common_logic.lua. measure
+-- 1-indexed, TimeMap_GetMeasureInfo espera 0-indexed, igual que arriba.
+local function nikMusicStateTimesigNum(proj, measure)
+  local _, _, _, timesig_num = reaper.TimeMap_GetMeasureInfo(proj, measure - 1)
+  return timesig_num
+end
+
 -- qn_offset (desde el downbeat del compas) -> beat.hundredths para mostrar
 -- en la tabla. Inverso de nikMusicStateBeatToQnOffset.
 local function nikMusicStateQnOffsetToBeat(qn_offset, beat_unit_qn)
@@ -256,6 +264,7 @@ local helpers = {
   moveCursorToRow = nikMusicStateMoveCursorToRow,
   rowToTime = nikMusicStateRowToTime,
   getSections = nikMusicStateGetSections,
+  getMaxBeats = function(measure) return nikMusicStateTimesigNum(0, measure) end,
   -- Alto que el contenedor reserva DESPUES del TabBar (Separator + boton
   -- "Guardar y Publicar" + texto de estado) -- las tabs con tabla+scroll
   -- (Armonia, Cues) tienen que restarlo del alto disponible, si no la
