@@ -51,9 +51,13 @@ if #parts == 0 then
     parts[1] = string.format("%.6f:%.4f", 0.0, reaper.Master_GetTempo())
 end
 
-if #timesig_parts == 0 then
-    local num, den = reaper.GetProjectTimeSignature2(proj)
-    timesig_parts[1] = string.format("%d:%d:%d", 1, num, den)
+local first_measure = nil
+if #timesig_parts > 0 then
+    first_measure = tonumber(timesig_parts[1]:match("^(%d+):"))
+end
+if first_measure ~= 1 then
+    local num, den = reaper.TimeMap_GetTimeSigAtTime(proj, 0)
+    table.insert(timesig_parts, 1, string.format("%d:%d:%d", 1, num, den))
 end
 
 reaper.SetExtState("NikRemote", "tempo_map", table.concat(parts, ","), false)
