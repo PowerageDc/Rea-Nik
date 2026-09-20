@@ -21,6 +21,7 @@
 
 // ---- Estado propio (sin ms-state.js separado, ver doc de arquitectura) ----
 
+var nikTransportPlayState = 0;
 var playPosSeconds = 0;                // segundos, crudo de TRANSPORT tok[2]
 var nikLastPositionBeatsStr = "1.1.00"; // "compas.beat.centesimas", TRANSPORT tok[5]
                                          // mismo nombre de variable que usa
@@ -54,6 +55,7 @@ function wwr_onreply(results) {
         switch (tok[0]) {
             case "TRANSPORT":
                 if (tok.length > 4) {
+                    nikTransportPlayState = parseInt(tok[1], 10);
                     if (tok[2] != playPosSeconds) playPosSeconds = tok[2];
                     // Crudo siempre, sin toggle de formato (esta UI no tiene el
                     // long-tap de measures/minsec del control remoto general).

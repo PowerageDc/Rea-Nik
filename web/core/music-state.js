@@ -179,12 +179,34 @@ function nikMusicStateBarStartQn(bar) {
 
 // Posición actual como {bar, qn_offset} -- misma forma que los eventos
 // aplanados, para poder reusar nikMusicStateComparePos sin traducir nada.
+var nikMusicStateLookaheadSec = (typeof nikMusicStateLookaheadSec !== "undefined") ? nikMusicStateLookaheadSec : 0.4;
+
+function nikMusicStateIsPlaying() {
+    return (typeof nikTransportPlayState !== "undefined") &&
+        (nikTransportPlayState === 1 || nikTransportPlayState === 5);
+}
+
 function nikMusicStateCurrentPos() {
     var parsed = nikMusicStateParseBarBeat(nikLastPositionBeatsStr);
     if (!parsed) return null;
-    var sig = nikMusicStateTimesigAt(parsed.bar);
-    var qnOffset = (parsed.beatIndex - 1 + parsed.hundredths / 100) * (4 / sig.den);
-    return { bar: parsed.bar, qn_offset: qnOffset };
+    var bar = parsed.bar;
+    var beats = parsed.beatIndex - 1 + parsed.hundredths / 100;
+
+    if (nikMusicStateLookaheadSec > 0 && nikMusicStateIsPlaying() && typeof nikMsTempoAt === "function") {
+        var bpm = nikMsTempoAt(parseFloat(playPosSeconds));
+        if (bpm != null && bpm > 0) {
+            beats += nikMusicStateLookaheadSec * bpm / 60;
+            var sigAdv = nikMusicStateTimesigAt(bar);
+            while (sigAdv.num > 0 && beats >= sigAdv.num) {
+                beats -= sigAdv.num;
+                bar++;
+                sigAdv = nikMusicStateTimesigAt(bar);
+            }
+        }
+    }
+
+    var sig = nikMusicStateTimesigAt(bar);
+    return { bar: bar, qn_offset: beats * (4 / sig.den) };
 }
 
 // --- Transposición: se aplica al leer, nunca sobre el array cacheado ---
