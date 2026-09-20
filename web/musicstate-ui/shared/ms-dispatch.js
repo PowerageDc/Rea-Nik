@@ -22,6 +22,8 @@
 // ---- Estado propio (sin ms-state.js separado, ver doc de arquitectura) ----
 
 var nikTransportPlayState = 0;
+var nikTransportPlayRate = 1;
+var nikTransportAnchorMs = 0;
 var playPosSeconds = 0;                // segundos, crudo de TRANSPORT tok[2]
 var nikLastPositionBeatsStr = "1.1.00"; // "compas.beat.centesimas", TRANSPORT tok[5]
                                          // mismo nombre de variable que usa
@@ -46,7 +48,9 @@ var g_markers = [];                    // mismo formato que main.js: array de to
 
 // ---- Parser central ----
 
-function wwr_onreply(results) {
+function wwr_onreply(results, sentAtMs) {
+    var halfRttMs = (typeof sentAtMs === "number")
+        ? Math.min(Math.max((Date.now() - sentAtMs) / 2, 0), 250) : 0;
     var ar = results.split("\n");
     for (var x = 0; x < ar.length; x++) {
         var tok = ar[x].split("\t");
@@ -60,6 +64,7 @@ function wwr_onreply(results) {
                     // Crudo siempre, sin toggle de formato (esta UI no tiene el
                     // long-tap de measures/minsec del control remoto general).
                     nikLastPositionBeatsStr = tok[5];
+                    nikTransportAnchorMs = performance.now() - halfRttMs;
                 }
                 break;
 

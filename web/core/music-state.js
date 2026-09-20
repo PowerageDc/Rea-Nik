@@ -181,6 +181,19 @@ function nikMusicStateBarStartQn(bar) {
 // aplanados, para poder reusar nikMusicStateComparePos sin traducir nada.
 var nikMusicStateLookaheadSec = (typeof nikMusicStateLookaheadSec !== "undefined") ? nikMusicStateLookaheadSec : 0.4;
 
+var NIK_MUSIC_STATE_MAX_EXTRAPOLATION_SEC = 8;
+
+function nikMusicStateExtrapolatedSec() {
+    if (typeof nikTransportAnchorMs === "undefined" || !nikTransportAnchorMs) return 0;
+    var elapsed = (performance.now() - nikTransportAnchorMs) / 1000;
+    if (elapsed <= 0) return 0;
+    return Math.min(elapsed, NIK_MUSIC_STATE_MAX_EXTRAPOLATION_SEC);
+}
+
+function nikMusicStatePlayRate() {
+    return (typeof nikTransportPlayRate === "number" && nikTransportPlayRate > 0) ? nikTransportPlayRate : 1;
+}
+
 function nikMusicStateIsPlaying() {
     return (typeof nikTransportPlayState !== "undefined") &&
         (nikTransportPlayState === 1 || nikTransportPlayState === 5);
@@ -192,10 +205,11 @@ function nikMusicStateCurrentPos() {
     var bar = parsed.bar;
     var beats = parsed.beatIndex - 1 + parsed.hundredths / 100;
 
-    if (nikMusicStateLookaheadSec > 0 && nikMusicStateIsPlaying() && typeof nikMsTempoAt === "function") {
+    var advanceSec = (nikMusicStateLookaheadSec + nikMusicStateExtrapolatedSec()) * nikMusicStatePlayRate();
+    if (advanceSec > 0 && nikMusicStateIsPlaying() && typeof nikMsTempoAt === "function") {
         var bpm = nikMsTempoAt(parseFloat(playPosSeconds));
         if (bpm != null && bpm > 0) {
-            beats += nikMusicStateLookaheadSec * bpm / 60;
+            beats += advanceSec * bpm / 60;
             var sigAdv = nikMusicStateTimesigAt(bar);
             while (sigAdv.num > 0 && beats >= sigAdv.num) {
                 beats -= sigAdv.num;
