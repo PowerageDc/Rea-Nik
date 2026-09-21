@@ -20,7 +20,7 @@ Estructura:
 ```
 C:\dev\Rea-Nik
 ├── AutoColor, RemoteControl, ReaPitchBus, RenderWorkflow,
-│ TempoTools, MvsepImporter, StemFragment, Tests-Debug, _Shared
+│ TempoTools, MvsepImporter, MusicState, StemFragment, Tests-Debug, _Shared
 ├── web\ ← contenido servido como reaper_www_root
 ├── _docs
 └── Rea-Nik.code-workspace
@@ -98,6 +98,11 @@ render, pero conviven en el mismo proyecto/entorno):
 - **Control remoto web**: interfaz HTML para controlar REAPER desde el
   celular en ensayos (transporte, faders, markers, playrate, semitonos
   ReaPitch), ver `features/remote_control.md`.
+- **MusicState (armonía, cues y prompter)**: el Helper (ReaImGui) carga por
+  proyecto tonalidad, roles, armonía y cues; se publican vía ExtState y un
+  prompter web de celular (`nsaudio_prompter.html`) los muestra a los
+  músicos sincronizados con el transporte, tolerando una red inestable.
+  Ver `features/musicstate_instrumentista.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color) a PCs de ensayo sin git ni
   editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -113,6 +118,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
+| MusicState / Prompter     | Helper y prompter vertical funcionales; pendientes: selector de rol, layout horizontal, prueba en sala |
 | Deploy vía ReaPack        | Completo (AutoColor + RemoteControl deployados vía metapaquete + .www) |
 
 ## Pendientes generales (horizonte, no bloqueantes)
@@ -123,6 +129,13 @@ render, pero conviven en el mismo proyecto/entorno):
 - Pitch-shift toggle script (per-stem, mapeable a footswitch MIDI).
 - Parser de nomenclatura alternativa de secciones (V1, V2, PC, C1...) usada en
   otros proyectos — no bloqueante.
+- Red propia para la sala de ensayo (router dedicado, PC por UTP): el Wi-Fi
+  institucional llega débil e inestable a la sala. El prompter tiene
+  resiliencia de software, pero no reemplaza la red (ver §9 de
+  `features/musicstate_instrumentista.md`).
+- Evaluar portar al control remoto general el manejo de conexión del prompter
+  (indicador de datos viejos, tope del backoff de `main.js`, compensación por
+  RTT) — ver §10 de `features/musicstate_instrumentista.md`.
 - Control remoto web: decidir si los `commandId` hardcodeados como fallback en
   `config.js` deben eliminarse (forzar error visible si falta
   `config.local.js`) o mantenerse con validación explícita — hoy fallan en

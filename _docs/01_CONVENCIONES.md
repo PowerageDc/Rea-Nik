@@ -128,12 +128,13 @@ C:\dev\Rea-Nik\
 ├── RemoteControl/ control remoto web (poll, tabs, playrate, ReaPitch remoto)
 ├── ReaPitchBus/ panel nativo ReaImGui de ReaPitch
 ├── MvsepImporter/ importador de stems desde MVSEP
+├── MusicState/ Helper ReaImGui (armonía, cues, roles) y publicación a ExtState
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
 ├── AutoColor/ auto-color de tracks
 ├── StemFragment/ captura/UI de fragmentos de stem
 ├── Tests-Debug/ scripts de diagnóstico y prueba (sin dominio propio)
-├── web/ control remoto web servido como `reaper_www_root` (vía junction)
+├── web/ control remoto web y prompter de MusicState, servidos como `reaper_www_root` (vía junction)
 └── _docs/ documentación del proyecto (este archivo y los demás `.md`)
 ```
 
@@ -142,12 +143,11 @@ poder excluirla fácilmente si algún día se importa la carpeta completa al
 Action List (no contiene scripts ejecutables, solo módulos).
 
 Un módulo entra a `_Shared/` cuando lo consume más de un dominio (hoy:
-`StemBus_common_logic.lua` y `ReaPitchBus_common_logic.lua`, usados por
-`RemoteControl/` y por `ReaPitchBus/`). Un módulo usado por un solo dominio
-se queda dentro de la carpeta de ese dominio (ej.
-`ActiveProject_common_logic.lua`, `ProjectTabs_common_logic.lua` y
-`MarkerBars_common_logic.lua` viven dentro de `RemoteControl/`, no en
-`_Shared/`, porque solo los consume ese dominio).
+`StemBus_common_logic.lua` y `ReaPitchBus_common_logic.lua`, usados por `RemoteControl/` y por `ReaPitchBus/`; 
+y `MusicStateBridge_common_logic.lua`, puente de las keys de `NikMusicState` a ExtState). Un módulo usado por 
+un solo dominio se queda dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
+`ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de `RemoteControl/`, no 
+en `_Shared/`, porque solo los consume ese dominio).
 
 **Importante:** mover o renombrar un script ya registrado en el Action List
 (o mapeado a un footswitch MIDI) invalida su Command ID — hay que sacarlo
