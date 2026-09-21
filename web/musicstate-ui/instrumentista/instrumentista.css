@@ -356,3 +356,20 @@ html, body {
 .ms-divider[hidden] {
   display: none;
 }
+
+.ms-screen.is-stale .ms-top-block,
+.ms-screen.is-stale .ms-section-row {
+    opacity: 0.35;
+    transition: opacity 0.3s;
+}
+
+.ms-screen.is-stale::before {
+    content: "SIN SEÑAL";
+    position: fixed;
+    top: 6px;
+    right: 10px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: #f5a623;
+    z-index: 10;
+}
