@@ -19,6 +19,7 @@ function nikInstrumentistaBuildSlowPoll() {
     // para este perfil).
     return NIK_LUA_COMMANDS.statePoll.commandId +
         ";GET/EXTSTATE/NikRemote/active_project_name" +
+        ";GET/EXTSTATE/NikRemote/playrate" +
         ";GET/EXTSTATE/NikRemote/reapitch_semitone" +
         ";GET/EXTSTATE/NikMusicState/publish_version";
 }

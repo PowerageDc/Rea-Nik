@@ -106,6 +106,9 @@ function wwr_onreply(results, sentAtMs) {
                 if (tok[1] == "NikRemote" && tok[2] == "reapitch_semitone") {
                     nikMsSetReaPitchSemitone(tok[3]);
                 }
+                if (tok[1] == "NikRemote" && tok[2] == "playrate") {
+                    nikMsSetTransportPlayRate(tok[3]);
+                }
                 if (tok[1] == "NikRemote" && tok[2] == "tempo_map") {
                     // Duplicación deliberada respecto a playrate.js (ver
                     // remote_control_faders.md) — ms-tempo.js todavía no está
@@ -182,6 +185,14 @@ function nikMsResetProjectState() {
     g_markers = [];
     if (typeof nikMsSectionOnMarkersUpdated === "function") nikMsSectionOnMarkersUpdated();
     nikReaPitchLastSemitone = "none";
+}
+
+// Pendiente de doc
+function nikMsSetTransportPlayRate(val) {
+    var r = parseFloat(val);
+    if (isNaN(r) || r <= 0) return;
+    if (r > 5) r = r / 100;
+    nikTransportPlayRate = r;
 }
 
 // Mismo criterio exacto que la parte no-DOM de nikReaPitchUpdateSemitoneDisplay()
