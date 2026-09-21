@@ -82,6 +82,11 @@ function nikMsSectionAt(posSeconds) {
 
 // Atajo sobre la posición actual de reproducción -- mismo criterio que
 // nikMsTempoAt(parseFloat(playPosSeconds)).
+function nikMsEffectivePosSeconds() {
+    return (typeof nikMusicStateEffectiveSec === "function")
+        ? nikMusicStateEffectiveSec() : parseFloat(playPosSeconds);
+}
+
 function nikMsCurrentSection() {
-    return nikMsSectionAt(parseFloat(playPosSeconds));
+    return nikMsSectionAt(nikMsEffectivePosSeconds());
 }

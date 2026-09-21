@@ -199,14 +199,24 @@ function nikMusicStateIsPlaying() {
         (nikTransportPlayState === 1 || nikTransportPlayState === 5);
 }
 
+function nikMusicStateAdvanceSongSec() {
+    if (!nikMusicStateIsPlaying()) return 0;
+    var sec = (nikMusicStateLookaheadSec + nikMusicStateExtrapolatedSec()) * nikMusicStatePlayRate();
+    return sec > 0 ? sec : 0;
+}
+
+function nikMusicStateEffectiveSec() {
+    return parseFloat(playPosSeconds) + nikMusicStateAdvanceSongSec();
+}
+
 function nikMusicStateCurrentPos() {
     var parsed = nikMusicStateParseBarBeat(nikLastPositionBeatsStr);
     if (!parsed) return null;
     var bar = parsed.bar;
     var beats = parsed.beatIndex - 1 + parsed.hundredths / 100;
 
-    var advanceSec = (nikMusicStateLookaheadSec + nikMusicStateExtrapolatedSec()) * nikMusicStatePlayRate();
-    if (advanceSec > 0 && nikMusicStateIsPlaying() && typeof nikMsTempoAt === "function") {
+    var advanceSec = nikMusicStateAdvanceSongSec();
+    if (advanceSec > 0 && typeof nikMsTempoAt === "function") {
         var bpm = nikMsTempoAt(parseFloat(playPosSeconds));
         if (bpm != null && bpm > 0) {
             beats += advanceSec * bpm / 60;

@@ -100,9 +100,10 @@ function nikInstrumentistaFormatKeyTonicHtml(key) {
 }
 
 function nikInstrumentistaFormatTempo() {
-    var pos = parseFloat(playPosSeconds);
+    var pos = nikMsEffectivePosSeconds();
     var bpm = (typeof nikMsTempoAt === "function") ? nikMsTempoAt(pos) : null;
     if (bpm == null) return "—";
+    if (typeof nikMusicStatePlayRate === "function") bpm *= nikMusicStatePlayRate();
     return '<span class="ms-tempo-number">' + Math.round(bpm) + "</span> BPM";
 }
 
@@ -135,7 +136,7 @@ function nikInstrumentistaRender() {
     // uno después del vigente. Reusa nikMsMarkerChainMap ya resuelto por
     // ms-section.js -- no se recalcula nada acá, solo se lee.
     var curIdx = (typeof nikMsFindSectionIndexAt === "function")
-        ? nikMsFindSectionIndexAt(parseFloat(playPosSeconds)) : -1;
+        ? nikMsFindSectionIndexAt(nikMsEffectivePosSeconds()) : -1;
     document.getElementById("msSectionPrev").textContent = nikInstrumentistaAdjacentSectionLabel(curIdx - 1);
     document.getElementById("msSectionNext").textContent = nikInstrumentistaAdjacentSectionLabel(curIdx + 1);
 
