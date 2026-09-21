@@ -124,7 +124,7 @@ vivir bajo `Scripts\` del resource path de REAPER:
 
 ```
 C:\dev\Rea-Nik\
-├── _Shared/ módulos *_common_logic.lua consumidos por más de un dominio
+├── _Shared/ módulos *_common_logic.lua consumidos por más de un dominio, o genéricos pensados para reuso entre UIs
 ├── RemoteControl/ control remoto web (poll, tabs, playrate, ReaPitch remoto)
 ├── ReaPitchBus/ panel nativo ReaImGui de ReaPitch
 ├── MvsepImporter/ importador de stems desde MVSEP
@@ -143,11 +143,16 @@ poder excluirla fácilmente si algún día se importa la carpeta completa al
 Action List (no contiene scripts ejecutables, solo módulos).
 
 Un módulo entra a `_Shared/` cuando lo consume más de un dominio (hoy:
-`StemBus_common_logic.lua` y `ReaPitchBus_common_logic.lua`, usados por `RemoteControl/` y por `ReaPitchBus/`; 
-y `MusicStateBridge_common_logic.lua`, puente de las keys de `NikMusicState` a ExtState). Un módulo usado por 
-un solo dominio se queda dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
-`ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de `RemoteControl/`, no 
-en `_Shared/`, porque solo los consume ese dominio).
+`StemBus_common_logic.lua` y `ReaPitchBus_common_logic.lua`, usados por
+`RemoteControl/` y por `ReaPitchBus/`), o cuando es genérico y está pensado
+para reusarse entre UIs de dominios distintos aunque hoy lo consuma uno solo
+(`ImGuiInputCommit_common_logic.lua`: patrones de input de ReaImGui, hoy solo
+en el Helper de `MusicState/`). Un módulo usado por un solo dominio se queda
+dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`,
+`ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de
+`RemoteControl/`, y `MusicStateBridge_common_logic.lua` y
+`MusicStateRowInputs_common_logic.lua` dentro de `MusicState/`, no en
+`_Shared/`, porque solo los consume ese dominio).
 
 **Importante:** mover o renombrar un script ya registrado en el Action List
 (o mapeado a un footswitch MIDI) invalida su Command ID — hay que sacarlo
