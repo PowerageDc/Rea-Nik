@@ -24,7 +24,8 @@ function nikInstrumentistaBuildSlowPoll() {
 }
 
 function nikInstrumentistaInit() {
-    wwr_req_recur("TRANSPORT", 10);
+    g_wwr_timer_freq = 20;
+    wwr_req_recur("TRANSPORT", 100);
     wwr_req_recur("MARKER", 500);
     wwr_req_recur(nikInstrumentistaBuildSlowPoll(), 1000);
     wwr_start();
