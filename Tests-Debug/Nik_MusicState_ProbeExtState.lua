@@ -7,7 +7,7 @@
 -- ShowConsoleMsg).
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
-local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
+local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
 
 local GLOBAL_NAMESPACE = "NikMusicState"  -- ver IMPL_MusicState.md 11.2
 local KEYS = { "project_key", "project_roles", "harmony_data", "cues_data" }

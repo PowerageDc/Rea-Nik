@@ -18,9 +18,9 @@
 --   instrumentista los consuma.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
-local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
+local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
 local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_logic.lua")
-local RowInputs = dofile(script_dir .. "../_Shared/MusicStateRowInputs_common_logic.lua")
+local RowInputs = dofile(script_dir .. "MusicStateRowInputs_common_logic.lua")
 local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
 local Armonia = dofile(script_dir .. "MusicStateArmonia_common_logic.lua")

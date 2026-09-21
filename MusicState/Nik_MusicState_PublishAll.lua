@@ -29,7 +29,7 @@
 --   cues_data       -- IMPL seccion 11.2
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
-local Bridge = dofile(script_dir .. "../_Shared/MusicStateBridge_common_logic.lua")
+local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
 
 local proj = 0
 local namespace = Bridge.NAMESPACE
