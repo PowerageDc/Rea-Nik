@@ -102,7 +102,9 @@ render, pero conviven en el mismo proyecto/entorno):
   proyecto tonalidad, roles, armonía y cues; se publican vía ExtState y un
   prompter web de celular (`nsaudio_prompter.html`) los muestra a los
   músicos sincronizados con el transporte, tolerando una red inestable.
-  Ver `features/musicstate_instrumentista.md`.
+  Modelo de datos y protocolo (punto de entrada de la feature): ver
+  `features/musicstate_data_model.md`. UI de instrumentista: ver
+  `features/musicstate_instrumentista.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color) a PCs de ensayo sin git ni
   editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -131,8 +133,8 @@ render, pero conviven en el mismo proyecto/entorno):
   otros proyectos — no bloqueante.
 - Red propia para la sala de ensayo (router dedicado, PC por UTP): el Wi-Fi
   institucional llega débil e inestable a la sala. El prompter tiene
-  resiliencia de software, pero no reemplaza la red (ver §9 de
-  `features/musicstate_instrumentista.md`).
+  resiliencia de software, pero no reemplaza la red. Diagnóstico y
+  configuración: `07_RED_SALA_ENSAYO.md`.
 - Evaluar portar al control remoto general el manejo de conexión del prompter
   (indicador de datos viejos, tope del backoff de `main.js`, compensación por
   RTT) — ver §10 de `features/musicstate_instrumentista.md`.
