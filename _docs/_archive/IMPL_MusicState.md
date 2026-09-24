@@ -1,3 +1,8 @@
+> **Archivado.** Contenido consolidado en `features/musicstate_data_model.md`,
+> `musicstate_client.md`, `musicstate_bridge.md` y `musicstate_helper.md`.
+> Se conserva por su bitácora de decisiones y validaciones; no reflejar
+> cambios de código acá.
+
 # IMPL — MusicState (Metadata musical + Web Controller)
 
 Documento transicional (ver convención en `01_CONVENCIONES.md` /

@@ -1,3 +1,8 @@
+> **Archivado.** Contenido consolidado en `features/musicstate_helper.md`
+> y en `08_REAIMGUI_PATTERNS.md` (patrones genéricos de ReaImGui). Se
+> conserva por su bitácora de decisiones; no reflejar cambios de código
+> acá.
+
 # Sesión: Modularización de Nik_MusicState_Helper.lua + Armonía (sticky header, agrupado, auto-scroll, highlight)
 
 Doc de traspaso para continuar en otra sesión. Contexto: `Nik_MusicState_Helper.lua`
