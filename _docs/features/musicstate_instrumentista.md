@@ -381,19 +381,9 @@ y que los acordes sigan alineados con los de la PC.
 
 La red institucional (con firewall y Wi-Fi propio) más las paredes de la
 sala degradan la señal, y el web control es HTTP plano y tráfico local que
-igualmente pasa por los equipos de la red. Solución de fondo: un router
-propio solo para la sala (no reemplaza la resiliencia de software de §4:
-la complementa).
-
-- PC por UTP a un puerto **LAN** del router; puerto WAN sin usar (no
-  conectarlo a la red institucional, para evitar conflictos de DHCP).
-- IP fija para la PC (o reserva DHCP) para que la URL sea estable.
-- Windows tiene que clasificar esa red como **privada**, o su firewall
-  bloquea las conexiones entrantes al servidor de REAPER.
-- Preferir 5 GHz, canal manual sin congestión, aislamiento de clientes
-  apagado.
-- En los celulares, desactivar datos móviles durante el ensayo (esa red no
-  tiene internet y algunos teléfonos desvían el tráfico).
+igualmente pasa por los equipos de la red — resiliencia de software (§4)
+que no reemplaza una red que funcione. Diagnóstico, solución (router
+propio para la sala) y guía de configuración: `07_RED_SALA_ENSAYO.md`.
 
 ## 10. Guía para extender
 
@@ -431,7 +421,8 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
   slots `anterior · ACTUAL · próximo1 · próximo2`; decidir si la banda
   terciaria queda en dos filas o en una.
 - Cantidad de slots de acorde en vertical, a validar en dispositivo real.
-- Prueba de estrés física en la sala y router propio (§9).
+- Prueba de estrés física en la sala (§9). Router propio para la sala:
+  ver `07_RED_SALA_ENSAYO.md` (pendiente de armar, §4 de ese doc).
 - Escalar el lookahead según el tempo (idea a evaluar tras varios
   ensayos con el valor fijo).
 - Validar la conversión adelanto → beats en compases no x/4 (6/8, etc.):
@@ -449,8 +440,8 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
   datos colgados (§6).
 - Extraer `ms-tempo.js` a un módulo compartido si `playrate.js` se
   refactoriza.
-- `IMPL_MusicState.md`: no menciona `publish_version` (quinta key que
-  puentea `Bridge.KEYS`) ni el refresco automático del cliente.
+- `IMPL_MusicState.md`, secciones 10-11: falta `publish_version` en la
+  lista de keys de `Bridge.KEYS`.
 
 **Fuera de alcance:** exploración manual con scroll táctil de acordes
 pasados/futuros; perfiles de cantante y coordinador/Helper (mismo esquema,
