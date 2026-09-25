@@ -1,257 +1,278 @@
-    html,
-    body {
-        height: 100%;
-        -webkit-tap-highlight-color: transparent;
-    }
+html,
+body {
+    height: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
 
-    button,
-    input {
-        -webkit-tap-highlight-color: transparent;
-    }
+button,
+input {
+    -webkit-tap-highlight-color: transparent;
+}
 
-    body {
-        background-color: #333333;
-        color: #A9ABAB;
-        font-family: 'Open Sans', sans-serif;
-        font-size: 0.9em;
-        margin: 0px;
-        user-select: none;
-        cursor: default;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        height: 100dvh;
-        overflow: hidden;
-    }
+@font-face {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 300;
+    src: url('fonts/OpenSans/OpenSans-Light.woff2') format('woff2');
+}
 
+@font-face {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 400;
+    src: url('fonts/OpenSans/OpenSans-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    font-style: normal;
+    font-weight: 700;
+    src: url('fonts/OpenSans/OpenSans-Bold.woff2') format('woff2');
+}
+
+body {
+    background-color: #333333;
+    color: #A9ABAB;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.9em;
+    margin: 0px;
+    user-select: none;
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+#colWrap {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+#col1 {
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
+}
+
+#tracks {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media only screen and (min-device-width: 768px) and (orientation: landscape) and (-webkit-min-device-pixel-ratio: 1) {
     #colWrap {
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-        flex-shrink: 1;
-        min-height: 0;
+        flex-direction: row;
     }
 
     #col1 {
-        flex-grow: 0;
-        flex-shrink: 0;
-        flex-basis: auto;
+        flex-basis: 50%;
     }
 
     #tracks {
-        flex-grow: 1;
-        flex-shrink: 1;
-        flex-basis: 0;
-        min-height: 0;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        flex-basis: 50%;
+        border-left-style: solid;
+        border-left-color: #1A1A1A;
     }
+}
 
-    @media only screen and (min-device-width: 768px) and (orientation: landscape) and (-webkit-min-device-pixel-ratio: 1) {
-        #colWrap {
-            flex-direction: row;
-        }
+#optionsBar {
+    overflow-y: hidden;
+    -webkit-transition: all 0.2s ease-out;
+    -o-transition: all 0.2s ease-out;
+    transition: all 0.2s ease-out;
+}
 
-        #col1 {
-            flex-basis: 50%;
-        }
+#transport_r3 {
+    display: flex;
+    margin: 1.5%;
+}
 
-        #tracks {
-            flex-basis: 50%;
-            border-left-style: solid;
-            border-left-color: #1A1A1A;
-        }
-    }
+#transport_r3.nikCollapsed {
+    display: block;
+    height: 4px;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a1a;
+    overflow: hidden;
+}
 
-    #optionsBar {
-        overflow-y: hidden;
-        -webkit-transition: all 0.2s ease-out;
-        -o-transition: all 0.2s ease-out;
-        transition: all 0.2s ease-out;
-    }
+.button.nikToggledOn .iconBg {
+    fill: #4a2020;
+}
 
-    #transport_r3 {
-        display: flex;
-        margin: 1.5%;
-    }
+#buttonSoloInFront.nikToggledOn .iconBg {
+    fill: #4a3a14;
+}
 
-    #transport_r3.nikCollapsed {
-        display: block;
-        height: 4px;
-        margin: 0;
-        padding: 0;
-        background-color: #1a1a1a;
-        overflow: hidden;
-    }
+.trackRow1 {
+    will-change: transform;
+}
 
-    .button.nikToggledOn .iconBg {
-        fill: #4a2020;
-    }
+.trackRow2 {
+    will-change: transform;
+}
 
-    #buttonSoloInFront.nikToggledOn .iconBg {
-        fill: #4a3a14;
-    }
+.optionsBar {
+    height: 0px;
 
-    .trackRow1 {
-        will-change: transform;
-    }
+}
 
-    .trackRow2 {
-        will-change: transform;
-    }
+.button:hover .mouseover {
+    visibility: visible;
+}
 
-    .optionsBar {
-        height: 0px;
+.button:active .mouseover {
+    visibility: hidden;
+    pointer-events: all;
+}
 
-    }
+.button:active .shadow {
+    visibility: hidden;
+}
 
-    .button:hover .mouseover {
-        visibility: visible;
-    }
+.button:active .gloss {
+    visibility: hidden;
+}
 
-    .button:active .mouseover {
-        visibility: hidden;
-        pointer-events: all;
-    }
+.button:active .active {
+    visibility: visible;
+}
 
-    .button:active .shadow {
-        visibility: hidden;
-    }
+/* nikCursorNav: layout base compartido por los 6 botones */
+.nikCursorNavBtn {
+    border: none;
+    border-radius: 4px;
+    font-family: 'Open Sans', sans-serif;
+    padding: 12px 8px;
+    font-size: 1em;
+    background: #262626;
+    color: #A8A8A8;
+}
 
-    .button:active .gloss {
-        visibility: hidden;
-    }
+/* Rewind / End: ancho fijo mínimo, ícono más grande */
+.nikCursorNavEdge {
+    flex: 0 0 auto;
+    padding: 12px 14px;
+    font-size: 1.3em;
+    color: #808080;
+}
 
-    .button:active .active {
-        visibility: visible;
-    }
+/* Compases (◀◀ Comp / Comp ▶▶): ganan el ancho sobrante */
+.nikCursorNavWide {
+    flex: 2 1 0;
+    padding: 12px 4px;
+}
 
-    /* nikCursorNav: layout base compartido por los 6 botones */
-    .nikCursorNavBtn {
-        border: none;
-        border-radius: 4px;
-        font-family: 'Open Sans', sans-serif;
-        padding: 12px 8px;
-        font-size: 1em;
-        background: #262626;
-        color: #A8A8A8;
-    }
+/* Beat (◀ Beat / Beat ▶): angostos a su contenido */
+.nikCursorNavTight {
+    flex: 0 0 auto;
+}
 
-    /* Rewind / End: ancho fijo mínimo, ícono más grande */
-    .nikCursorNavEdge {
-        flex: 0 0 auto;
-        padding: 12px 14px;
-        font-size: 1.3em;
-        color: #808080;
-    }
+/* nikTabBar: botones Tab prev/next */
+.nikTabBtn {
+    padding: 10px 16px;
+    font-size: 1em;
+    background: linear-gradient(180deg, #4A4A4A 0%, #2E2E2E 100%);
+    color: #D0D0D0;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Open Sans', sans-serif;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
 
-    /* Compases (◀◀ Comp / Comp ▶▶): ganan el ancho sobrante */
-    .nikCursorNavWide {
-        flex: 2 1 0;
-        padding: 12px 4px;
-    }
+/* Fader modular */
+.nikVFaderWrap {
+    position: relative;
+    width: 72px;
+    height: 320px;
+    margin: 0;
+}
 
-    /* Beat (◀ Beat / Beat ▶): angostos a su contenido */
-    .nikCursorNavTight {
-        flex: 0 0 auto;
-    }
+.nikVFaderTrack {
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 320px;
+    height: 72px;
+    margin: 0;
+    background: transparent;
+    transform: translate(-50%, -50%) rotate(-90deg);
+}
 
-    /* nikTabBar: botones Tab prev/next */
-    .nikTabBtn {
-        padding: 10px 16px;
-        font-size: 1em;
-        background: linear-gradient(180deg, #4A4A4A 0%, #2E2E2E 100%);
-        color: #D0D0D0;
-        border: none;
-        border-radius: 6px;
-        font-family: 'Open Sans', sans-serif;
-        flex: 0 0 auto;
-        white-space: nowrap;
-    }
+.nikVFaderTrack::-webkit-slider-runnable-track {
+    height: 8px;
+    background: transparent;
+}
 
-    /* Fader modular */
-    .nikVFaderWrap {
-        position: relative;
-        width: 72px;
-        height: 320px;
-        margin: 0;
-    }
+.nikVFaderTrack::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    margin-top: -26px;
+}
 
-    .nikVFaderTrack {
-        -webkit-appearance: none;
-        appearance: none;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 320px;
-        height: 72px;
-        margin: 0;
-        background: transparent;
-        transform: translate(-50%, -50%) rotate(-90deg);
-    }
+.nikVFaderTrack::-moz-range-track {
+    height: 8px;
+    background: transparent;
+}
 
-    .nikVFaderTrack::-webkit-slider-runnable-track {
-        height: 8px;
-        background: transparent;
-    }
+.nikVFaderTrack::-moz-range-thumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
 
-    .nikVFaderTrack::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: transparent;
-        cursor: pointer;
-        margin-top: -26px;
-    }
+/* Knob SVG (core/fader-knob-svg.js), montado dentro de .nikVFaderWrap,
+    mismo sistema de posicionamiento que .nikVFaderTrack — capa puramente
+    visual, el input de arriba sigue manejando el drag. */
+.nikFaderKnobSvg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 320px;
+    height: 72px;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
 
-    .nikVFaderTrack::-moz-range-track {
-        height: 8px;
-        background: transparent;
-    }
+.nikFaderKnobSvg--vertical {
+    transform: translate(-50%, -50%) rotate(-90deg);
+}
 
-    .nikVFaderTrack::-moz-range-thumb {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-    }
+.nikVFaderStepBtn {
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 50%;
+    background: #262626;
+    color: #A8A8A8;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 1.6em;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+}
 
-    /* Knob SVG (core/fader-knob-svg.js), montado dentro de .nikVFaderWrap,
-       mismo sistema de posicionamiento que .nikVFaderTrack — capa puramente
-       visual, el input de arriba sigue manejando el drag. */
-    .nikFaderKnobSvg {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 320px;
-        height: 72px;
-        pointer-events: none;
-        transform: translate(-50%, -50%);
-    }
-
-    .nikFaderKnobSvg--vertical {
-        transform: translate(-50%, -50%) rotate(-90deg);
-    }
-
-    .nikVFaderStepBtn {
-        width: 52px;
-        height: 52px;
-        border: none;
-        border-radius: 50%;
-        background: #262626;
-        color: #A8A8A8;
-        font-family: 'Open Sans', sans-serif;
-        font-size: 1.6em;
-        line-height: 1;
-        cursor: pointer;
-        flex-shrink: 0;
-    }
-
-    .nikVFaderClampFlash {
-        transition: color 0.15s ease, background-color 0.15s ease;
-        color: #FF5757 !important;
-        background-color: #3a2020 !important;
-    }
+.nikVFaderClampFlash {
+    transition: color 0.15s ease, background-color 0.15s ease;
+    color: #FF5757 !important;
+    background-color: #3a2020 !important;
+}
