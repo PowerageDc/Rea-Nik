@@ -114,6 +114,11 @@ function nikInstrumentistaFormatSongName() {
 var NIK_INSTRUMENTISTA_STALE_MS = 1500;
 var nikInstrumentistaScreenEl = null;
 
+var nikInstrumentistaBeatLastKey = null;
+var nikInstrumentistaChordEventLastKey = null;
+var nikInstrumentistaBeatDotCount = null;
+var nikInstrumentistaBeatProgressFilling = false;
+
 function nikInstrumentistaUpdateStaleIndicator() {
     if (!nikInstrumentistaScreenEl) nikInstrumentistaScreenEl = document.querySelector(".ms-screen");
     if (!nikInstrumentistaScreenEl) return;
@@ -154,6 +159,7 @@ function nikInstrumentistaRender() {
     document.getElementById("msSectionNext").textContent = nikInstrumentistaAdjacentSectionLabel(curIdx + 1);
 
     nikInstrumentistaRenderChordStrip();
+    nikInstrumentistaRenderBeat();
 
     // "todos" no se pasa tal cual a nikMusicStateActiveCues -- esa función
     // trata "sin filtro" como null/undefined (devuelve todas), no como el
@@ -466,6 +472,83 @@ function nikInstrumentistaRenderChordStrip() {
         nikInstrumentistaShiftChordSlots(newList, delta);
     }
     nikInstrumentistaChordPrevWindow = newList;
+}
+
+function nikInstrumentistaRenderBeat() {
+    if (typeof nikBeat === "undefined") return;
+    var pos = nikBeat.currentPos();
+    if (!pos) return;
+
+    var pulseCount = nikBeat.pulseCountAt(pos.bar);
+    var pulseIdx = nikBeat.currentPulseIndex(pos.bar, pos.qn_offset);
+    var pulseKey = pos.bar + "_" + pulseIdx;
+    if (pulseKey !== nikInstrumentistaBeatLastKey) {
+        nikInstrumentistaBeatLastKey = pulseKey;
+        nikInstrumentistaFlashBeatDot(pulseIdx, pulseCount);
+    }
+
+    if (!nikMusicStateIsPlaying()) {
+        if (nikInstrumentistaBeatProgressFilling) {
+            nikInstrumentistaResetBeatProgress();
+            nikInstrumentistaBeatProgressFilling = false;
+        }
+        return;
+    }
+
+    var chordPos = (typeof nikMusicStateCurrentPos === "function") ? nikMusicStateCurrentPos() : null;
+    if (!chordPos || nikMusicStateHarmonyFlat.length === 0) return;
+    var idx = nikMusicStateFindIndexAtOrBefore(nikMusicStateHarmonyFlat, chordPos);
+    if (idx === -1) return;
+    var chordEventKey = nikInstrumentistaChordKey(nikMusicStateHarmonyFlat[idx]);
+    if (chordEventKey === nikInstrumentistaChordEventLastKey) return;
+    nikInstrumentistaChordEventLastKey = chordEventKey;
+    nikInstrumentistaStartChordRing(nikBeat.secUntilNextChordEvent());
+    nikInstrumentistaBeatProgressFilling = true;
+}
+
+function nikInstrumentistaFlashBeatDot(pulseIdx, pulseCount) {
+    var dotsEl = document.getElementById("msBeatDots");
+    if (!dotsEl) return;
+
+    if (pulseCount !== nikInstrumentistaBeatDotCount) {
+        nikInstrumentistaBeatDotCount = pulseCount;
+        dotsEl.innerHTML = "";
+        for (var i = 0; i < pulseCount; i++) {
+            var dot = document.createElement("span");
+            dot.className = "ms-beat-dot";
+            dotsEl.appendChild(dot);
+        }
+    }
+
+    var children = dotsEl.children;
+    for (var j = 0; j < children.length; j++) {
+        children[j].classList.toggle("is-active", j === (pulseIdx - 1));
+    }
+}
+
+// Reset instantáneo a scaleX(0) (sin transición) + forzar reflow antes de
+// animar -- mismo patrón que nikInstrumentistaShiftChordSlots usa para los
+// nodos que entran (offsetWidth). secUntilNext ya viene calculado UNA VEZ
+// por nikBeat.secUntilNextChordEvent() al cruzar el evento anterior -- acá
+// no se recalcula nada, solo se dispara la transición CSS.
+function nikInstrumentistaResetBeatProgress() {
+    var fillEl = document.getElementById("msBeatProgressFill");
+    if (!fillEl) return;
+    fillEl.classList.remove("is-filling");
+    fillEl.style.transitionDuration = "0s";
+    fillEl.style.transform = "scaleX(0)";
+    void fillEl.offsetWidth;
+}
+
+function nikInstrumentistaStartChordRing(secUntilNext) {
+    nikInstrumentistaResetBeatProgress();
+    if (!secUntilNext || secUntilNext <= 0) return;
+
+    var fillEl = document.getElementById("msBeatProgressFill");
+    if (!fillEl) return;
+    fillEl.style.transitionDuration = secUntilNext + "s";
+    fillEl.classList.add("is-filling");
+    fillEl.style.transform = "scaleX(1)";
 }
 
 function nikInstrumentistaStartRenderLoop(intervalMs) {

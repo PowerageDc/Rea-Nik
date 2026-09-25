@@ -29,6 +29,10 @@
   --divider-label-gap: clamp(6px, 1.5vh, 12px);
   --ms-song-to-divider-gap: 15px;  /* subí/bajá este número: nombre <-> divider */
   --ms-divider-to-row-gap: 25px;   /* subí/bajá este número: divider <-> fila rol/tonalidad/tempo */
+  --chord-beat-gap: 18px;          /* subí/bajá este número: tira de acordes <-> indicador de pulso */
+  --beat-indicator-h: 34px;        /* alto reservado del indicador (dots + barra) -- si cambiás su tamaño real, ajustar acá para no solapar el cue */
+  --beat-bar-width: 80px;         /* subí/bajá este número: largo de la barra de progreso (se autocentra sola) */
+  --beat-dots-to-bar-gap: 24px;     /* subí/bajá este número: dots <-> barra de progreso */
 }
 
 html, body {
@@ -323,9 +327,62 @@ html, body {
   opacity: 0;
 }
 
+.ms-beat-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + (var(--chord-h) / 2) + var(--chord-beat-gap));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--beat-dots-to-bar-gap);
+}
+
+.ms-beat-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ms-beat-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ms-fg-dim);
+  opacity: 0.4;
+  transition: background 80ms ease, opacity 80ms ease, transform 80ms ease;
+}
+
+.ms-beat-dot.is-active {
+  background: var(--ms-chord-color);
+  opacity: 1;
+  transform: scale(1.25);
+}
+
+.ms-beat-progress {
+  width: 100%;
+  max-width: var(--beat-bar-width);
+  height: 3px;
+  background: var(--ms-divider-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ms-beat-progress-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--ms-chord-color);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+.ms-beat-progress-fill.is-filling {
+  transition: transform linear;
+}
+
 .ms-cue-divider {
   position: absolute;
-  top: calc(50% + (var(--chord-h) / 2) + clamp(28px, 6vh, 48px));
+  top: calc(50% + (var(--chord-h) / 2) + var(--chord-beat-gap) + var(--beat-indicator-h) + clamp(28px, 6vh, 48px));
   left: 0;
   right: 0;
   margin: 0 auto;
@@ -335,7 +392,7 @@ html, body {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(50% + (var(--chord-h) / 2) + clamp(28px, 6vh, 48px) + 16px);
+  top: calc(50% + (var(--chord-h) / 2) + var(--chord-beat-gap) + var(--beat-indicator-h) + clamp(28px, 6vh, 48px) + 16px);
   margin: 0 auto;
   padding: 0 20px;
   max-width: 480px;
