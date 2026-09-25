@@ -106,8 +106,8 @@ render, pero conviven en el mismo proyecto/entorno):
   `features/musicstate_data_model.md`. UI de instrumentista: ver
   `features/musicstate_instrumentista.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
-  scripts (hoy: Control remoto + Auto-color) a PCs de ensayo sin git ni
-  editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
+  scripts (hoy: Control remoto + Auto-color + MusicState) a PCs de ensayo
+  sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
   `05_REAPACK_DEPLOY.md`.
 
 ## Estado general (ver detalle en cada doc de feature)
@@ -121,7 +121,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
 | MusicState / Prompter     | Helper y prompter vertical funcionales; pendientes: selector de rol, layout horizontal, prueba en sala |
-| Deploy vía ReaPack        | Completo (AutoColor + RemoteControl deployados vía metapaquete + .www) |
+| Deploy vía ReaPack        | Completo (AutoColor + RemoteControl + MusicState deployados vía metapaquete + .www) |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma

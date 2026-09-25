@@ -7,8 +7,10 @@ setup de git (`04_GIT_TOOLING.md`).
 
 ## Alcance: qué se deploya y qué no
 
-Solo un subconjunto del repo: hoy, `AutoColor/` (script suelto) y
-`RemoteControl/` (metapaquete + `.www`, ver abajo). El resto
+Solo un subconjunto del repo: hoy, `AutoColor/` (script suelto),
+`RemoteControl/` (metapaquete + `.www`, ver abajo) y `MusicState/`
+(metapaquete de scripts; el `.www` de MusicState/prompter comparte
+manifiesto con el de RemoteControl, ver abajo). El resto
 (`RenderWorkflow/`, `TempoTools/`, `MvsepImporter/`, `StemFragment/`,
 `Tests-Debug/`) es uso local: no necesita exclusión explícita, porque
 `reapack-index` solo indexa lo que tiene header de metadata — sin header,
@@ -116,6 +118,16 @@ dominio. El manifiesto necesita **extensión `.www`** (no `.html`):
   de ReaPack junto al metapaquete de scripts del mismo dominio — es
   esperado, no un bug. Tildar ambas casillas antes de dar Install para
   instalarlas juntas en un solo paso.
+- **Un mismo manifiesto `.www` puede servir la interfaz web de más de una
+  feature**, si conviven bajo el mismo `reaper_www_root/` y no amerita
+  separarlas. Caso real: `Nik_RemoteControl_WebUI.www` provee tanto
+  `nsaudio_remote_control.html` (control remoto) como
+  `nsaudio_prompter.html` + `musicstate-ui/*/*.{css,js}` (MusicState /
+  prompter) — un solo `@version`, un solo bump cubre cambios en
+  cualquiera de las dos. No confundir con el metapaquete de **scripts**
+  Lua de cada dominio, que sí son anclas separadas (`Nik_RemoteState_Poll.lua`
+  para RemoteControl, `Nik_MusicState_Helper.lua` para MusicState) aunque
+  compartan este mismo `.www`.
 
 ## Mecanismo de config por PC (`config.local.js` + generador)
 
