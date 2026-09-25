@@ -66,6 +66,7 @@ reaper_www_root/
     ├── shared/
     │   ├── ms-dispatch.js    wwr_onreply propio, ancla de transporte
     │   ├── ms-tempo.js       lookup de tempo puro
+    │   ├── ms-beat.js        pulso por compás + distancia a próximo evento de armonía
     │   └── ms-section.js     sección actual y posición efectiva en segundos
     └── instrumentista/
         ├── instrumentista.js   bootstrap de polls + render
@@ -76,8 +77,8 @@ reaper_www_root/
 anteriores): `main.js`, `config.js`, `config.local.js` (por XHR síncrono
 + `eval`, se ignora si no existe), `core/utils.js`, `markers/markers.js`,
 `core/music-transpose.js`, `core/music-state.js`, `ms-tempo.js`,
-`ms-section.js`, `ms-dispatch.js`, `instrumentista.js`. Después el shell
-llama `nikInstrumentistaInit()` y
+`ms-beat.js`, `ms-section.js`, `ms-dispatch.js`, `instrumentista.js`.
+Después el shell llama `nikInstrumentistaInit()` y
 `nikInstrumentistaStartRenderLoop(50)`.
 
 `config.local.js` es imprescindible en cada PC: sin él los Command IDs
@@ -220,6 +221,56 @@ pone en 0. Mientras `is-stale` está activo, la UI limita `g_wwr_errcnt`
 a 2, con lo que los reintentos quedan cada ~100 ms y la recuperación al
 volver la red es de ~100–150 ms (medido en dev).
 
+### 4.8 Indicador de pulso
+
+Puntos por pulso del compás vigente + barra de progreso hacia el próximo
+evento de armonía, pegados debajo de la tira de acordes. Cálculo puro en
+`musicstate-ui/shared/ms-beat.js` (`nikBeat`, wrapper de objeto único, ver
+01_CONVENCIONES.md); detección de cruce y DOM en
+`nikInstrumentistaRenderBeat()` (instrumentista.js), llamada desde el
+mismo render loop de 50 ms que todo lo demás.
+
+**Dos posiciones efectivas distintas, a propósito:**
+- Los **dots** usan `nikBeat.currentPos()` -- misma fórmula de
+  extrapolación que `nikMusicStateCurrentPos()`, pero con `nikBeat.LATENCY_SEC`
+  en vez de `nikMusicStateLookaheadSec`: el pulso no debe llevar el
+  anticipo deliberado de los acordes (§4.4), solo compensar latencia real.
+  Fijado en 0.4 tras prueba de escritorio (empíricamente iguala la
+  sensación de sincronía contra el strip y el audio) -- no es un valor de
+  latencia de red medido, pendiente de validar en sala (ver §11).
+- La **barra de progreso** usa `nikMusicStateCurrentPos()` sin modificar:
+  tiene que quedar sincronizada con el instante exacto en que la tira de
+  acordes shiftea, no con el pulso real.
+
+**Pulsos por compás:** `nikBeat.pulsesInBar(num, den)` -- simple (den=4):
+un pulso por unidad del denominador. Compuesto (den=8, num múltiplo de 3,
+num>3): agrupa de a 3 corcheas (6/8→2 pulsos, 12/8→4). No cubre hoy den=2
+ni den=8 no compuesto (ej. 3/8) -- no confirmado contra un caso real. El
+timesig map se relee en cada render (`nikMusicStateTimesigAt(bar)`, sin
+cachear el compás), igual criterio que `nikMsTempoAt` -- necesario para
+los cambios de compás ocasionales (4/4→2/4→4/4) confirmados en la sesión
+de prueba.
+
+**Disparo del fill (una sola vez por evento):** `nikInstrumentistaRenderBeat()`
+detecta el cruce de evento de armonía comparando la key del evento vigente
+(`bar_qn_offset`, mismo criterio que `nikInstrumentistaChordKey` de la
+tira) contra la última vista. Al cruzar, `nikBeat.secUntilNextChordEvent()`
+calcula la duración del fill **una sola vez** (mismo criterio anti-tirón
+que la tira de acordes) y `nikInstrumentistaStartChordRing()` dispara una
+transición CSS (`transform: scaleX()`, no `stroke-dashoffset` -- se
+descartó el anillo SVG original por simplicidad de ajuste de tamaño).
+
+**Gate de `stopped`:** ambos elementos (dots y barra) dependen de
+`nikMusicStateIsPlaying()`. Los dots no tienen problema porque no animan
+en el tiempo (solo prenden/apagan por posición). La barra sí: sin un
+guard explícito, saltar de sección estando detenido dispara un fill
+igual (la posición sigue siendo válida aunque no haya reproducción), y
+una transición CSS ya iniciada sigue corriendo en el navegador aunque
+REAPER se detenga a mitad de camino. `nikInstrumentistaRenderBeat()`
+corta y resetea la barra (`nikInstrumentistaResetBeatProgress()`, sin
+transición) apenas `nikMusicStateIsPlaying()` es falso, antes de mirar
+el evento de armonía.
+
 ## 5. Contrato de variables y funciones
 
 Globales sueltas con prefijo (patrón de `core/music-state.js`, no
@@ -244,6 +295,11 @@ wrapper de objeto: hay estado propio cacheado).
 | `nikMsCurrentSection()` / `nikMsSectionAt(pos)` | ms-section.js | sección vigente |
 | `nikMsTempoAt(pos)` | ms-tempo.js | BPM del mapa (sin playrate) |
 | `NIK_INSTRUMENTISTA_STALE_MS` | instrumentista.js | umbral de datos viejos (1500) |
+| `nikInstrumentistaBeatLastKey` | instrumentista.js | key (`bar_pulseIndex`) del último pulso marcado, para detectar cruce |
+| `nikInstrumentistaChordEventLastKey` | instrumentista.js | key del evento de armonía vigente, para detectar cruce y recalcular la duración del fill una sola vez |
+| `nikInstrumentistaBeatDotCount` | instrumentista.js | cantidad de dots ya dibujados, para repoblar solo si cambia (4↔2 en cambios de compás) |
+| `nikInstrumentistaBeatProgressFilling` | instrumentista.js | si la barra está en medio de un fill, para saber si hace falta resetear al detenerse |
+| `nikBeat.LATENCY_SEC` | ms-beat.js | latencia propia del pulso (§4.8), separada de `nikMusicStateLookaheadSec` |
 
 ## 6. Ciclo de vida por proyecto
 
@@ -282,6 +338,9 @@ Layout vertical único, estático. De arriba hacia abajo:
   vacíos, no `—`.
 - **Tira de acordes:** 5 slots (offsets -2..2, `nikMusicStateChordWindow(2,2)`),
   jerarquía tipográfica decreciente desde el actual.
+- **Indicador de pulso:** pegado debajo de la tira -- puntos por pulso del
+  compás vigente (2/4/6/8 según el timesig) + barra de progreso hacia el
+  próximo evento de armonía. Mecanismo completo en §4.8.
 - **Banda de cue:** solo visible si hay indicación activa para el rol;
   varias cues activas se unen con ` · `.
 
@@ -389,15 +448,6 @@ propio para la sala) y guía de configuración: `07_RED_SALA_ENSAYO.md`.
 
 Ideas ya evaluadas, apoyadas en primitivas existentes:
 
-- **Contador de beats / pulso.** `nikMusicStateCurrentPos()` ya da compás
-  y offset con adelanto y playrate. Beat dentro del compás:
-  `floor(qn_offset × den / 4) + 1`. Beats restantes hasta el próximo
-  evento de armonía: con `nikMusicStateBarStartQn` y el timesig map. Un
-  acorde más corto que un compás aparece como evento propio con
-  `qn_offset > 0`. Un pulso que cae **sobre** el beat necesita compensar
-  solo latencia, sin el anticipo del acorde: usar una constante propia,
-  separada de `nikMusicStateLookaheadSec`. Definir en compases compuestos
-  (6/8) si se cuentan 6 o 2 pulsos.
 - **Animaciones según tiempo restante.** Tiempo hasta el próximo cambio =
   `beats restantes × 60 / bpm / playrate`. Calcular la duración **una sola
   vez** al disparar el shift, porque cada ancla nueva corrige la
@@ -425,6 +475,9 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
   ver `07_RED_SALA_ENSAYO.md` (pendiente de armar, §4 de ese doc).
 - Escalar el lookahead según el tempo (idea a evaluar tras varios
   ensayos con el valor fijo).
+- Calibrar `nikBeat.LATENCY_SEC` (fijado en 0.4 tras prueba de
+  escritorio, §4.8) contra la prueba física en sala -- red y dispositivo
+  reales pueden pedir otro valor.
 - Validar la conversión adelanto → beats en compases no x/4 (6/8, etc.):
   hoy solo verificada en 4/4.
 - Verificar el override del lookahead vía `config.local.js` y el formato

@@ -240,6 +240,10 @@ distinto porque el contexto de carga es distinto (Lua resuelve ruta
 relativa bajo demanda; JS depende de que el script tag ya se haya cargado
 antes en el documento).
 
-Caso implementado: `nikTranspose` (`core/music-transpose.js`) —
-transposición de tonalidad/acordes para la feature MusicState (ver
-`IMPL_MusicState.md`).
+Casos implementados:
+- `nikTranspose` (`core/music-transpose.js`) — transposición de
+  tonalidad/acordes para la feature MusicState (ver IMPL_MusicState.md).
+- `nikBeat` (`musicstate-ui/shared/ms-beat.js`) — pulso por compás y
+  distancia al próximo evento de armonía para el indicador de pulso del
+  prompter de instrumentista (ver `features/musicstate_instrumentista.md`
+  §4.8).
