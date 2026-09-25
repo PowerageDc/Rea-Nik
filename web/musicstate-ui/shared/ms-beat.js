@@ -12,6 +12,8 @@
 
 var nikBeat = {
 
+    LATENCY_SEC: 0.4, // compensa latencia + iguala visualmente el anticipo del strip (nikMusicStateLookaheadSec) -- valor validado en sala, no es latencia real de red
+
     // Cantidad de pulsos a marcar por compás. Compuesto (den=8, num
     // múltiplo de 3, num>3): agrupa de a 3 corcheas -- 6/8->2, 12/8->4
     // (confirmado en sesión). Simple: un pulso por unidad del denominador
