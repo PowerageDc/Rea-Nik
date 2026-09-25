@@ -40,8 +40,3 @@ local namespace = Bridge.NAMESPACE
 -- del lado del cliente. Confirmado con prueba real -- IMPL seccion 3.
 
 local ok_count, failed = Bridge.bridgeAll(proj)
-reaper.ShowConsoleMsg(string.format("Nik_MusicState_PublishAll: %d/%d keys publicadas OK.\n",
-    ok_count, #Bridge.KEYS))
-for _, key in ipairs(failed) do
-    reaper.ShowConsoleMsg("Nik_MusicState_PublishAll: fallo (" .. key .. ").\n")
-end
