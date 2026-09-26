@@ -120,7 +120,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
-| MusicState / Prompter     | Helper y prompter vertical funcionales, con indicador de pulso (dots + barra de progreso a próximo acorde, ver `features/musicstate_instrumentista.md` §4.8); pendientes: selector de rol, layout horizontal, calibración de `nikBeat.LATENCY_SEC` y prueba de estrés física completa en sala |
+| MusicState / Prompter     | Helper y prompter vertical y landscape funcionales (landscape vía CSS puro, misma tira de 5 slots, ver `features/musicstate_instrumentista.md` §7), con indicador de pulso (dots + barra de progreso a próximo acorde, ver §4.8); pendientes: selector de rol, calibración de `nikBeat.LATENCY_SEC`, prueba de estrés física completa en sala, y los de §11 de la feature (jank de arranque en tira de acordes, dots levemente adelantados con tempo variable, landscape en pantallas más chicas) |
 | Deploy vía ReaPack        | Completo (AutoColor + RemoteControl + MusicState deployados vía metapaquete + .www) |
 
 ## Pendientes generales (horizonte, no bloqueantes)

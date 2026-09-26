@@ -358,6 +358,21 @@ siempre; sin rol se muestra `(sin rol)`. Para filtrar cues, `"todos"` o
 sin rol equivalen a no filtrar. **No hay selector en la UI todavía**: hoy
 se setea por consola con `nikInstrumentistaSetRole("...")`.
 
+**Landscape:** activo por proporción de viewport
+(`@media (min-aspect-ratio: 1/1)`, no por `orientation`), puramente CSS —
+mismo HTML, mismo `instrumentista.js`, misma tira de 5 slots (no el
+rediseño a 4 slots que se había previsto, ver nota en §11). Reordena
+visualmente los mismos bloques (nombre de canción, fila rol/tempo/
+tonalidad, sección, tira de acordes, indicador de pulso, banda de cue)
+usando `.ms-top-block { display: contents; }` para poder ubicar nombre de
+canción y fila rol/tempo/tonalidad por separado, y una serie de variables
+CSS recalibradas para el alto disponible (`--chord-h`,
+`--chord-divider-gap`, `--ms-song-to-divider-gap`,
+`--ms-divider-to-row-gap`, `--chord-beat-gap`, tamaños de fuente de
+nombre de canción/fila terciaria/tonalidad) en vez de las que usa la
+vertical. Ajustado y confirmado en dispositivo real (Moto Edge 20 Lite);
+pendiente confirmar en pantallas más chicas (ver §11).
+
 ## 8. Gotchas
 
 - **`main.js` es de REAPER y no se modifica.** Esta UI depende de detalles
@@ -466,10 +481,24 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
 **Pendientes (ninguno bloqueante):**
 
 - Selector de rol en la UI (hoy solo por consola + `localStorage`).
-- Layout horizontal. Diseño previsto: conmutación por proporción de
-  viewport (no por `orientation`) con debounce de 150–200 ms, fila de 4
-  slots `anterior · ACTUAL · próximo1 · próximo2`; decidir si la banda
-  terciaria queda en dos filas o en una.
+- Rediseño de la tira de acordes a 4 slots para landscape (`anterior ·
+  ACTUAL · próximo1 · próximo2`, con debounce de 150–200 ms si implica
+  cambios de estructura por JS). Evaluado y pospuesto: el landscape
+  actual (§7) reusa la tira de 5 slots existente vía CSS puro, sin JS
+  nuevo, y valida bien en dispositivo real — queda como mejora opcional
+  a futuro, no bloqueante.
+- Landscape: validar en pantallas más chicas que la probada (Moto Edge 20
+  Lite, ~969×539 con la barra del navegador oculta) — las variables CSS
+  recalibradas (§7) podrían necesitar otro ajuste en un viewport más
+  chico. En particular, `--chord-divider-gap: clamp(36px, 3vh, 20px)`
+  quedó con el mínimo (36px) mayor al máximo (20px) a propósito: en
+  DevTools, con los tres parámetros del clamp libres, el mínimo y el
+  máximo se limitaban entre sí y no daban control fino sobre la posición
+  de la fila de sección; fijar el mínimo por encima del máximo fue lo
+  único que permitió ese control, a costa de que el valor quede
+  constante (36px) en vez de escalar con el alto real del viewport como
+  sería deseable. No se pudo emular en DevTools un viewport landscape
+  más chico para validar si ese valor fijo sigue funcionando ahí.
 - Cantidad de slots de acorde en vertical, a validar en dispositivo real.
 - Prueba de estrés física en la sala (§9). Router propio para la sala:
   ver `07_RED_SALA_ENSAYO.md` (pendiente de armar, §4 de ese doc).
@@ -487,14 +516,26 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
   UI abierta (no los cubre `publish_version`); caso raro en ensayo.
 - Semitono `"mixed"` del Stem Bus: manejo escrito, sin probar con datos
   reales.
+- Jerkiness leve en los primeros 1-2 shifts de la tira de acordes al
+  arranque de cada canción (offsets -2/-1 llenándose de placeholders a
+  reales, 2-3 nodos recalculando `flex-basis`/`font-size` en el mismo
+  frame en vez del 1 nodo del régimen estable — diagnosticado en sesión,
+  confirmado con logging de entering/exiting por shift). Sin jank
+  simétrico al final de la canción (ahí el índice avanza de a uno, sin
+  reacomodo múltiple). Fix evaluado y pospuesto a propósito: migrar
+  `nikInstrumentistaShiftChordSlots` a animar `transform`/`scale` en vez
+  de `flex-basis`/`font-size` (compositor-only, sin costo de layout por
+  frame) — cambio de fondo al mecanismo de la tira, se aborda en sesión
+  aparte para no arriesgar romper el shift normal ya estable.
+- Dots del indicador de pulso (§4.8) ligeramente adelantados respecto al
+  audio en proyectos con tempo map muy variable (BPM cambiando con
+  frecuencia) — tolerable por ahora, pendiente investigar la causa.
 - String exacto que reporta REAPER para un proyecto sin guardar (afecta
   el recorte de `.rpp`).
 - Token de generación por cambio de proyecto, solo si reaparece el bug de
   datos colgados (§6).
 - Extraer `ms-tempo.js` a un módulo compartido si `playrate.js` se
   refactoriza.
-- `IMPL_MusicState.md`, secciones 10-11: falta `publish_version` en la
-  lista de keys de `Bridge.KEYS`.
 
 **Fuera de alcance:** exploración manual con scroll táctil de acordes
 pasados/futuros; perfiles de cantante y coordinador/Helper (mismo esquema,
