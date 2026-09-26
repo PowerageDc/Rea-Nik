@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Rea-Nik" commit="b60d49e4f6bd1e83d9cfec9cefa2097e6e6e0b9b">
+<index version="1" name="Rea-Nik" commit="a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784">
   <category name="AutoColor">
     <reapack name="reaper_autocolor_live.lua" type="script" desc="REAPER Auto Color por instrumento — VERSIÓN LIVE (background)">
       <metadata>
@@ -256,6 +256,45 @@
         <source file="fonts/OpenSans/OpenSans-Bold.woff2">https://github.com/PowerageDc/Rea-Nik/raw/b60d49e4f6bd1e83d9cfec9cefa2097e6e6e0b9b/web/fonts/OpenSans/OpenSans-Bold.woff2</source>
         <source file="fonts/OpenSans/OpenSans-Light.woff2">https://github.com/PowerageDc/Rea-Nik/raw/b60d49e4f6bd1e83d9cfec9cefa2097e6e6e0b9b/web/fonts/OpenSans/OpenSans-Light.woff2</source>
         <source file="fonts/OpenSans/OpenSans-Regular.woff2">https://github.com/PowerageDc/Rea-Nik/raw/b60d49e4f6bd1e83d9cfec9cefa2097e6e6e0b9b/web/fonts/OpenSans/OpenSans-Regular.woff2</source>
+      </version>
+      <version name="1.5" author="Nik" time="2026-09-26T07:59:17Z">
+        <source file="config.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/config.js</source>
+        <source file="modal-loader.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modal-loader.js</source>
+        <source file="nsaudio_remote_control.html">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/nsaudio_remote_control.html</source>
+        <source file="nsaudio_prompter.html">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/nsaudio_prompter.html</source>
+        <source file="styles.css">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/styles.css</source>
+        <source file="core/fader-knob-svg.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/fader-knob-svg.js</source>
+        <source file="core/faders.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/faders.js</source>
+        <source file="core/init.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/init.js</source>
+        <source file="core/long-press.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/long-press.js</source>
+        <source file="core/music-state.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/music-state.js</source>
+        <source file="core/music-transpose.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/music-transpose.js</source>
+        <source file="core/state.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/state.js</source>
+        <source file="core/tab-ui-memory.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/tab-ui-memory.js</source>
+        <source file="core/tracks-render.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/tracks-render.js</source>
+        <source file="core/utils.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/utils.js</source>
+        <source file="core/vertical-fader.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/vertical-fader.js</source>
+        <source file="core/wwr-dispatch.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/core/wwr-dispatch.js</source>
+        <source file="markers/markers.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/markers/markers.js</source>
+        <source file="modals/marker-browser/marker-browser.html">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/marker-browser/marker-browser.html</source>
+        <source file="modals/marker-browser/marker-browser.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/marker-browser/marker-browser.js</source>
+        <source file="modals/playrate/playrate.html">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/playrate/playrate.html</source>
+        <source file="modals/playrate/playrate.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/playrate/playrate.js</source>
+        <source file="modals/project-tabs/project-tabs.html">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/project-tabs/project-tabs.html</source>
+        <source file="modals/project-tabs/project-tabs.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/project-tabs/project-tabs.js</source>
+        <source file="modals/reapitch/reapitch.html">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/reapitch/reapitch.html</source>
+        <source file="modals/reapitch/reapitch.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/reapitch/reapitch.js</source>
+        <source file="modals/tracksvis/tracksvis.html">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/tracksvis/tracksvis.html</source>
+        <source file="modals/tracksvis/tracksvis.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/modals/tracksvis/tracksvis.js</source>
+        <source file="musicstate-ui/instrumentista/instrumentista.css">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/musicstate-ui/instrumentista/instrumentista.css</source>
+        <source file="musicstate-ui/instrumentista/instrumentista.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/musicstate-ui/instrumentista/instrumentista.js</source>
+        <source file="musicstate-ui/shared/ms-beat.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/musicstate-ui/shared/ms-beat.js</source>
+        <source file="musicstate-ui/shared/ms-dispatch.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/musicstate-ui/shared/ms-dispatch.js</source>
+        <source file="musicstate-ui/shared/ms-section.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/musicstate-ui/shared/ms-section.js</source>
+        <source file="musicstate-ui/shared/ms-tempo.js">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/musicstate-ui/shared/ms-tempo.js</source>
+        <source file="fonts/OpenSans/OpenSans-Bold.woff2">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/fonts/OpenSans/OpenSans-Bold.woff2</source>
+        <source file="fonts/OpenSans/OpenSans-Light.woff2">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/fonts/OpenSans/OpenSans-Light.woff2</source>
+        <source file="fonts/OpenSans/OpenSans-Regular.woff2">https://github.com/PowerageDc/Rea-Nik/raw/a43ac7c3337c5f0a0e25ec3287bd8ec5dfe6e784/web/fonts/OpenSans/OpenSans-Regular.woff2</source>
       </version>
     </reapack>
   </category>
