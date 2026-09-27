@@ -241,7 +241,7 @@ html, body {
   white-space: nowrap;
   text-overflow: ellipsis;
   text-align: center;
-  transition: flex-basis 300ms ease, font-size 300ms ease,
+  transition: flex-basis 300ms ease, transform 300ms ease,
               opacity 300ms ease, color 300ms ease;
 }
 

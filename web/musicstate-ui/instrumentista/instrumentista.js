@@ -362,11 +362,23 @@ function nikInstrumentistaFindInsertBeforeNode(stripEl, offset) {
     return null;
 }
 
+function nikInstrumentistaGetCurrentScale(node) {
+    // Lee el scale REALMENTE interpolado en este instante (no el valor
+    // objetivo) -- necesario porque si dos shifts se pisan (típico al
+    // arrancar canción, mientras se resuelven placeholders), la transición
+    // anterior puede seguir en vuelo cuando arranca esta.
+    var t = getComputedStyle(node).transform;
+    if (!t || t === "none") return 1;
+    var m = t.match(/^matrix\(([^,]+),/);
+    return m ? parseFloat(m[1]) : 1;
+}
+
 // Shift limpio de ±1: no se reconstruye nada, se reetiquetan los data-offset
 // de los nodos existentes (dispara la transición CSS sola) y se maneja el
 // ciclo de vida del nodo que entra/sale por los offsets fantasma (±3).
 // delta = -1: avanza (el actual pasa a anterior) -> entra por la derecha.
 // delta = +1: retrocede -> entra por la izquierda.
+
 function nikInstrumentistaShiftChordSlots(newList, delta) {
     var stripEl = document.getElementById("msChordStrip");
     var newByKey = {};
@@ -379,7 +391,31 @@ function nikInstrumentistaShiftChordSlots(newList, delta) {
         if (!nikInstrumentistaChordNodesByKey.hasOwnProperty(key)) continue;
         var node = nikInstrumentistaChordNodesByKey[key];
         if (newByKey[key]) {
+            // FLIP: medir tamaño antes del salto de bucket, aplicar el
+            // data-offset (el font-size ahora salta instantáneo, sin
+            // transición -- un solo layout, no uno por frame), medir el
+            // tamaño final ya resuelto, y "disfrazar" el nodo con
+            // transform:scale() al tamaño viejo para soltarlo recién en el
+            // próximo frame con transición -- de ahí en más la animación
+            // es compositor-only, sin costo de layout por frame sin
+            // importar cuántos nodos cambien de bucket a la vez.
+            var beforePx = parseFloat(getComputedStyle(node).fontSize) * nikInstrumentistaGetCurrentScale(node);
             node.setAttribute("data-offset", String(newByKey[key].offset));
+            var afterPx = parseFloat(getComputedStyle(node).fontSize);
+            if (beforePx && afterPx && beforePx !== afterPx) {
+                // Excluir SOLO "transform" de la transición mientras lo
+                // disfrazamos -- opacity/color/flex-basis (ya en curso por
+                // el cambio de bucket) tienen que seguir animando sin
+                // interrupción, o la cola del ease queda "pelada" (nada
+                // más se mueve) y se percibe como que se traba.
+                node.style.transitionProperty = "opacity, color, flex-basis";
+                node.style.transform = "scale(" + (beforePx / afterPx) + ")";
+                void node.offsetHeight;
+                node.style.transitionProperty = "";
+                (function (scalingNode) {
+                    requestAnimationFrame(function () { scalingNode.style.transform = "scale(1)"; });
+                })(node);
+            }
         } else {
             node.setAttribute("data-offset", String(exitGhostOffset));
             (function (leavingNode, leavingKey) {
