@@ -353,118 +353,129 @@ function nikInstrumentistaRebuildChordSlots(newList, withFade) {
     stripEl.addEventListener("transitionend", onFadeOut);
 }
 
-function nikInstrumentistaFindInsertBeforeNode(stripEl, offset) {
-    var children = stripEl.children;
-    for (var i = 0; i < children.length; i++) {
-        var childOffset = parseInt(children[i].getAttribute("data-offset"), 10);
-        if (childOffset > offset) return children[i];
-    }
-    return null;
-}
-
-function nikInstrumentistaGetCurrentScale(node) {
-    // Lee el scale REALMENTE interpolado en este instante (no el valor
-    // objetivo) -- necesario porque si dos shifts se pisan (típico al
-    // arrancar canción, mientras se resuelven placeholders), la transición
-    // anterior puede seguir en vuelo cuando arranca esta.
-    var t = getComputedStyle(node).transform;
-    if (!t || t === "none") return 1;
-    var m = t.match(/^matrix\(([^,]+),/);
-    return m ? parseFloat(m[1]) : 1;
-}
-
-// Shift limpio de ±1: no se reconstruye nada, se reetiquetan los data-offset
-// de los nodos existentes (dispara la transición CSS sola) y se maneja el
-// ciclo de vida del nodo que entra/sale por los offsets fantasma (±3).
-// delta = -1: avanza (el actual pasa a anterior) -> entra por la derecha.
-// delta = +1: retrocede -> entra por la izquierda.
-
-function nikInstrumentistaShiftChordSlots(newList, delta) {
+// FLIP de toda la tira en un solo lote: se mide la posición/tamaño real
+// (getBoundingClientRect, incluye cualquier transform en vuelo de un shift
+// anterior -- ya no hace falta nikInstrumentistaGetCurrentScale aparte) de
+// todo lo que sigue vivo ANTES de tocar nada; se aplican TODAS las
+// mutaciones del shift (salientes fuera del flujo, continuos reetiquetados,
+// entrantes insertados en su offset final) sin leer nada en el medio; se
+// mide UNA sola vez el estado resultante; y se disfraza cada nodo afectado
+// con transform para soltarlo recién en el próximo frame -- un solo flush
+// de layout por shift entero, no uno por nodo, y nada de flex-basis
+// animado (ya no varía: los salientes se sacan del flujo con
+// position:absolute en vez de vía offset fantasma).
+function nikInstrumentistaShiftChordSlots(newList) {
     var stripEl = document.getElementById("msChordStrip");
     var newByKey = {};
     for (var i = 0; i < newList.length; i++) newByKey[newList[i].key] = newList[i];
 
-    var enterGhostOffset = (delta === -1) ? 3 : -3;
-    var exitGhostOffset = (delta === -1) ? -3 : 3;
+    var containerRectBefore = stripEl.getBoundingClientRect();
 
+    // FIRST
+    var beforeRects = {};
+    var continuingKeys = [];
+    var exitingKeys = [];
     for (var key in nikInstrumentistaChordNodesByKey) {
         if (!nikInstrumentistaChordNodesByKey.hasOwnProperty(key)) continue;
-        var node = nikInstrumentistaChordNodesByKey[key];
-        if (newByKey[key]) {
-            // FLIP: medir tamaño antes del salto de bucket, aplicar el
-            // data-offset (el font-size ahora salta instantáneo, sin
-            // transición -- un solo layout, no uno por frame), medir el
-            // tamaño final ya resuelto, y "disfrazar" el nodo con
-            // transform:scale() al tamaño viejo para soltarlo recién en el
-            // próximo frame con transición -- de ahí en más la animación
-            // es compositor-only, sin costo de layout por frame sin
-            // importar cuántos nodos cambien de bucket a la vez.
-            var beforePx = parseFloat(getComputedStyle(node).fontSize) * nikInstrumentistaGetCurrentScale(node);
-            node.setAttribute("data-offset", String(newByKey[key].offset));
-            var afterPx = parseFloat(getComputedStyle(node).fontSize);
-            if (beforePx && afterPx && beforePx !== afterPx) {
-                // Excluir SOLO "transform" de la transición mientras lo
-                // disfrazamos -- opacity/color/flex-basis (ya en curso por
-                // el cambio de bucket) tienen que seguir animando sin
-                // interrupción, o la cola del ease queda "pelada" (nada
-                // más se mueve) y se percibe como que se traba.
-                node.style.transitionProperty = "opacity, color, flex-basis";
-                node.style.transform = "scale(" + (beforePx / afterPx) + ")";
-                void node.offsetHeight;
-                node.style.transitionProperty = "";
-                (function (scalingNode) {
-                    requestAnimationFrame(function () { scalingNode.style.transform = "scale(1)"; });
-                })(node);
-            }
-        } else {
-            node.setAttribute("data-offset", String(exitGhostOffset));
-            (function (leavingNode, leavingKey) {
-                var onLeave = function (ev) {
-                    if (ev.propertyName !== "flex-basis" && ev.propertyName !== "opacity") return;
-                    leavingNode.removeEventListener("transitionend", onLeave);
-                    if (leavingNode.parentNode) leavingNode.parentNode.removeChild(leavingNode);
-                    delete nikInstrumentistaChordNodesByKey[leavingKey];
-                };
-                leavingNode.addEventListener("transitionend", onLeave);
-            })(node, key);
-        }
+        beforeRects[key] = nikInstrumentistaChordNodesByKey[key].getBoundingClientRect();
+        if (newByKey[key]) continuingKeys.push(key); else exitingKeys.push(key);
     }
 
-    // Los nodos continuos (ya existían y siguen existiendo) no se tocan acá
-    // -- solo se les cambió data-offset arriba, y eso alcanza para que la
-    // transición CSS corra sola sin reinsertarlos en el DOM. Solo los nodos
-    // nuevos se insertan, usando como referencia el próximo nodo continuo (o
-    // ya insertado en esta misma pasada) a su derecha en newList -- no la
-    // dirección de delta, que era la causa del bug anterior.
+    // MUTATE -- salientes primero: sacarlos del flujo ya, para que los
+    // continuos calculen su posición final sin el saliente estorbando.
+    for (var ei = 0; ei < exitingKeys.length; ei++) {
+        var exitKey = exitingKeys[ei];
+        var leavingNode = nikInstrumentistaChordNodesByKey[exitKey];
+        var er = beforeRects[exitKey];
+        leavingNode.style.position = "absolute";
+        leavingNode.style.left = (er.left - containerRectBefore.left) + "px";
+        leavingNode.style.top = (er.top - containerRectBefore.top) + "px";
+        leavingNode.style.width = er.width + "px";
+        leavingNode.style.transitionProperty = "opacity";
+        leavingNode.style.opacity = "0";
+        (function (node2, key2) {
+            var onLeave = function (ev) {
+                if (ev.propertyName !== "opacity") return;
+                node2.removeEventListener("transitionend", onLeave);
+                if (node2.parentNode) node2.parentNode.removeChild(node2);
+            };
+            node2.addEventListener("transitionend", onLeave);
+        })(leavingNode, exitKey);
+        delete nikInstrumentistaChordNodesByKey[exitKey];
+    }
+
+    // MUTATE -- continuos: reetiquetar data-offset (salto instantáneo de
+    // font-size/flex-basis, ya no animan por CSS).
+    for (var ci = 0; ci < continuingKeys.length; ci++) {
+        var contKey = continuingKeys[ci];
+        nikInstrumentistaChordNodesByKey[contKey].setAttribute("data-offset", String(newByKey[contKey].offset));
+    }
+
+    // MUTATE -- entrantes: insertar directo en su offset final (ya no hay
+    // paso intermedio por offset fantasma), mismo criterio de referencia
+    // que antes (próximo nodo continuo o recién insertado a su derecha).
+    var enteringNodes = [];
     var nextNode = null;
     for (var j = newList.length - 1; j >= 0; j--) {
         var item = newList[j];
-        var existing = nikInstrumentistaChordNodesByKey[item.key];
-
-        if (existing) {
-            nextNode = existing;
-            continue;
-        }
+        var existingNode = nikInstrumentistaChordNodesByKey[item.key];
+        if (existingNode) { nextNode = existingNode; continue; }
 
         var slot = document.createElement("span");
         slot.className = "ms-chord-slot";
-        slot.setAttribute("data-offset", String(enterGhostOffset));
+        slot.setAttribute("data-offset", String(item.offset));
         slot.dataset.chordRaw = item.text;
         slot.innerHTML = nikInstrumentistaFormatChordHtml(item.text);
-
         if (nextNode) stripEl.insertBefore(slot, nextNode);
         else stripEl.appendChild(slot);
 
         nikInstrumentistaChordNodesByKey[item.key] = slot;
-        (function (enteringNode, finalOffset) {
-            void enteringNode.offsetWidth;
-            requestAnimationFrame(function () {
-                enteringNode.setAttribute("data-offset", String(finalOffset));
-            });
-        })(slot, item.offset);
-
+        enteringNodes.push(slot);
         nextNode = slot;
     }
+
+    // LAST -- una sola pasada de layout para toda la tira ya mutada.
+    var disguises = [];
+    for (var ci2 = 0; ci2 < continuingKeys.length; ci2++) {
+        var ck = continuingKeys[ci2];
+        var node = nikInstrumentistaChordNodesByKey[ck];
+        var before = beforeRects[ck];
+        var after = node.getBoundingClientRect();
+        var dx = before.left - after.left;
+        var dy = before.top - after.top;
+        var sx = before.width / after.width;
+        var sy = before.height / after.height;
+        if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5 || Math.abs(sx - 1) > 0.01 || Math.abs(sy - 1) > 0.01) {
+            disguises.push({
+                node: node, exclude: "opacity, color",
+                from: "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")"
+            });
+        }
+    }
+    for (var ei2 = 0; ei2 < enteringNodes.length; ei2++) {
+        disguises.push({ node: enteringNodes[ei2], exclude: "", from: "scale(0.6)", fadeIn: true });
+    }
+
+    // INVERT -- disfraz sin transición, todos los nodos del lote juntos.
+    for (var di = 0; di < disguises.length; di++) {
+        var d = disguises[di];
+        d.node.style.transitionProperty = d.exclude || "none";
+        d.node.style.transform = d.from;
+        if (d.fadeIn) d.node.style.opacity = "0";
+    }
+    if (disguises.length) void stripEl.offsetHeight; // un solo flush para todo el lote
+
+    // PLAY -- restaurar transición completa; próximo frame, soltar al
+    // reposo (transform:none), de ahí en más compositor-only.
+    for (var dj = 0; dj < disguises.length; dj++) {
+        disguises[dj].node.style.transitionProperty = "";
+    }
+    requestAnimationFrame(function () {
+        for (var dk = 0; dk < disguises.length; dk++) {
+            disguises[dk].node.style.transform = "";
+            if (disguises[dk].fadeIn) disguises[dk].node.style.opacity = "";
+        }
+    });
 }
 
 // Misma estructura (mismas ocurrencias en las mismas posiciones) pero
@@ -505,7 +516,7 @@ function nikInstrumentistaRenderChordStrip() {
     if (delta === null) {
         nikInstrumentistaRebuildChordSlots(newList, true);
     } else {
-        nikInstrumentistaShiftChordSlots(newList, delta);
+        nikInstrumentistaShiftChordSlots(newList);
     }
     nikInstrumentistaChordPrevWindow = newList;
 }
@@ -563,10 +574,11 @@ function nikInstrumentistaFlashBeatDot(pulseIdx, pulseCount) {
 }
 
 // Reset instantáneo a scaleX(0) (sin transición) + forzar reflow antes de
-// animar -- mismo patrón que nikInstrumentistaShiftChordSlots usa para los
-// nodos que entran (offsetWidth). secUntilNext ya viene calculado UNA VEZ
-// por nikBeat.secUntilNextChordEvent() al cruzar el evento anterior -- acá
-// no se recalcula nada, solo se dispara la transición CSS.
+// animar -- mismo patrón FLIP (disfrazar sin transición, forzar flush,
+// soltar en el próximo frame) que usa nikInstrumentistaShiftChordSlots.
+// secUntilNext ya viene calculado UNA VEZ por
+// nikBeat.secUntilNextChordEvent() al cruzar el evento anterior -- acá no
+// se recalcula nada, solo se dispara la transición CSS.
 function nikInstrumentistaResetBeatProgress() {
     var fillEl = document.getElementById("msBeatProgressFill");
     if (!fillEl) return;

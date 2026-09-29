@@ -241,8 +241,8 @@ html, body {
   white-space: nowrap;
   text-overflow: ellipsis;
   text-align: center;
-  transition: flex-basis 300ms ease, transform 300ms ease,
-              opacity 300ms ease, color 300ms ease;
+  transform-origin: 0 0; /* requerido por la fórmula FLIP (translate+scale) del shift -- sin efecto en reposo, transform:none no usa origin */
+  transition: transform 300ms ease, opacity 300ms ease, color 300ms ease;
 }
 
 .ms-chord-slot .chord-part-sharp {
