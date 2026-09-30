@@ -90,3 +90,31 @@ function nikMsEffectivePosSeconds() {
 function nikMsCurrentSection() {
     return nikMsSectionAt(nikMsEffectivePosSeconds());
 }
+
+// Sección en un índice de nikMsMarkersSorted (no por posición) -- mismo
+// shape que nikMsSectionAt/nikMsCurrentSection ({id,pos,displayName,
+// resolvedColor}), o null si el índice cae fuera de rango. Usado por
+// instrumentista.js para previa/próxima -- necesita también el color, no
+// solo el nombre, para el preview/cruce animado de la fila de sección.
+function nikMsSectionByIndex(idx) {
+    if (idx < 0 || idx >= nikMsMarkersSorted.length) return null;
+    var row = nikMsMarkersSorted[idx];
+    var resolved = nikMsMarkerChainMap[row[2]];
+    if (!resolved) return null;
+    return {
+        id: row[2],
+        pos: parseFloat(row[3]),
+        displayName: resolved.displayName,
+        resolvedColor: resolved.resolvedColor
+    };
+}
+
+// Segundos hasta el próximo cambio de sección desde una posición dada, o
+// null si no hay una próxima (última sección de la canción, o timeline sin
+// markers).
+function nikMsSecUntilNextSection(posSeconds) {
+    var idx = nikMsFindSectionIndexAt(posSeconds);
+    var next = nikMsSectionByIndex(idx + 1);
+    if (!next) return null;
+    return next.pos - posSeconds;
+}

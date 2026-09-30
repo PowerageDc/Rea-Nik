@@ -33,6 +33,7 @@
   --beat-indicator-h: 34px;        /* alto reservado del indicador (dots + barra) -- si cambiás su tamaño real, ajustar acá para no solapar el cue */
   --beat-bar-width: 80px;         /* subí/bajá este número: largo de la barra de progreso (se autocentra sola) */
   --beat-dots-to-bar-gap: 24px;     /* subí/bajá este número: dots <-> barra de progreso */
+  --ms-section-preview-color: var(--ms-fg); /* color del fill de preview antes del cruce -- configurable, no tiene por qué coincidir con el color destino de ninguna sección */
 }
 
 html, body {
@@ -198,6 +199,8 @@ html, body {
   white-space: nowrap;
   text-overflow: ellipsis;
   text-align: center;
+  transform-origin: 0 0; /* requerido por la fórmula FLIP (translate+scale) del cruce -- sin efecto en reposo */
+  transition: transform 300ms ease, color 300ms ease;
 }
 
 .ms-section-adj {
@@ -210,10 +213,37 @@ html, body {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  transform-origin: 0 0;
+  transition: transform 300ms ease, color 300ms ease;
+}
+
+.ms-section-adj-wrap {
+  position: relative;
+  display: inline-block;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+#msSectionNext {
+  display: block;
+  width: 100%;
+}
+
+.ms-section-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  font-size: clamp(1.2rem, 4vw, 1.3rem);
+  font-weight: 500;
+  color: var(--ms-section-preview-color);
+  clip-path: inset(100% 0 0 0); /* oculto -- el JS lo anima a inset(0 0 0 0) */
+  pointer-events: none;
 }
 
 #msSectionPrev,
-#msSectionNext {
+#msSectionNext,
+#msSectionNextFill {
   text-align: center;
 }
 

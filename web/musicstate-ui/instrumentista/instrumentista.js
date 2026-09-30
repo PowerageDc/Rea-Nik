@@ -139,24 +139,35 @@ function nikInstrumentistaRender() {
     document.getElementById("msTempo").innerHTML = nikInstrumentistaFormatTempo();
     document.getElementById("msSongName").textContent = nikInstrumentistaFormatSongName();
 
-    var sectionEl = document.getElementById("msSection");
-    var section = (typeof nikMsCurrentSection === "function") ? nikMsCurrentSection() : null;
-    if (section) {
-        sectionEl.textContent = section.displayName;
-        sectionEl.style.color = section.resolvedColor || "";
-    } else {
-        sectionEl.textContent = "—";
-        sectionEl.style.color = "";
-    }
-
-    // Previa/próxima -- misma fuente de datos que nikMsCurrentSection()
-    // (nikMsMarkersSorted + nikMsFindSectionIndexAt), un índice antes y
-    // uno después del vigente. Reusa nikMsMarkerChainMap ya resuelto por
-    // ms-section.js -- no se recalcula nada acá, solo se lee.
+    // Fila de sección: prev/actual/next son siempre los mismos 3 nodos --
+    // no hace falta trackear identidad como en la tira de acordes. En el
+    // cruce (avance de a un índice), cada nodo "toma prestado" el rect de
+    // otro para el FLIP: lo que pasa a "actual" viene visualmente de donde
+    // estaba "next" (chico, derecha); lo que pasa a "prev" viene de donde
+    // estaba "actual" (grande, centro). Fuera de un cruce, solo se arma
+    // (una vez) el fill de preview sobre "next" cuando falta poco para que
+    // sea el próximo cambio.
     var curIdx = (typeof nikMsFindSectionIndexAt === "function")
         ? nikMsFindSectionIndexAt(nikMsEffectivePosSeconds()) : -1;
-    document.getElementById("msSectionPrev").textContent = nikInstrumentistaAdjacentSectionLabel(curIdx - 1);
-    document.getElementById("msSectionNext").textContent = nikInstrumentistaAdjacentSectionLabel(curIdx + 1);
+
+    if (nikInstrumentistaSectionCurIdx === null || curIdx !== nikInstrumentistaSectionCurIdx) {
+        if (nikInstrumentistaSectionCurIdx !== null && curIdx === nikInstrumentistaSectionCurIdx + 1) {
+            nikInstrumentistaShiftSectionRow(curIdx);
+        } else {
+            // Primer render, o salto/seek que no es un avance de a uno --
+            // no hay "antes" válido para disfrazar con FLIP, repinta directo.
+            nikInstrumentistaPaintSectionRow(curIdx);
+        }
+        nikInstrumentistaSectionCurIdx = curIdx;
+        nikInstrumentistaSectionFillArmedIdx = null;
+    } else if (nikInstrumentistaSectionFillArmedIdx !== curIdx) {
+        var secUntilNext = (typeof nikMsSecUntilNextSection === "function")
+            ? nikMsSecUntilNextSection(nikMsEffectivePosSeconds()) : null;
+        if (secUntilNext !== null && secUntilNext <= NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC) {
+            nikInstrumentistaArmSectionFill(secUntilNext);
+            nikInstrumentistaSectionFillArmedIdx = curIdx;
+        }
+    }
 
     nikInstrumentistaRenderChordStrip();
     nikInstrumentistaRenderBeat();
@@ -177,15 +188,116 @@ function nikInstrumentistaRender() {
     }
 }
 
-// Nombre de sección en un índice de nikMsMarkersSorted, o "" si el índice
-// cae fuera de rango (no hay previa antes del primer marker, o no hay
-// próxima después del último) -- el slot queda vacío, no "—", para no
-// competir visualmente con el "—" de la sección actual sin dato.
-function nikInstrumentistaAdjacentSectionLabel(idx) {
-    if (idx < 0 || !nikMsMarkersSorted || idx >= nikMsMarkersSorted.length) return "";
-    var row = nikMsMarkersSorted[idx];
-    var resolved = nikMsMarkerChainMap[row[2]];
-    return resolved ? resolved.displayName : "";
+var NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC = 2;
+var nikInstrumentistaSectionCurIdx = null;       // null = todavía no hubo primer render
+var nikInstrumentistaSectionFillArmedIdx = null; // curIdx para el que ya se disparó el fill de "next"
+
+// Repintado directo, sin animación -- primer render y saltos/seeks que no
+// son un avance de a un índice (no hay "antes" válido para FLIP).
+function nikInstrumentistaPaintSectionRow(curIdx) {
+    var prev = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(curIdx - 1) : null;
+    var cur = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(curIdx) : null;
+    var next = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(curIdx + 1) : null;
+
+    var prevEl = document.getElementById("msSectionPrev");
+    var curEl = document.getElementById("msSection");
+    var nextEl = document.getElementById("msSectionNext");
+    var nextFillEl = document.getElementById("msSectionNextFill");
+
+    prevEl.textContent = prev ? prev.displayName : "";
+    prevEl.style.color = "";
+    curEl.textContent = cur ? cur.displayName : "—";
+    curEl.style.color = cur ? (cur.resolvedColor || "") : "";
+    nextEl.textContent = next ? next.displayName : "";
+    nextFillEl.textContent = next ? next.displayName : "";
+    nikInstrumentistaResetSectionFill(nextFillEl);
+}
+
+function nikInstrumentistaResetSectionFill(nextFillEl) {
+    nextFillEl.style.transition = "none";
+    nextFillEl.style.clipPath = "inset(100% 0 0 0)";
+    void nextFillEl.offsetHeight;
+    nextFillEl.style.transition = "";
+}
+
+// Arranca el fill de preview sobre "next" -- una sola transición CSS con
+// duración = segundos reales que faltan (no un valor fijo), para que
+// termine de llenarse justo en el instante del cruce sin importar en qué
+// punto exacto del poll de 50ms se haya detectado el umbral.
+function nikInstrumentistaArmSectionFill(secRemaining) {
+    var nextFillEl = document.getElementById("msSectionNextFill");
+    requestAnimationFrame(function () {
+        nextFillEl.style.transition = "clip-path " + secRemaining + "s linear";
+        nextFillEl.style.clipPath = "inset(0 0 0 0)";
+    });
+}
+
+// FLIP simple: dx/dy/scale a partir de un rect "antes" -- no depende de que
+// sea el mismo nodo que tenía ese rect, solo de que el rect sea correcto.
+function nikInstrumentistaFlipFromRect(el, beforeRect) {
+    var after = el.getBoundingClientRect();
+    var dx = beforeRect.left - after.left;
+    var dy = beforeRect.top - after.top;
+    var sx = beforeRect.width / after.width;
+    var sy = beforeRect.height / after.height;
+    el.style.transitionProperty = "none";
+    el.style.transform = "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
+    void el.offsetHeight;
+    el.style.transitionProperty = "";
+    requestAnimationFrame(function () { el.style.transform = ""; });
+}
+
+// Igual, pero además disfraza el color de partida -- solo hace falta para
+// "actual": visualmente viene del fill de preview (ya completamente lleno
+// en --ms-section-preview-color), no del color que tenía el current
+// anterior, así que tiene que arrancar mostrando el color de preview y
+// mutar al color real de la sección mientras se reubica -- si no, hay un
+// salto de color visible en el instante del cruce.
+function nikInstrumentistaFlipFromRectWithColor(el, beforeRect, fromColor, toColor) {
+    var after = el.getBoundingClientRect();
+    var dx = beforeRect.left - after.left;
+    var dy = beforeRect.top - after.top;
+    var sx = beforeRect.width / after.width;
+    var sy = beforeRect.height / after.height;
+    el.style.transitionProperty = "none";
+    el.style.transform = "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
+    el.style.color = fromColor;
+    void el.offsetHeight;
+    el.style.transitionProperty = "";
+    requestAnimationFrame(function () {
+        el.style.transform = "";
+        el.style.color = toColor;
+    });
+}
+
+function nikInstrumentistaShiftSectionRow(newCurIdx) {
+    var prevEl = document.getElementById("msSectionPrev");
+    var curEl = document.getElementById("msSection");
+    var nextEl = document.getElementById("msSectionNext");
+    var nextFillEl = document.getElementById("msSectionNextFill");
+
+    var previewColor = getComputedStyle(nextFillEl).color;
+
+    // FIRST -- rects prestados, antes de mutar nada.
+    var rCurBefore = curEl.getBoundingClientRect();
+    var rNextBefore = nextEl.getBoundingClientRect();
+
+    // MUTATE
+    var newCur = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(newCurIdx) : null;
+    var newNext = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(newCurIdx + 1) : null;
+    var newCurColor = newCur ? (newCur.resolvedColor || "") : "";
+
+    prevEl.textContent = curEl.textContent;
+    prevEl.style.color = "";
+    curEl.textContent = newCur ? newCur.displayName : "—";
+    nextEl.textContent = newNext ? newNext.displayName : "";
+    nextFillEl.textContent = newNext ? newNext.displayName : "";
+    nikInstrumentistaResetSectionFill(nextFillEl);
+
+    // LAST + disfraz (son solo 2 nodos, no hace falta batchear el flush
+    // como en la tira de acordes).
+    nikInstrumentistaFlipFromRect(prevEl, rCurBefore);
+    nikInstrumentistaFlipFromRectWithColor(curEl, rNextBefore, previewColor, newCurColor);
 }
 
 var nikInstrumentistaChordNodesByKey = {};
