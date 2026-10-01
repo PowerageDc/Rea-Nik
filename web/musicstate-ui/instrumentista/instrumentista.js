@@ -139,35 +139,7 @@ function nikInstrumentistaRender() {
     document.getElementById("msTempo").innerHTML = nikInstrumentistaFormatTempo();
     document.getElementById("msSongName").textContent = nikInstrumentistaFormatSongName();
 
-    // Fila de sección: prev/actual/next son siempre los mismos 3 nodos --
-    // no hace falta trackear identidad como en la tira de acordes. En el
-    // cruce (avance de a un índice), cada nodo "toma prestado" el rect de
-    // otro para el FLIP: lo que pasa a "actual" viene visualmente de donde
-    // estaba "next" (chico, derecha); lo que pasa a "prev" viene de donde
-    // estaba "actual" (grande, centro). Fuera de un cruce, solo se arma
-    // (una vez) el fill de preview sobre "next" cuando falta poco para que
-    // sea el próximo cambio.
-    var curIdx = (typeof nikMsFindSectionIndexAt === "function")
-        ? nikMsFindSectionIndexAt(nikMsEffectivePosSeconds()) : -1;
-
-    if (nikInstrumentistaSectionCurIdx === null || curIdx !== nikInstrumentistaSectionCurIdx) {
-        if (nikInstrumentistaSectionCurIdx !== null && curIdx === nikInstrumentistaSectionCurIdx + 1) {
-            nikInstrumentistaShiftSectionRow(curIdx);
-        } else {
-            // Primer render, o salto/seek que no es un avance de a uno --
-            // no hay "antes" válido para disfrazar con FLIP, repinta directo.
-            nikInstrumentistaPaintSectionRow(curIdx);
-        }
-        nikInstrumentistaSectionCurIdx = curIdx;
-        nikInstrumentistaSectionFillArmedIdx = null;
-    } else if (nikInstrumentistaSectionFillArmedIdx !== curIdx) {
-        var secUntilNext = (typeof nikMsSecUntilNextSection === "function")
-            ? nikMsSecUntilNextSection(nikMsEffectivePosSeconds()) : null;
-        if (secUntilNext !== null && secUntilNext <= NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC) {
-            nikInstrumentistaArmSectionFill(secUntilNext);
-            nikInstrumentistaSectionFillArmedIdx = curIdx;
-        }
-    }
+    nikInstrumentistaRenderSectionRow();
 
     nikInstrumentistaRenderChordStrip();
     nikInstrumentistaRenderBeat();
@@ -189,27 +161,40 @@ function nikInstrumentistaRender() {
 }
 
 var NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC = 2;
-var nikInstrumentistaSectionCurIdx = null;       // null = todavía no hubo primer render
+var nikInstrumentistaSectionPrevTriple = null;   // null = todavía no hubo primer render
 var nikInstrumentistaSectionFillArmedIdx = null; // curIdx para el que ya se disparó el fill de "next"
+var nikInstrumentistaSectionJumpPendingIdx = null;
 
-// Repintado directo, sin animación -- primer render y saltos/seeks que no
-// son un avance de a un índice (no hay "antes" válido para FLIP).
+function nikInstrumentistaSectionId(sec) { return sec ? sec.id : null; }
+
+// Repintado directo, sin animación -- primer render, o después del fade de
+// un salto (nikInstrumentistaJumpSectionRow).
 function nikInstrumentistaPaintSectionRow(curIdx) {
-    var prev = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(curIdx - 1) : null;
-    var cur = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(curIdx) : null;
-    var next = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(curIdx + 1) : null;
+    var byIndex = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex : function () { return null; };
+    var prev = byIndex(curIdx - 1);
+    var cur = byIndex(curIdx);
+    var next = byIndex(curIdx + 1);
 
     var prevEl = document.getElementById("msSectionPrev");
     var curEl = document.getElementById("msSection");
-    var nextEl = document.getElementById("msSectionNext");
-    var nextFillEl = document.getElementById("msSectionNextFill");
 
     prevEl.textContent = prev ? prev.displayName : "";
     prevEl.style.color = "";
     curEl.textContent = cur ? cur.displayName : "—";
     curEl.style.color = cur ? (cur.resolvedColor || "") : "";
+    nikInstrumentistaSetNextLabel(next);
+}
+
+// Contenido + color de "next" -- el color ya es el destino real de esa
+// sección (no un preview neutro): el fill, mientras todavía está chico a
+// la derecha, ya "pinta" el color real que va a tener al llegar al
+// centro, sin necesidad de mutar ningún color en el cruce.
+function nikInstrumentistaSetNextLabel(next) {
+    var nextEl = document.getElementById("msSectionNext");
+    var nextFillEl = document.getElementById("msSectionNextFill");
     nextEl.textContent = next ? next.displayName : "";
     nextFillEl.textContent = next ? next.displayName : "";
+    nextFillEl.style.color = next ? (next.resolvedColor || "") : "";
     nikInstrumentistaResetSectionFill(nextFillEl);
 }
 
@@ -220,10 +205,10 @@ function nikInstrumentistaResetSectionFill(nextFillEl) {
     nextFillEl.style.transition = "";
 }
 
-// Arranca el fill de preview sobre "next" -- una sola transición CSS con
-// duración = segundos reales que faltan (no un valor fijo), para que
-// termine de llenarse justo en el instante del cruce sin importar en qué
-// punto exacto del poll de 50ms se haya detectado el umbral.
+// Arranca el fill sobre "next" -- una sola transición CSS con duración =
+// segundos reales que faltan (no un valor fijo), para que termine de
+// llenarse justo en el instante del cruce sin importar en qué punto exacto
+// del poll de 50ms se haya detectado el umbral.
 function nikInstrumentistaArmSectionFill(secRemaining) {
     var nextFillEl = document.getElementById("msSectionNextFill");
     requestAnimationFrame(function () {
@@ -247,57 +232,138 @@ function nikInstrumentistaFlipFromRect(el, beforeRect) {
     requestAnimationFrame(function () { el.style.transform = ""; });
 }
 
-// Igual, pero además disfraza el color de partida -- solo hace falta para
-// "actual": visualmente viene del fill de preview (ya completamente lleno
-// en --ms-section-preview-color), no del color que tenía el current
-// anterior, así que tiene que arrancar mostrando el color de preview y
-// mutar al color real de la sección mientras se reubica -- si no, hay un
-// salto de color visible en el instante del cruce.
-function nikInstrumentistaFlipFromRectWithColor(el, beforeRect, fromColor, toColor) {
-    var after = el.getBoundingClientRect();
-    var dx = beforeRect.left - after.left;
-    var dy = beforeRect.top - after.top;
-    var sx = beforeRect.width / after.width;
-    var sy = beforeRect.height / after.height;
-    el.style.transitionProperty = "none";
-    el.style.transform = "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
-    el.style.color = fromColor;
-    void el.offsetHeight;
-    el.style.transitionProperty = "";
-    requestAnimationFrame(function () {
-        el.style.transform = "";
-        el.style.color = toColor;
+// Lo que sourceEl tenía se desvanece en su lugar en vez de descartarse sin
+// más -- mismo patrón que usan los acordes salientes (clon posicionado +
+// fade). Limpia el id del clon antes de insertarlo (ver "Clonar elementos
+// DOM con id" en 01_CONVENCIONES.md). El forced reflow entre insertar y
+// bajar la opacity es necesario -- sin él el navegador puede coalescer
+// ambos estilos y la transición no arranca (mismo bug ya visto con la
+// tira de acordes).
+function nikInstrumentistaGhostFadeOut(sourceEl, containerEl) {
+    if (!sourceEl.textContent) return;
+    var r = sourceEl.getBoundingClientRect();
+    var cr = containerEl.getBoundingClientRect();
+    var ghost = sourceEl.cloneNode(true);
+    ghost.removeAttribute("id");
+    ghost.style.position = "absolute";
+    ghost.style.left = (r.left - cr.left) + "px";
+    ghost.style.top = (r.top - cr.top) + "px";
+    ghost.style.width = r.width + "px";
+    ghost.style.margin = "0";
+    ghost.style.transitionProperty = "opacity";
+    containerEl.appendChild(ghost);
+    void ghost.offsetHeight;
+    ghost.style.opacity = "0";
+    ghost.addEventListener("transitionend", function onDone(ev) {
+        if (ev.propertyName !== "opacity") return;
+        ghost.removeEventListener("transitionend", onDone);
+        if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
     });
 }
 
+// Entrada de "next" -- mismo tratamiento que los acordes entrantes (fade +
+// escala chica).
+function nikInstrumentistaFadeInEntering(el) {
+    el.style.transitionProperty = "none";
+    el.style.opacity = "0";
+    el.style.transform = "scale(0.7)";
+    void el.offsetHeight;
+    el.style.transitionProperty = "";
+    requestAnimationFrame(function () {
+        el.style.opacity = "";
+        el.style.transform = "";
+    });
+}
+
+// Cruce limpio de a un índice: "actual" toma el rect de donde estaba
+// "next", "prev" toma el rect de donde estaba "actual".
 function nikInstrumentistaShiftSectionRow(newCurIdx) {
+    var rowEl = document.getElementById("msSectionRow");
     var prevEl = document.getElementById("msSectionPrev");
     var curEl = document.getElementById("msSection");
     var nextEl = document.getElementById("msSectionNext");
-    var nextFillEl = document.getElementById("msSectionNextFill");
 
-    var previewColor = getComputedStyle(nextFillEl).color;
-
-    // FIRST -- rects prestados, antes de mutar nada.
     var rCurBefore = curEl.getBoundingClientRect();
     var rNextBefore = nextEl.getBoundingClientRect();
 
-    // MUTATE
-    var newCur = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(newCurIdx) : null;
-    var newNext = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex(newCurIdx + 1) : null;
-    var newCurColor = newCur ? (newCur.resolvedColor || "") : "";
+    nikInstrumentistaGhostFadeOut(prevEl, rowEl);
+
+    var byIndex = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex : function () { return null; };
+    var newCur = byIndex(newCurIdx);
+    var newNext = byIndex(newCurIdx + 1);
 
     prevEl.textContent = curEl.textContent;
     prevEl.style.color = "";
     curEl.textContent = newCur ? newCur.displayName : "—";
-    nextEl.textContent = newNext ? newNext.displayName : "";
-    nextFillEl.textContent = newNext ? newNext.displayName : "";
-    nikInstrumentistaResetSectionFill(nextFillEl);
+    curEl.style.color = newCur ? (newCur.resolvedColor || "") : "";
+    nikInstrumentistaSetNextLabel(newNext);
 
-    // LAST + disfraz (son solo 2 nodos, no hace falta batchear el flush
-    // como en la tira de acordes).
     nikInstrumentistaFlipFromRect(prevEl, rCurBefore);
-    nikInstrumentistaFlipFromRectWithColor(curEl, rNextBefore, previewColor, newCurColor);
+    nikInstrumentistaFlipFromRect(curEl, rNextBefore);
+    nikInstrumentistaFadeInEntering(nextEl);
+}
+
+// Salto (seek, o cualquier transición que no sea un avance de a un
+// índice): sin "antes" válido para FLIP -- fade de toda la fila, repintado
+// directo por debajo, fade de vuelta. Mismo patrón que
+// nikInstrumentistaRebuildChordSlots(..., true), incluida la protección
+// contra saltos seguidos muy rápido.
+function nikInstrumentistaJumpSectionRow(curIdx) {
+    var rowEl = document.getElementById("msSectionRow");
+    nikInstrumentistaSectionJumpPendingIdx = curIdx;
+    if (rowEl.classList.contains("is-jumping")) return;
+
+    rowEl.classList.add("is-jumping");
+    var onFadeOut = function (ev) {
+        if (ev.propertyName !== "opacity") return;
+        rowEl.removeEventListener("transitionend", onFadeOut);
+        nikInstrumentistaPaintSectionRow(nikInstrumentistaSectionJumpPendingIdx);
+        nikInstrumentistaSectionJumpPendingIdx = null;
+        rowEl.classList.remove("is-jumping");
+    };
+    rowEl.addEventListener("transitionend", onFadeOut);
+}
+
+// Punto de entrada, llamado desde nikInstrumentistaRender(). Recalcula
+// prev/actual/next por IDENTIDAD (no por índice numérico) en cada tick --
+// mismo criterio que nikInstrumentistaRenderChordStrip con la tira de
+// acordes: comparar solo el índice numérico se quedaba pegado mostrando
+// datos viejos/vacíos cuando los datos de fondo cambiaban (ej. markers
+// recién cargados) sin que el índice se moviera.
+function nikInstrumentistaRenderSectionRow() {
+    var pos = nikMsEffectivePosSeconds();
+    var curIdx = (typeof nikMsFindSectionIndexAt === "function") ? nikMsFindSectionIndexAt(pos) : -1;
+    var byIndex = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex : function () { return null; };
+
+    var newTriple = {
+        prevId: nikInstrumentistaSectionId(byIndex(curIdx - 1)),
+        curId: nikInstrumentistaSectionId(byIndex(curIdx)),
+        nextId: nikInstrumentistaSectionId(byIndex(curIdx + 1))
+    };
+    var old = nikInstrumentistaSectionPrevTriple;
+
+    if (old === null) {
+        nikInstrumentistaPaintSectionRow(curIdx);
+        nikInstrumentistaSectionFillArmedIdx = null;
+    } else if (newTriple.prevId === old.prevId && newTriple.curId === old.curId && newTriple.nextId === old.nextId) {
+        if (nikInstrumentistaSectionFillArmedIdx !== curIdx) {
+            var secUntilNext = (typeof nikMsSecUntilNextSection === "function") ? nikMsSecUntilNextSection(pos) : null;
+            if (secUntilNext !== null && secUntilNext <= NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC) {
+                nikInstrumentistaArmSectionFill(secUntilNext);
+                nikInstrumentistaSectionFillArmedIdx = curIdx;
+            }
+        }
+        nikInstrumentistaSectionPrevTriple = newTriple;
+        return;
+    } else if (newTriple.prevId === old.curId && newTriple.curId === old.nextId) {
+        nikInstrumentistaShiftSectionRow(curIdx);
+        nikInstrumentistaSectionFillArmedIdx = null;
+    } else {
+        nikInstrumentistaJumpSectionRow(curIdx);
+        nikInstrumentistaSectionFillArmedIdx = null;
+    }
+
+    nikInstrumentistaSectionPrevTriple = newTriple;
 }
 
 var nikInstrumentistaChordNodesByKey = {};
