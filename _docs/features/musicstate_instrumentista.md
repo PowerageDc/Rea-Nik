@@ -516,17 +516,32 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
   UI abierta (no los cubre `publish_version`); caso raro en ensayo.
 - Semitono `"mixed"` del Stem Bus: manejo escrito, sin probar con datos
   reales.
-- Jerkiness leve en los primeros 1-2 shifts de la tira de acordes al
-  arranque de cada canción (offsets -2/-1 llenándose de placeholders a
-  reales, 2-3 nodos recalculando `flex-basis`/`font-size` en el mismo
-  frame en vez del 1 nodo del régimen estable — diagnosticado en sesión,
-  confirmado con logging de entering/exiting por shift). Sin jank
-  simétrico al final de la canción (ahí el índice avanza de a uno, sin
-  reacomodo múltiple). Fix evaluado y pospuesto a propósito: migrar
-  `nikInstrumentistaShiftChordSlots` a animar `transform`/`scale` en vez
-  de `flex-basis`/`font-size` (compositor-only, sin costo de layout por
-  frame) — cambio de fondo al mecanismo de la tira, se aborda en sesión
-  aparte para no arriesgar romper el shift normal ya estable.
+- **Resuelto** (sesión de refactor FLIP): jerkiness de arranque de la tira
+  de acordes. `nikInstrumentistaShiftChordSlots` migrado a animar
+  `transform`/`opacity` (técnica FLIP: medir antes, mutar, medir después,
+  disfrazar, un solo flush por lote, soltar todos juntos en el mismo
+  frame) en vez de `flex-basis`/`font-size`. Confirmado fluido en
+  dispositivo en todos los shifts, incluido el arranque de canción. Código
+  de referencia para cualquier animación futura de texto con cambio de
+  tamaño/posición (ej. UI de lyrics, §9/Fuera de alcance).
+- Fila de sección (preludio de cambio + cruce animado, prev/actual/next):
+  implementada (`nikInstrumentistaRenderSectionRow` y funciones
+  asociadas), pero con bugs de animación sin resolver -- prev/next
+  aparecen/desaparecen con fade liso en vez de animarse (trasladarse +
+  escalar), y el cruce de next a actual muestra un ensanchado de
+  tipografía visible en el camino. Segundo intento (batching compartido,
+  mismo criterio que el fix de acordes) aplicado sin cambio aparente de
+  comportamiento -- sospecha de caché de navegador/WWR sin confirmar
+  todavía; no se descartó un bug de lógica real. A retomar en sesión
+  aparte.
+- Limpieza de datos de sección al cerrar proyecto / project sin guardar:
+  al cerrar un proyecto (cursor a 1.1.00), la fila de sección puede seguir
+  mostrando la próxima sección del proyecto cerrado. `nikMsResetProjectState()`
+  y el flujo `MARKER_LIST`/`MARKER_LIST_END` deberían limpiar esto solos
+  por diseño -- causa no identificada todavía, pendiente diagnóstico con
+  logging real en dispositivo (`nikCurrentProjectName`, `g_markers.length`
+  en `EXTSTATE`/`active_project_name` y al entrar a
+  `nikMsSectionOnMarkersUpdated()`).
 - Dots del indicador de pulso (§4.8) ligeramente adelantados respecto al
   audio en proyectos con tempo map muy variable (BPM cambiando con
   frecuencia) — tolerable por ahora, pendiente investigar la causa.
