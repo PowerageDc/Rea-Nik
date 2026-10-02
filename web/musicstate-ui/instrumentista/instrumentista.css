@@ -203,7 +203,7 @@ html, body {
   white-space: nowrap;
   text-overflow: ellipsis;
   text-align: center;
-  transform-origin: 0 0; /* requerido por la fórmula FLIP (translate+scale) del cruce -- sin efecto en reposo */
+  transform-origin: 50% 50%; /* FLIP por centro, escala uniforme (ver nikInstrumentistaFlipTransform) */
   transition: transform 300ms ease, color 300ms ease;
 }
 
@@ -217,7 +217,7 @@ html, body {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  transform-origin: 0 0;
+  transform-origin: 50% 50%;
   transition: transform 300ms ease, color 300ms ease, opacity 150ms ease;
 }
 

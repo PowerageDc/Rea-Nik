@@ -139,9 +139,8 @@ function nikInstrumentistaRender() {
     document.getElementById("msTempo").innerHTML = nikInstrumentistaFormatTempo();
     document.getElementById("msSongName").textContent = nikInstrumentistaFormatSongName();
 
-    nikInstrumentistaRenderSectionRow();
-
     nikInstrumentistaRenderChordStrip();
+    nikInstrumentistaRenderSectionRow();
     nikInstrumentistaRenderBeat();
 
     // "todos" no se pasa tal cual a nikMusicStateActiveCues -- esa función
@@ -208,11 +207,10 @@ function nikInstrumentistaArmSectionFill(secRemaining) {
 }
 
 function nikInstrumentistaFlipTransform(beforeRect, afterRect) {
-    var dx = beforeRect.left - afterRect.left;
-    var dy = beforeRect.top - afterRect.top;
-    var sx = beforeRect.width / afterRect.width;
-    var sy = beforeRect.height / afterRect.height;
-    return "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
+    var dx = (beforeRect.left + beforeRect.width / 2) - (afterRect.left + afterRect.width / 2);
+    var dy = (beforeRect.top + beforeRect.height / 2) - (afterRect.top + afterRect.height / 2);
+    var s = beforeRect.height / afterRect.height;
+    return "translate(" + dx + "px," + dy + "px) scale(" + s + ")";
 }
 
 // Arma (sin disparar) el clon-fantasma de lo que sourceEl tenía, para que
@@ -272,7 +270,8 @@ function nikInstrumentistaShiftSectionRow(newCurIdx) {
     var newNext = byIndex(newCurIdx + 1);
 
     prevEl.textContent = curEl.textContent;
-    prevEl.style.color = "";
+    prevEl.style.color = curEl.style.color || "var(--ms-fg)";
+    prevEl.style.opacity = "1";
     curEl.textContent = newCur ? newCur.displayName : "—";
     curEl.style.color = newCur ? (newCur.resolvedColor || "") : "";
     nikInstrumentistaPrepareNextLabel(newNext);
@@ -286,7 +285,7 @@ function nikInstrumentistaShiftSectionRow(newCurIdx) {
     curEl.style.transform = nikInstrumentistaFlipTransform(rNextBefore, rCurAfter);
     nextEl.style.opacity = "0";
     nextEl.style.transform = "scale(0.7)";
-    if (ghost) ghost.style.transitionProperty = "opacity";
+    if (ghost) ghost.style.transitionProperty = "opacity, transform";
 
     // Un solo flush para todo el lote.
     void rowEl.offsetHeight;
@@ -299,10 +298,15 @@ function nikInstrumentistaShiftSectionRow(newCurIdx) {
 
     requestAnimationFrame(function () {
         prevEl.style.transform = "";
+        prevEl.style.color = "";
+        prevEl.style.opacity = "";
         curEl.style.transform = "";
         nextEl.style.transform = "";
         nextEl.style.opacity = "";
-        if (ghost) ghost.style.opacity = "0";
+        if (ghost) {
+            ghost.style.opacity = "0";
+            ghost.style.transform = "scale(0.7)";
+        }
     });
 }
 
@@ -347,7 +351,7 @@ function nikInstrumentistaRenderSectionRow() {
         }
         nikInstrumentistaSectionPrevTriple = newTriple;
         return;
-    } else if (newTriple.prevId === old.curId && newTriple.curId === old.nextId) {
+    } else if (newTriple.prevId === old.curId && newTriple.curId === old.nextId && !nikInstrumentistaChordLastRenderJumped) {
         nikInstrumentistaShiftSectionRow(curIdx);
         nikInstrumentistaSectionFillArmedIdx = null;
     } else {
@@ -360,6 +364,7 @@ function nikInstrumentistaRenderSectionRow() {
 
 var nikInstrumentistaChordNodesByKey = {};
 var nikInstrumentistaChordPrevWindow = null; // null = todavía no hubo primer render
+var nikInstrumentistaChordLastRenderJumped = false;
 var nikInstrumentistaChordJumpPendingList = null;
 
 function nikInstrumentistaChordKey(entry) {
@@ -665,6 +670,7 @@ function nikInstrumentistaRefreshTextInPlace(newList) {
 
 function nikInstrumentistaRenderChordStrip() {
     var stripEl = document.getElementById("msChordStrip");
+    nikInstrumentistaChordLastRenderJumped = false;
     if (typeof nikMusicStateChordWindow !== "function") { stripEl.textContent = "—"; return; }
 
     var win = nikMusicStateChordWindow(2, 2);
@@ -684,6 +690,7 @@ function nikInstrumentistaRenderChordStrip() {
 
     var delta = nikInstrumentistaDetectShift(nikInstrumentistaChordPrevWindow, newList);
     if (delta === null) {
+        nikInstrumentistaChordLastRenderJumped = true;
         nikInstrumentistaRebuildChordSlots(newList, true);
     } else {
         nikInstrumentistaShiftChordSlots(newList);
