@@ -161,14 +161,12 @@ function nikInstrumentistaRender() {
 }
 
 var NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC = 2;
-var nikInstrumentistaSectionPrevTriple = null;   // null = todavía no hubo primer render
-var nikInstrumentistaSectionFillArmedIdx = null; // curIdx para el que ya se disparó el fill de "next"
+var nikInstrumentistaSectionPrevTriple = null;
+var nikInstrumentistaSectionFillArmedIdx = null;
 var nikInstrumentistaSectionJumpPendingIdx = null;
 
 function nikInstrumentistaSectionId(sec) { return sec ? sec.id : null; }
 
-// Repintado directo, sin animación -- primer render, o después del fade de
-// un salto (nikInstrumentistaJumpSectionRow).
 function nikInstrumentistaPaintSectionRow(curIdx) {
     var byIndex = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex : function () { return null; };
     var prev = byIndex(curIdx - 1);
@@ -177,38 +175,30 @@ function nikInstrumentistaPaintSectionRow(curIdx) {
 
     var prevEl = document.getElementById("msSectionPrev");
     var curEl = document.getElementById("msSection");
+    var nextFillEl = document.getElementById("msSectionNextFill");
 
     prevEl.textContent = prev ? prev.displayName : "";
     prevEl.style.color = "";
     curEl.textContent = cur ? cur.displayName : "—";
     curEl.style.color = cur ? (cur.resolvedColor || "") : "";
-    nikInstrumentistaSetNextLabel(next);
+    nikInstrumentistaPrepareNextLabel(next);
+    void nextFillEl.offsetHeight;
+    nextFillEl.style.transition = "";
 }
 
-// Contenido + color de "next" -- el color ya es el destino real de esa
-// sección (no un preview neutro): el fill, mientras todavía está chico a
-// la derecha, ya "pinta" el color real que va a tener al llegar al
-// centro, sin necesidad de mutar ningún color en el cruce.
-function nikInstrumentistaSetNextLabel(next) {
+// Texto + color + fill oculto (sin transición) de "next" -- NO fuerza
+// reflow ni restaura la transición del fill acá: queda a cargo de quien
+// llama, para poder batchearlo junto con el resto del lote (ver abajo).
+function nikInstrumentistaPrepareNextLabel(next) {
     var nextEl = document.getElementById("msSectionNext");
     var nextFillEl = document.getElementById("msSectionNextFill");
     nextEl.textContent = next ? next.displayName : "";
     nextFillEl.textContent = next ? next.displayName : "";
     nextFillEl.style.color = next ? (next.resolvedColor || "") : "";
-    nikInstrumentistaResetSectionFill(nextFillEl);
-}
-
-function nikInstrumentistaResetSectionFill(nextFillEl) {
     nextFillEl.style.transition = "none";
     nextFillEl.style.clipPath = "inset(100% 0 0 0)";
-    void nextFillEl.offsetHeight;
-    nextFillEl.style.transition = "";
 }
 
-// Arranca el fill sobre "next" -- una sola transición CSS con duración =
-// segundos reales que faltan (no un valor fijo), para que termine de
-// llenarse justo en el instante del cruce sin importar en qué punto exacto
-// del poll de 50ms se haya detectado el umbral.
 function nikInstrumentistaArmSectionFill(secRemaining) {
     var nextFillEl = document.getElementById("msSectionNextFill");
     requestAnimationFrame(function () {
@@ -217,30 +207,21 @@ function nikInstrumentistaArmSectionFill(secRemaining) {
     });
 }
 
-// FLIP simple: dx/dy/scale a partir de un rect "antes" -- no depende de que
-// sea el mismo nodo que tenía ese rect, solo de que el rect sea correcto.
-function nikInstrumentistaFlipFromRect(el, beforeRect) {
-    var after = el.getBoundingClientRect();
-    var dx = beforeRect.left - after.left;
-    var dy = beforeRect.top - after.top;
-    var sx = beforeRect.width / after.width;
-    var sy = beforeRect.height / after.height;
-    el.style.transitionProperty = "none";
-    el.style.transform = "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
-    void el.offsetHeight;
-    el.style.transitionProperty = "";
-    requestAnimationFrame(function () { el.style.transform = ""; });
+function nikInstrumentistaFlipTransform(beforeRect, afterRect) {
+    var dx = beforeRect.left - afterRect.left;
+    var dy = beforeRect.top - afterRect.top;
+    var sx = beforeRect.width / afterRect.width;
+    var sy = beforeRect.height / afterRect.height;
+    return "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
 }
 
-// Lo que sourceEl tenía se desvanece en su lugar en vez de descartarse sin
-// más -- mismo patrón que usan los acordes salientes (clon posicionado +
-// fade). Limpia el id del clon antes de insertarlo (ver "Clonar elementos
-// DOM con id" en 01_CONVENCIONES.md). El forced reflow entre insertar y
-// bajar la opacity es necesario -- sin él el navegador puede coalescer
-// ambos estilos y la transición no arranca (mismo bug ya visto con la
-// tira de acordes).
-function nikInstrumentistaGhostFadeOut(sourceEl, containerEl) {
-    if (!sourceEl.textContent) return;
+// Arma (sin disparar) el clon-fantasma de lo que sourceEl tenía, para que
+// se desvanezca en su lugar en vez de descartarse sin más -- ver "Clonar
+// elementos DOM con id" en 01_CONVENCIONES.md. No fuerza reflow ni dispara
+// el fade acá: el flush y el release quedan a cargo del lote completo en
+// nikInstrumentistaShiftSectionRow.
+function nikInstrumentistaBuildGhost(sourceEl, containerEl) {
+    if (!sourceEl.textContent) return null;
     var r = sourceEl.getBoundingClientRect();
     var cr = containerEl.getBoundingClientRect();
     var ghost = sourceEl.cloneNode(true);
@@ -250,44 +231,42 @@ function nikInstrumentistaGhostFadeOut(sourceEl, containerEl) {
     ghost.style.top = (r.top - cr.top) + "px";
     ghost.style.width = r.width + "px";
     ghost.style.margin = "0";
-    ghost.style.transitionProperty = "opacity";
     containerEl.appendChild(ghost);
-    void ghost.offsetHeight;
-    ghost.style.opacity = "0";
     ghost.addEventListener("transitionend", function onDone(ev) {
         if (ev.propertyName !== "opacity") return;
         ghost.removeEventListener("transitionend", onDone);
         if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
     });
+    return ghost;
 }
 
-// Entrada de "next" -- mismo tratamiento que los acordes entrantes (fade +
-// escala chica).
-function nikInstrumentistaFadeInEntering(el) {
-    el.style.transitionProperty = "none";
-    el.style.opacity = "0";
-    el.style.transform = "scale(0.7)";
-    void el.offsetHeight;
-    el.style.transitionProperty = "";
-    requestAnimationFrame(function () {
-        el.style.opacity = "";
-        el.style.transform = "";
-    });
-}
-
-// Cruce limpio de a un índice: "actual" toma el rect de donde estaba
-// "next", "prev" toma el rect de donde estaba "actual".
+// Cruce limpio de a un índice. Todo el lote (prev/current/next + el
+// fantasma de lo que se pierde) se dispone, se mide y se dispara junto --
+// un solo flush compartido, un solo release compartido. Si se hace por
+// nodo (como la versión anterior), cada flush individual termina
+// comprometiendo el estado pendiente de los OTROS nodos todavía sin
+// suprimir -- causa real del bug donde ni la escala ni el color se veían
+// animar bien.
 function nikInstrumentistaShiftSectionRow(newCurIdx) {
     var rowEl = document.getElementById("msSectionRow");
     var prevEl = document.getElementById("msSectionPrev");
     var curEl = document.getElementById("msSection");
     var nextEl = document.getElementById("msSectionNext");
+    var nextFillEl = document.getElementById("msSectionNextFill");
 
+    // FIRST
     var rCurBefore = curEl.getBoundingClientRect();
     var rNextBefore = nextEl.getBoundingClientRect();
+    var ghost = nikInstrumentistaBuildGhost(prevEl, rowEl);
 
-    nikInstrumentistaGhostFadeOut(prevEl, rowEl);
+    // Suprimir ANTES de mutar/medir nada más -- cualquier forced reflow
+    // posterior (necesario para medir con el texto ya nuevo) flushea todo
+    // el documento, no solo el nodo leído.
+    prevEl.style.transitionProperty = "none";
+    curEl.style.transitionProperty = "none";
+    nextEl.style.transitionProperty = "none";
 
+    // MUTATE
     var byIndex = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex : function () { return null; };
     var newCur = byIndex(newCurIdx);
     var newNext = byIndex(newCurIdx + 1);
@@ -296,18 +275,37 @@ function nikInstrumentistaShiftSectionRow(newCurIdx) {
     prevEl.style.color = "";
     curEl.textContent = newCur ? newCur.displayName : "—";
     curEl.style.color = newCur ? (newCur.resolvedColor || "") : "";
-    nikInstrumentistaSetNextLabel(newNext);
+    nikInstrumentistaPrepareNextLabel(newNext);
 
-    nikInstrumentistaFlipFromRect(prevEl, rCurBefore);
-    nikInstrumentistaFlipFromRect(curEl, rNextBefore);
-    nikInstrumentistaFadeInEntering(nextEl);
+    // INVERT -- medir ya con el contenido nuevo, armar los 3 disfraces,
+    // todo con las transiciones todavía suprimidas.
+    var rCurAfter = curEl.getBoundingClientRect();
+    var rPrevAfter = prevEl.getBoundingClientRect();
+
+    prevEl.style.transform = nikInstrumentistaFlipTransform(rCurBefore, rPrevAfter);
+    curEl.style.transform = nikInstrumentistaFlipTransform(rNextBefore, rCurAfter);
+    nextEl.style.opacity = "0";
+    nextEl.style.transform = "scale(0.7)";
+    if (ghost) ghost.style.transitionProperty = "opacity";
+
+    // Un solo flush para todo el lote.
+    void rowEl.offsetHeight;
+
+    // PLAY -- restaurar transición completa, soltar los 3 juntos.
+    prevEl.style.transitionProperty = "";
+    curEl.style.transitionProperty = "";
+    nextEl.style.transitionProperty = "";
+    nextFillEl.style.transition = "";
+
+    requestAnimationFrame(function () {
+        prevEl.style.transform = "";
+        curEl.style.transform = "";
+        nextEl.style.transform = "";
+        nextEl.style.opacity = "";
+        if (ghost) ghost.style.opacity = "0";
+    });
 }
 
-// Salto (seek, o cualquier transición que no sea un avance de a un
-// índice): sin "antes" válido para FLIP -- fade de toda la fila, repintado
-// directo por debajo, fade de vuelta. Mismo patrón que
-// nikInstrumentistaRebuildChordSlots(..., true), incluida la protección
-// contra saltos seguidos muy rápido.
 function nikInstrumentistaJumpSectionRow(curIdx) {
     var rowEl = document.getElementById("msSectionRow");
     nikInstrumentistaSectionJumpPendingIdx = curIdx;
@@ -324,12 +322,6 @@ function nikInstrumentistaJumpSectionRow(curIdx) {
     rowEl.addEventListener("transitionend", onFadeOut);
 }
 
-// Punto de entrada, llamado desde nikInstrumentistaRender(). Recalcula
-// prev/actual/next por IDENTIDAD (no por índice numérico) en cada tick --
-// mismo criterio que nikInstrumentistaRenderChordStrip con la tira de
-// acordes: comparar solo el índice numérico se quedaba pegado mostrando
-// datos viejos/vacíos cuando los datos de fondo cambiaban (ej. markers
-// recién cargados) sin que el índice se moviera.
 function nikInstrumentistaRenderSectionRow() {
     var pos = nikMsEffectivePosSeconds();
     var curIdx = (typeof nikMsFindSectionIndexAt === "function") ? nikMsFindSectionIndexAt(pos) : -1;
