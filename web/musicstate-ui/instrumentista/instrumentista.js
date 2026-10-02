@@ -206,6 +206,14 @@ function nikInstrumentistaArmSectionFill(secRemaining) {
     });
 }
 
+function nikInstrumentistaResetSectionFill() {
+    var nextFillEl = document.getElementById("msSectionNextFill");
+    nextFillEl.style.transition = "none";
+    nextFillEl.style.clipPath = "inset(100% 0 0 0)";
+    void nextFillEl.offsetHeight;
+    nextFillEl.style.transition = "";
+}
+
 function nikInstrumentistaFlipTransform(beforeRect, afterRect) {
     var dx = (beforeRect.left + beforeRect.width / 2) - (afterRect.left + afterRect.width / 2);
     var dy = (beforeRect.top + beforeRect.height / 2) - (afterRect.top + afterRect.height / 2);
@@ -342,7 +350,13 @@ function nikInstrumentistaRenderSectionRow() {
         nikInstrumentistaPaintSectionRow(curIdx);
         nikInstrumentistaSectionFillArmedIdx = null;
     } else if (newTriple.prevId === old.prevId && newTriple.curId === old.curId && newTriple.nextId === old.nextId) {
-        if (nikInstrumentistaSectionFillArmedIdx !== curIdx) {
+        var isPlaying = (typeof nikMusicStateIsPlaying === "function") && nikMusicStateIsPlaying();
+        if (!isPlaying) {
+            if (nikInstrumentistaSectionFillArmedIdx !== null) {
+                nikInstrumentistaResetSectionFill();
+                nikInstrumentistaSectionFillArmedIdx = null;
+            }
+        } else if (nikInstrumentistaSectionFillArmedIdx !== curIdx) {
             var secUntilNext = (typeof nikMsSecUntilNextSection === "function") ? nikMsSecUntilNextSection(pos) : null;
             if (secUntilNext !== null && secUntilNext <= NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC) {
                 nikInstrumentistaArmSectionFill(secUntilNext);
