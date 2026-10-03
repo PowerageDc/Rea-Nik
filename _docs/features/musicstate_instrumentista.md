@@ -21,8 +21,9 @@ mientras se toca; no requiere interacción táctil.
 
 Los músicos se conectan por Wi-Fi al servidor web embebido de REAPER
 (`reaper_www_root`, servido vía junction, ver `00_CONTEXTO_GENERAL.md`).
-La UI tiene que seguir siendo utilizable con red inestable: la sala tiene
-señal débil (ver §9, requisitos de red).
+La UI tiene que seguir siendo utilizable con red inestable: la sala tenía
+señal débil con la red institucional; hoy se usa un router propio (ver §9,
+requisitos de red).
 
 Fuente de verdad de los datos musicales: `IMPL_MusicState.md`.
 
@@ -235,9 +236,10 @@ mismo render loop de 50 ms que todo lo demás.
   extrapolación que `nikMusicStateCurrentPos()`, pero con `nikBeat.LATENCY_SEC`
   en vez de `nikMusicStateLookaheadSec`: el pulso no debe llevar el
   anticipo deliberado de los acordes (§4.4), solo compensar latencia real.
-  Fijado en 0.4 tras prueba de escritorio (empíricamente iguala la
-  sensación de sincronía contra el strip y el audio) -- no es un valor de
-  latencia de red medido, pendiente de validar en sala (ver §11).
+  Fijado en 0.4 (empíricamente iguala la sensación de sincronía contra el
+  strip y el audio) -- no es una latencia de red medida. Validado en dev
+  y en sala con la red de ensayo. Con mapas de tempo extensos los dots se
+  desfasan levemente (ver §11).
 - La **barra de progreso** usa `nikMusicStateCurrentPos()` sin modificar:
   tiene que quedar sincronizada con el instante exacto en que la tira de
   acordes shiftea, no con el pulso real.
@@ -250,6 +252,13 @@ timesig map se relee en cada render (`nikMusicStateTimesigAt(bar)`, sin
 cachear el compás), igual criterio que `nikMsTempoAt` -- necesario para
 los cambios de compás ocasionales (4/4→2/4→4/4) confirmados en la sesión
 de prueba.
+
+La key de cambio de pulso (`nikInstrumentistaBeatLastKey`) es
+`compás_pulso_cantidad`. Incluir la cantidad de pulsos fuerza la
+reconstrucción de los dots aunque compás y pulso no cambien: caso típico,
+cambiar a un tab cuyo compás 1 tiene otra métrica (4→2 tiempos) con el
+cursor al inicio. Sin ella, los dots del tab anterior quedaban hasta el
+primer cambio de pulso al dar play.
 
 **Disparo del fill (una sola vez por evento):** `nikInstrumentistaRenderBeat()`
 detecta el cruce de evento de armonía comparando la key del evento vigente
@@ -271,6 +280,15 @@ corta y resetea la barra (`nikInstrumentistaResetBeatProgress()`, sin
 transición) apenas `nikMusicStateIsPlaying()` es falso, antes de mirar
 el evento de armonía.
 
+También se resetea `nikInstrumentistaChordEventLastKey` a `null` al
+detenerse. Si no, al reproducir de nuevo con el mismo evento vigente que
+la última vez (típico: detener sobre el primer acorde y volver al inicio),
+`RenderBeat` cree que ya cruzó ese evento y la barra no arranca hasta el
+siguiente acorde. Al reanudar, el evento vigente se vuelve a detectar y la
+barra arranca con el tiempo restante hasta el próximo evento. Mismo
+criterio para el preludio de la fila de sección (§7): corre solo en
+reproducción.
+
 ## 5. Contrato de variables y funciones
 
 Globales sueltas con prefijo (patrón de `core/music-state.js`, no
@@ -284,8 +302,8 @@ wrapper de objeto: hay estado propio cacheado).
 | `nikTransportAnchorMs` | ms-dispatch.js | ancla local del último `TRANSPORT` |
 | `nikTransportPlayRate` | ms-dispatch.js | playrate como factor (default 1) |
 | `nikReaPitchLastSemitone` | ms-dispatch.js | semitono; `"none"` y `"mixed"` son sentinels válidos, no se colapsan a 0 |
-| `nikCurrentProjectName` | ms-dispatch.js | con extensión `.rpp` |
-| `g_markers` | ms-dispatch.js | tokens completos de cada marker |
+| `nikCurrentProjectName` | ms-dispatch.js | con extensión `.rpp`; si no termina en `.rpp` (pestaña "sin guardar", el literal depende del idioma de REAPER) el nombre de canción se muestra vacío (`U+00A0`) |
+| `g_markers` | ms-dispatch.js | tokens completos de cada marker; se reemplaza entero en cada `MARKER_LIST` (el server también la manda vacía), el reset de proyecto no lo toca (§6) |
 | `nikMusicStateLookaheadSec` | music-state.js | adelanto (§4.4) |
 | `NIK_MUSIC_STATE_MAX_EXTRAPOLATION_SEC` | music-state.js | tope de extrapolación (8) |
 | `nikMusicStateAdvanceSongSec()` | music-state.js | adelanto en segundos de canción |
@@ -295,20 +313,41 @@ wrapper de objeto: hay estado propio cacheado).
 | `nikMsCurrentSection()` / `nikMsSectionAt(pos)` | ms-section.js | sección vigente |
 | `nikMsTempoAt(pos)` | ms-tempo.js | BPM del mapa (sin playrate) |
 | `NIK_INSTRUMENTISTA_STALE_MS` | instrumentista.js | umbral de datos viejos (1500) |
-| `nikInstrumentistaBeatLastKey` | instrumentista.js | key (`bar_pulseIndex`) del último pulso marcado, para detectar cruce |
-| `nikInstrumentistaChordEventLastKey` | instrumentista.js | key del evento de armonía vigente, para detectar cruce y recalcular la duración del fill una sola vez |
+| `nikInstrumentistaBeatLastKey` | instrumentista.js | key (`bar_pulseIndex_pulseCount`) del último pulso marcado, para detectar cruce; incluye la cantidad de pulsos para que un cambio de métrica reconstruya los dots |
+| `nikInstrumentistaChordEventLastKey` | instrumentista.js | key del evento de armonía vigente, para detectar cruce y recalcular la duración del fill una sola vez; se resetea a `null` al detener el transporte |
 | `nikInstrumentistaBeatDotCount` | instrumentista.js | cantidad de dots ya dibujados, para repoblar solo si cambia (4↔2 en cambios de compás) |
 | `nikInstrumentistaBeatProgressFilling` | instrumentista.js | si la barra está en medio de un fill, para saber si hace falta resetear al detenerse |
 | `nikBeat.LATENCY_SEC` | ms-beat.js | latencia propia del pulso (§4.8), separada de `nikMusicStateLookaheadSec` |
+| `nikMsHandleProjectSwitch(source)` | ms-dispatch.js | punto único de cambio de proyecto (reset + re-pedidos); `source` es `"name"` o `"markers"` (§6) |
+| `nikMsMarkersSig` | ms-dispatch.js | firma de la última lista de markers, para detectar cambio de proyecto (`null` hasta la primera lista) |
+| `nikMsLastSwitchAtMs` / `NIK_MS_SWITCH_DEDUPE_MS` | ms-dispatch.js | ventana de dedupe (2000 ms) entre disparadores; el timestamp arranca en `-Infinity` (§8) |
+| `nikMsLog(tag, extra)` / `NIK_MS_DEBUG` | ms-dispatch.js | logging de diagnóstico, apagado por defecto (§9) |
+| `nikInstrumentistaSectionId(sec)` | instrumentista.js | identidad de sección para comparar triples prev/actual/next: `id\|displayName` (§7) |
+| `nikInstrumentistaChordLastRenderJumped` | instrumentista.js | `true` si en este tick la tira de acordes hizo jump (fade); la fila de sección lo consulta para no animar un cruce tras un seek (§7) |
+| `nikInstrumentistaResetSectionFill()` | instrumentista.js | resetea sin transición el fill de preludio de next |
 
 ## 6. Ciclo de vida por proyecto
 
-- **Cambio de proyecto:** al cambiar `active_project_name`,
-  `nikMsResetProjectState()` limpia todo el estado por-proyecto (armonía,
-  cues, tonalidad, roles, tempo map, markers, semitono, versión
+- **Cambio de proyecto:** `nikMsHandleProjectSwitch(source)` es el punto
+  único. Se dispara por dos caminos: cambio de `active_project_name`
+  (`"name"`, llega por el poll lento de 1000 ms, hasta ~1 s después del
+  cambio real de tab) y cambio de la firma de la lista de markers en
+  `MARKER_LIST_END` (`"markers"`, ciclo de 500 ms; casi siempre llega
+  antes que el nombre y deja acordes y secciones sincronizados). Si el
+  otro camino ya actuó hace menos de 2 s se saltea (dedupe), para no
+  resetear y re-pedir dos veces por el mismo cambio. La primera lista tras
+  el boot solo guarda la firma. Falso positivo conocido e inocuo: editar
+  markers a mano con la UI abierta dispara `"markers"` (un reset y una
+  recarga).
+- **Reset:** `nikMsResetProjectState()` limpia el estado por-proyecto
+  (armonía, cues, tonalidad, roles, tempo map, semitono, versión
   publicada) **antes** de re-pedir. Es necesario porque, si el proyecto
   nuevo no tiene `ProjExtState` (pestaña "sin guardar"), el puente Lua no
   tiene nada que puentear y quedarían colgados los valores del anterior.
+  **No vacía `g_markers`**: la lista ya es del proyecto activo y se
+  reemplaza en cada `MARKER_LIST` (también llega vacía en un tab sin
+  markers). Vaciarla demoraba las secciones hasta el siguiente ciclo y
+  metía un estado vacío intermedio.
 - **Re-pedido diferido:** además del pedido inmediato, se repite a los
   400 ms. Una respuesta on-demand rezagada del proyecto anterior puede
   llegar después del reset, y el protocolo no etiqueta a qué proyecto
@@ -334,8 +373,12 @@ Layout vertical único, estático. De arriba hacia abajo:
   (equivalente, redondeado, `NNN BPM`) y tonalidad (`♪` + tónica con
   alteración; sufijo `m` si es menor, nada si es mayor).
 - **Fila de sección:** previa, actual (color de familia de
-  `nikResolveMarkerDisplay()`) y próxima. Los slots sin dato quedan
-  vacíos, no `—`.
+  `nikResolveMarkerDisplay()`) y próxima. Previa y próxima sin dato quedan
+  vacías, no `—`. El actual sin sección (cursor antes de la primera, tab
+  vacío) muestra `U+00A0`: un espacio común colapsa con
+  `white-space: nowrap` y la fila cambiaría de alto; el actual es el que
+  sostiene la altura de línea de la fila. Mismo criterio para el nombre de
+  canción de un proyecto sin guardar.
 - **Tira de acordes:** 5 slots (offsets -2..2, `nikMusicStateChordWindow(2,2)`),
   jerarquía tipográfica decreciente desde el actual.
 - **Indicador de pulso:** pegado debajo de la tira -- puntos por pulso del
@@ -350,6 +393,28 @@ se desplazó ±1, se reetiquetan los `data-offset` de los nodos existentes
 (la transición CSS hace el movimiento) y entran/salen por offsets
 fantasma ±3. En cualquier otro caso (salto de posición) se reconstruye
 con fade (`is-jumping`).
+
+**Animación de la fila de sección:** el estado es un triple
+prev/actual/next con identidad `id|displayName` (los ids solos no sirven:
+proyectos distintos los comparten). Por tick:
+- Triple igual: no se anima; solo se arma el preludio de next si falta
+  poco para la próxima sección (`NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC`) y
+  hay reproducción.
+- Avance de uno (`prevId === old.curId`, `curId === old.nextId`,
+  `curId !== null`) y la tira de acordes no hizo jump en ese tick: cruce
+  animado, FLIP con **escala uniforme** derivada del alto y alineación por
+  **centros** (`transform-origin: 50% 50%`). El prev saliente es un
+  fantasma que se achica a `scale(0.7)` mientras se desvanece; el actual
+  que pasa a prev hace transicionar color y opacidad. `FlipTransform`
+  devuelve `""` si algún rect mide alto 0.
+- Cualquier otro caso (seek, retroceso, cambio de proyecto, lista de
+  markers reemplazada): fade (`is-jumping`). Los jumps consecutivos se
+  fusionan en uno si llegan antes de terminar el fade-out (150 ms).
+
+El render de la tira de acordes corre **antes** que el de la fila de
+sección: esta consulta `nikInstrumentistaChordLastRenderJumped`. Si no hay
+armonía cargada el flag queda siempre en `false`, y un seek que cruce una
+sola sección animaría igual.
 
 **Rol:** vive en `localStorage` (`nikInstrumentistaRole`), por
 dispositivo (el eje es "de quién es este celular", no el proyecto de
@@ -404,6 +469,23 @@ pendiente confirmar en pantallas más chicas (ver §11).
   250 ms).
 - **Clonado de elementos con `id`:** aplica la regla general de
   `01_CONVENCIONES.md` si algún día se clonan nodos con `id` en esta UI.
+- **FLIP de texto: no escalar X e Y por separado.** Con el ratio de rects,
+  el alto coincide pero el ancho no (los anchos de los slots dependen de
+  flex y de contenido) y el texto se deforma. Escala uniforme derivada del
+  alto y alineación por centros; ver §7 y `01_CONVENCIONES.md`.
+- **`null === null` en comparaciones de identidad.** Un triple de sección
+  vacío (`null, null, null`) coincide con el siguiente triple vacío y
+  parece un "avance de uno": copiaba el placeholder a prev y disparaba la
+  animación. Un shift exige `curId !== null`.
+- **Keys de "último evento" (dedupe de render).** Tienen que incluir todo
+  lo que determina el render (los dots incluyen `pulseCount`) y
+  resetearse cuando el consumidor deja de correr (barra de pulso y
+  preludio al detener el transporte). Si no, el siguiente arranque cree
+  que el evento ya pasó.
+- **`performance.now()` mide desde la carga de la página.** Un timestamp
+  inicial en `0` hace que cualquier dedupe por ventana de tiempo saltee el
+  primer evento durante los primeros segundos (`nikMsLastSwitchAtMs`
+  arranca en `-Infinity` por eso).
 
 ## 9. Cómo testear y requisitos de red
 
@@ -442,22 +524,31 @@ listeners; imprime `errcntAlVolver`, `primerReplyMs` y `cartelMs`):
 (function(){var o=wwr_onreply;window.addEventListener("online",function(){var t0=performance.now(),e0=g_wwr_errcnt,tr=null,el=document.querySelector(".ms-screen");wwr_onreply=function(r,d){if(tr===null)tr=Math.round(performance.now()-t0);return o(r,d)};var iv=setInterval(function(){if(!el.classList.contains("is-stale")){clearInterval(iv);wwr_onreply=o;console.log({errcntAlVolver:e0,primerReplyMs:tr,cartelMs:Math.round(performance.now()-t0)})}},10)})})()
 ```
 
-### Prueba de estrés física (pendiente)
+### Logging de diagnóstico del cambio de proyecto
 
-En la sala, con la puerta cerrada y el celular en el peor punto: dejar una
-canción entera en play; cortar el Wi-Fi del celular durante 3, 5 y 10 s;
-hacer un stop/seek en REAPER durante el corte largo; repetir con 2–3
-celulares conectados. Mirar: que el cartel aparezca solo en cortes reales,
-que la recuperación sea rápida, que tras un stop/seek la pantalla corrija
-y que los acordes sigan alineados con los de la PC.
+`NIK_MS_DEBUG` (ms-dispatch.js, `false` por defecto) activa `nikMsLog`:
+imprime en consola, con timestamp, `MARKERS_IN`, `NAME_CHANGE`,
+`SWITCH`/`SWITCH_SKIP`, `RESET`, `HARMONY_IN`, `SECTION_SHIFT`/
+`SECTION_JUMP` y `CHORDS_SHIFT`/`CHORDS_JUMP`. `MARKERS_IN` sale cada
+500 ms (ruido, conviene filtrarlo en la consola). Qué esperar: con el tab
+quieto, ningún `SWITCH`; al cambiar de tab, `SWITCH markers` seguido de
+`SECTION_JUMP` y `CHORDS_JUMP` casi juntos, y ~400 ms después
+`NAME_CHANGE` con `SWITCH_SKIP name`. Útil para cualquier bug de datos
+colgados o de fades dobles al cambiar de proyecto.
+
+### Prueba de estrés física
+
+Hecha en sala con router propio (incluso con WAN inestable), sin impacto
+en la respuesta. Si cambia la red o la sala, repetir: canción entera en
+play, corte de Wi-Fi del celular de 3, 5 y 10 s, stop/seek en REAPER
+durante el corte largo y 2–3 celulares; el cartel debe aparecer solo en
+cortes reales y los acordes seguir alineados con los de la PC.
 
 ### Requisitos de red
 
-La red institucional (con firewall y Wi-Fi propio) más las paredes de la
-sala degradan la señal, y el web control es HTTP plano y tráfico local que
-igualmente pasa por los equipos de la red — resiliencia de software (§4)
-que no reemplaza una red que funcione. Diagnóstico, solución (router
-propio para la sala) y guía de configuración: `07_RED_SALA_ENSAYO.md`.
+La red institucional degradaba la señal en la sala; se usa un router
+propio, y la resiliencia de software (§4) no reemplaza una red que
+funcione. Guía de configuración: `07_RED_SALA_ENSAYO.md`.
 
 ## 10. Guía para extender
 
@@ -500,13 +591,8 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
   sería deseable. No se pudo emular en DevTools un viewport landscape
   más chico para validar si ese valor fijo sigue funcionando ahí.
 - Cantidad de slots de acorde en vertical, a validar en dispositivo real.
-- Prueba de estrés física en la sala (§9). Router propio para la sala:
-  ver `07_RED_SALA_ENSAYO.md` (pendiente de armar, §4 de ese doc).
 - Escalar el lookahead según el tempo (idea a evaluar tras varios
   ensayos con el valor fijo).
-- Calibrar `nikBeat.LATENCY_SEC` (fijado en 0.4 tras prueba de
-  escritorio, §4.8) contra la prueba física en sala -- red y dispositivo
-  reales pueden pedir otro valor.
 - Validar la conversión adelanto → beats en compases no x/4 (6/8, etc.):
   hoy solo verificada en 4/4.
 - Verificar el override del lookahead vía `config.local.js` y el formato
@@ -524,29 +610,34 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
   dispositivo en todos los shifts, incluido el arranque de canción. Código
   de referencia para cualquier animación futura de texto con cambio de
   tamaño/posición (ej. UI de lyrics, §9/Fuera de alcance).
-- Fila de sección (preludio de cambio + cruce animado, prev/actual/next):
-  implementada (`nikInstrumentistaRenderSectionRow` y funciones
-  asociadas), pero con bugs de animación sin resolver -- prev/next
-  aparecen/desaparecen con fade liso en vez de animarse (trasladarse +
-  escalar), y el cruce de next a actual muestra un ensanchado de
-  tipografía visible en el camino. Segundo intento (batching compartido,
-  mismo criterio que el fix de acordes) aplicado sin cambio aparente de
-  comportamiento -- sospecha de caché de navegador/WWR sin confirmar
-  todavía; no se descartó un bug de lógica real. A retomar en sesión
-  aparte.
-- Limpieza de datos de sección al cerrar proyecto / project sin guardar:
-  al cerrar un proyecto (cursor a 1.1.00), la fila de sección puede seguir
-  mostrando la próxima sección del proyecto cerrado. `nikMsResetProjectState()`
-  y el flujo `MARKER_LIST`/`MARKER_LIST_END` deberían limpiar esto solos
-  por diseño -- causa no identificada todavía, pendiente diagnóstico con
-  logging real en dispositivo (`nikCurrentProjectName`, `g_markers.length`
-  en `EXTSTATE`/`active_project_name` y al entrar a
-  `nikMsSectionOnMarkersUpdated()`).
+- **Resuelto** (sesión de fila de sección): cruce animado
+  prev/actual/next. La causa del ensanchado y la compresión era un FLIP
+  con escala no uniforme (`sx`/`sy` por ratio de rects: los anchos de los
+  slots dependen de flex y contenido, el alto no); ahora escala uniforme
+  por alto + alineación por centros (§7). Además: fantasma del prev que se
+  achica al desvanecerse, color/opacidad que transicionan al pasar a prev,
+  fade en seeks y cambios de proyecto, preludio solo en reproducción. La
+  sospecha de caché del intento anterior quedó descartada: el
+  comportamiento reportado era el del código.
+- Limpieza de datos al cerrar un proyecto / tab "sin guardar": no se pudo
+  reproducir tras los cambios del cambio de proyecto (§6). Causa probable
+  del síntoma original (sin confirmar): la identidad de sección por `id`
+  solo no detectaba listas reemplazadas con ids coincidentes. Cerrar el
+  ítem si no reaparece. El literal que reporta REAPER para un proyecto sin
+  guardar es `"(sin guardar)"` (REAPER en español); el criterio de nombre
+  vacío no depende de él (se basa en `.rpp`, §5).
 - Dots del indicador de pulso (§4.8) ligeramente adelantados respecto al
   audio en proyectos con tempo map muy variable (BPM cambiando con
   frecuencia) — tolerable por ahora, pendiente investigar la causa.
-- String exacto que reporta REAPER para un proyecto sin guardar (afecta
-  el recorte de `.rpp`).
+  Con tempo constante o con cambios puntuales de tempo fijo funciona bien
+  (validado en dev y en sala).
+- Datos parciales al cambiar de proyecto: a veces la armonía llega antes
+  que la tonalidad/semitono/nombre y se ven unos ms de acordes y
+  tonalidad sin transponer hasta que llega el dato de transposición.
+  Idea: esperar a tener todos los datos (armonía, tonalidad, semitono,
+  tempo/timesig) antes de pintar, en vez de pintar a medida que llegan;
+  probablemente interactúa con el reset de `nikMsHandleProjectSwitch`
+  (§6). No bloqueante.
 - Token de generación por cambio de proyecto, solo si reaparece el bug de
   datos colgados (§6).
 - Extraer `ms-tempo.js` a un módulo compartido si `playrate.js` se

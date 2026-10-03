@@ -120,7 +120,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
-| MusicState / Prompter     | Helper y prompter vertical y landscape funcionales (landscape vía CSS puro, misma tira de 5 slots, ver `features/musicstate_instrumentista.md` §7), con indicador de pulso (dots + barra de progreso a próximo acorde, ver §4.8). Tira de acordes migrada a animación por `transform` (técnica FLIP, compositor-only) — jank de arranque resuelto y confirmado en dispositivo. Fila de sección con preludio + cruce animado (mismo patrón, generalizado a 3 nodos) implementada pero con bugs de animación sin resolver (ver §11) y pendiente de retomar en sesión aparte; pendientes generales: selector de rol, calibración de `nikBeat.LATENCY_SEC`, prueba de estrés física completa en sala, y el resto de §11 de la feature (dots levemente adelantados con tempo variable, landscape en pantallas más chicas) |
+| MusicState / Prompter     | Helper y prompter (vertical y landscape) funcionales y validados en dev y en sala con router propio. Indicador de pulso (dots + barra, ver `features/musicstate_instrumentista.md` §4.8), tira de acordes y fila de sección (preludio + cruce animado) animadas por `transform` (técnica FLIP), y cambio de proyecto sincronizado (secciones y acordes juntos, §6). Pendientes: selector de rol, desfase de los dots en proyectos con mapas de tempo extensos, datos parciales al cambiar de proyecto, y el resto de §11 de la feature |
 | Deploy vía ReaPack        | Completo (AutoColor + RemoteControl + MusicState deployados vía metapaquete + .www) |
 
 ## Pendientes generales (horizonte, no bloqueantes)
@@ -131,10 +131,6 @@ render, pero conviven en el mismo proyecto/entorno):
 - Pitch-shift toggle script (per-stem, mapeable a footswitch MIDI).
 - Parser de nomenclatura alternativa de secciones (V1, V2, PC, C1...) usada en
   otros proyectos — no bloqueante.
-- Red propia para la sala de ensayo (router dedicado, PC por UTP): el Wi-Fi
-  institucional llega débil e inestable a la sala. El prompter tiene
-  resiliencia de software, pero no reemplaza la red. Diagnóstico y
-  configuración: `07_RED_SALA_ENSAYO.md`.
 - Evaluar portar al control remoto general el manejo de conexión del prompter
   (indicador de datos viejos, tope del backoff de `main.js`, compensación por
   RTT) — ver §10 de `features/musicstate_instrumentista.md`.

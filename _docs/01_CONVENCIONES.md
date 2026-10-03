@@ -215,6 +215,28 @@ por proyecto" → gotchas).
 Aplica a cualquier patrón de clonado de templates por instancia (tracks,
 sends, o UI repetida en otros paneles) — no solo al caso ya resuelto.
 
+## FLIP de texto con cambio de tamaño (animación por `transform`)
+
+Regla general para animar un nodo de texto que cambia de posición **y** de
+tamaño de fuente (tira de acordes y fila de sección del prompter, futuras
+UIs de lyrics; cualquier UI web del proyecto): técnica FLIP — medir antes,
+mutar el DOM, medir después, disfrazar con `transform` sin transición, un
+solo flush por lote, soltar en el frame siguiente — animando solo
+`transform`/`opacity`, nunca `font-size`/`flex-basis` (fuerzan layout por
+frame).
+
+- **Escala uniforme** derivada del alto de los rects
+  (`s = alto_antes / alto_después`), no `scaleX`/`scaleY` por separado por
+  el ratio de rects: el alto sigue al `font-size`, pero el ancho depende de
+  flex/contenido y deforma el texto.
+- **Alinear por centros** (`translate` entre centros de rect +
+  `transform-origin: 50% 50%`), no por esquina: los textos están centrados
+  en cajas de ancho distinto.
+- **Guard:** si algún rect mide alto 0 (nodo vacío), no aplicar transform.
+- Implementaciones: `nikInstrumentistaShiftChordSlots` (la técnica) y
+  `nikInstrumentistaShiftSectionRow` (escala uniforme por centros), ver
+  `features/musicstate_instrumentista.md` §7.
+
 ## Patrón de módulos JS de puro cálculo (wrapper de objeto único)
 
 Convención nueva — no retroactiva, no implica reescribir `state.js` ni

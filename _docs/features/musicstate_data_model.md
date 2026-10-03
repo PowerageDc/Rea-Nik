@@ -271,7 +271,7 @@ toca resolver:
 - `musicstate_helper.md` §9: header `@provides` desactualizado, backlog
   de UX (Cues sin sticky header, highlight sin calibrar, diccionario de
   color de secciones compartido, glitch de Enter en Roles).
-- `07_RED_SALA_ENSAYO.md`: router propio para la sala, todavía sin armar.
-- `musicstate_instrumentista.md` §11: prueba de estrés en la sala, delta
-  de lookahead por tempo, validación en compases no x/4, selector de rol
-  en la UI, layout horizontal.
+- `musicstate_instrumentista.md` §11: desfase de los dots en mapas de
+  tempo extensos, datos parciales al cambiar de proyecto, delta de
+  lookahead por tempo, validación en compases no x/4, selector de rol en
+  la UI, validación de landscape en pantallas más chicas.

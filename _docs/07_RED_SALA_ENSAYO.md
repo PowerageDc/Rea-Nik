@@ -81,14 +81,18 @@ músicos en su Wi-Fi.
   `g_wwr_errcnt`, frecuencia de poll unificada).
 - Un Wi-Fi interno malo si el router elegido es de mala calidad o queda
   mal ubicado.
-- Internet en la PC: al conectarla solo a la red propia, pierde salida a
-  internet salvo que se le deje una segunda vía (ver configuración).
+- Internet en la PC: con el WAN del router conectado a internet, la PC
+  sale por el mismo router (probado, ver §4); sin WAN, pierde salida
+  salvo que se le deje una segunda vía (ver configuración).
 
 ## 3. Configuración
 
 - PC por UTP a un puerto **LAN** del router nuevo. El puerto WAN/Internet
-  queda **sin usar** — no conectarlo a la red institucional, para evitar
-  conflictos de DHCP entre las dos redes.
+  puede quedar sin usar o conectado a internet: probado con WAN conectado
+  (incluso con internet inestable), sin impacto en el web control, porque
+  el tráfico celular ↔ PC no sale del router. Si el WAN va a otra red
+  local (por ejemplo la institucional), cuidar que no comparta subred con
+  la LAN del router para evitar conflictos.
 - IP fija para la PC (o reserva DHCP en el router), para que la URL del
   web control sea siempre la misma.
 - Windows tiene que clasificar esa red como **privada**: si la toma como
@@ -103,9 +107,9 @@ músicos en su Wi-Fi.
   móviles durante el ensayo: esa red no tiene salida a internet y algunos
   teléfonos desvían el tráfico a datos automáticamente al no detectarla.
 - Si la PC necesita internet durante el ensayo (por ejemplo para MVSEP),
-  dejarle una segunda vía (Wi-Fi de la PC a la red institucional) es
-  preferible a conectar el router nuevo a la institucional por el puerto
-  WAN — evita el riesgo de doble red con comportamiento impredecible.
+  alcanza con conectar el WAN del router a internet (probado, ver §4). La
+  alternativa es dejarle a la PC una segunda vía (su propio Wi-Fi a otra
+  red), con el WAN sin usar.
 
 **Router:** casi cualquiera sirve, siempre que se pueda resetear y
 configurar a mano; preferible con 5 GHz. Cable: alcanza con Cat5e/Cat6,
@@ -115,6 +119,6 @@ mismo setup se lleva a otra sala o a un show.
 
 ## 4. Estado
 
-Pendiente de armar: falta conseguir un router (evaluar si hay uno viejo
-disponible) y un cable UTP con el largo adecuado al recorrido real hasta
-la sala.
+Armado y probado en sala: router propio con la PC por UTP y el WAN
+conectado a internet (inestable), sin impacto en el funcionamiento ni en
+la respuesta del web control ni del prompter.
