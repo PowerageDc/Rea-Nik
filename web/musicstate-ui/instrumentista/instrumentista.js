@@ -165,7 +165,7 @@ var nikInstrumentistaSectionPrevTriple = null;
 var nikInstrumentistaSectionFillArmedIdx = null;
 var nikInstrumentistaSectionJumpPendingIdx = null;
 
-function nikInstrumentistaSectionId(sec) { return sec ? sec.id : null; }
+function nikInstrumentistaSectionId(sec) { return sec ? (sec.id + "|" + sec.displayName) : null; }
 
 function nikInstrumentistaPaintSectionRow(curIdx) {
     var byIndex = (typeof nikMsSectionByIndex === "function") ? nikMsSectionByIndex : function () { return null; };

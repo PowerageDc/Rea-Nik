@@ -46,7 +46,7 @@ var g_markers = [];                    // mismo formato que main.js: array de to
                                         // por marker ([.., nombre, id, pos, color]) — layout
                                         // confirmado contra core/wwr-dispatch.js (getValFromAr).
 
-var NIK_MS_DEBUG = true;
+var NIK_MS_DEBUG = false;
 function nikMsLog(tag, extra) {
     if (!NIK_MS_DEBUG) return;
     console.log("[ms " + Math.round(performance.now()) + "] " + tag + (extra !== undefined ? " " + extra : ""));
@@ -79,34 +79,7 @@ function wwr_onreply(results, sentAtMs) {
                     if (tok[3] != nikCurrentProjectName) {
                         nikCurrentProjectName = tok[3];
                         nikMsLog("NAME_CHANGE", JSON.stringify(tok[3]) + " markers=" + g_markers.length);
-                        // Limpiar ANTES de re-pedir: si el proyecto nuevo no tiene
-                        // datos propios (pestaña "sin guardar"), el puente Lua no
-                        // tiene ProjExtState de origen para pisar el ExtState global
-                        // -- sin este reset, quedaban colgados los valores del
-                        // proyecto anterior (bug reportado en sesión, causado por
-                        // Nik_RemoteState_Poll.lua ensuciando el dirty flag al
-                        // cerrar la última tab; workaround del lado cliente, no
-                        // toca ese script).
-                        nikMsResetProjectState();
-                        // Mismo criterio que el remoto general: re-disparar todo lo
-                        // que es por-proyecto al detectar el cambio.
-                        if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
-                        nikMsRequestTempoAndTimesig();
-                        // Mitigación de carrera (ver sesión): si una respuesta
-                        // rezagada del proyecto anterior llega DESPUÉS del reset,
-                        // repuebla con datos viejos -- no hay forma de detectar esto
-                        // por protocolo (las respuestas no vienen etiquetadas con a
-                        // qué proyecto correspondían). Este segundo pedido, más
-                        // tardío, asume orden de llegada FIFO del lado del server de
-                        // REAPER -- no es una garantía formal, es la mitigación más
-                        // barata posible. Si el problema persiste, hace falta algo
-                        // más robusto (token de generación) o atacar la causa raíz
-                        // del lado Lua (Nik_RemoteState_Poll.lua ensuciando el dirty
-                        // flag).
-                        window.setTimeout(function () {
-                            if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
-                            nikMsRequestTempoAndTimesig();
-                        }, 400);
+                        nikMsHandleProjectSwitch("name");
                     }
                     nikLastProjectNameUpdate = Date.now();
                 }
@@ -175,9 +148,60 @@ function wwr_onreply(results, sentAtMs) {
                 // sobre g_markers ya ordenado — guard de existencia, mismo
                 // motivo que arriba.
                 if (typeof nikMsSectionOnMarkersUpdated === "function") nikMsSectionOnMarkersUpdated();
+                var markersSig = g_markers.length + ":" + g_markers.map(function (t) { return t.join("|"); }).join(";");
+                var markersChanged = nikMsMarkersSig !== null && markersSig !== nikMsMarkersSig;
+                nikMsMarkersSig = markersSig;
+                if (markersChanged) nikMsHandleProjectSwitch("markers");
                 break;
         }
     }
+}
+
+var nikMsMarkersSig = null;
+var nikMsLastSwitchAtMs = -Infinity;
+var nikMsLastSwitchSource = "";
+var NIK_MS_SWITCH_DEDUPE_MS = 2000;
+
+// Punto único de "cambió el proyecto activo": reset del estado por-proyecto
+// + re-pedido de datos (armonía, key, roles, cues, tempo/timesig).
+// Dos disparadores:
+//   "name"    -- cambio de active_project_name (poll lento de 1000 ms: llega
+//                hasta ~1 s después del cambio real de tab).
+//   "markers" -- cambio de la firma de la lista de markers en
+//                MARKER_LIST_END (ciclo de 500 ms): casi siempre llega antes
+//                que el nombre y deja acordes y secciones sincronizados.
+// Dedupe: si el otro disparador ya actuó hace menos de NIK_MS_SWITCH_DEDUPE_MS
+// se saltea, para no hacer reset y re-pedido dos veces por el mismo cambio.
+// Falso positivo conocido e inocuo: editar markers a mano en REAPER con la UI
+// abierta dispara "markers" (un reset y una recarga).
+function nikMsHandleProjectSwitch(source) {
+    var now = performance.now();
+    if (source !== nikMsLastSwitchSource && now - nikMsLastSwitchAtMs < NIK_MS_SWITCH_DEDUPE_MS) {
+        nikMsLog("SWITCH_SKIP", source);
+        return;
+    }
+    nikMsLastSwitchAtMs = now;
+    nikMsLastSwitchSource = source;
+    nikMsLog("SWITCH", source);
+    // Limpiar ANTES de re-pedir: si el proyecto nuevo no tiene datos
+    // propios (pestaña "sin guardar"), el puente Lua no tiene ProjExtState
+    // de origen para pisar el ExtState global -- sin este reset quedaban
+    // colgados los valores del proyecto anterior (workaround del lado
+    // cliente, causado por Nik_RemoteState_Poll.lua ensuciando el dirty
+    // flag al cerrar la última tab).
+    nikMsResetProjectState();
+    if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
+    nikMsRequestTempoAndTimesig();
+    // Mitigación de carrera: si una respuesta rezagada del proyecto
+    // anterior llega DESPUÉS del reset, repuebla con datos viejos (las
+    // respuestas no vienen etiquetadas por proyecto). Este segundo pedido
+    // asume orden FIFO del server de REAPER -- no es garantía formal. Si
+    // persiste, hace falta un token de generación o atacar la causa raíz
+    // en Nik_RemoteState_Poll.lua.
+    window.setTimeout(function () {
+        if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
+        nikMsRequestTempoAndTimesig();
+    }, 400);
 }
 
 // Vuelve todo el estado por-proyecto a "vacío" -- llamado al detectar
@@ -192,8 +216,6 @@ function nikMsResetProjectState() {
     if (typeof nikMsTempoSetMap === "function") nikMsTempoSetMap(null);
     nikMsLastKnownPublishVersion = null;
     nikMsLog("RESET");
-    g_markers = [];
-    if (typeof nikMsSectionOnMarkersUpdated === "function") nikMsSectionOnMarkersUpdated();
     nikReaPitchLastSemitone = "none";
 }
 
