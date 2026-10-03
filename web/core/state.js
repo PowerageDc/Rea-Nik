@@ -12,7 +12,17 @@ var last_transport_state = -1, mouseDown = 0, last_time_str = "",
     startX = 0, joggerAgg = 0, recarmCountAr = [], recarmCount = 0, newPos = -1,
     trackHeightsAr = [], trackColoursAr = [], trackNumbersAr = [], trackNamesAr = [], trackVolumeAr = [],
     trackFlagsAr = [], trackSendCntAr = [], trackRcvCntAr = [], trackHwOutCntAr = [], trackSendHwCntAr = [], trackPeakAr = [], trackMeterAr = [], faderConAr = [],
-    hereCss = document.styleSheets[1], transitions = 1;
+    hereCss = null, transitions = 1;
+
+// Hoja principal (styles.css): se busca por href en vez de por índice, para
+// no depender del orden/cantidad de stylesheets cargadas antes que este script.
+(function () {
+    for (var i = 0; i < document.styleSheets.length; i++) {
+        var h = document.styleSheets[i].href;
+        if (h && h.indexOf("styles.css") !== -1) { hereCss = document.styleSheets[i]; break; }
+    }
+    if (!hereCss) console.warn("[state.js] No se encontró styles.css en document.styleSheets: calculateScale()/#options no van a funcionar.");
+})();
 
 // Modo de display de #status: "measures" | "minsec" — toggle sticky vía
 // long tap (ver core/init.js / core/long-press.js). Independiente del
