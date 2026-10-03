@@ -108,7 +108,8 @@ function nikInstrumentistaFormatTempo() {
 }
 
 function nikInstrumentistaFormatSongName() {
-    return nikCurrentProjectName ? nikCurrentProjectName.replace(/\.rpp$/i, "") : "—";
+    if (!nikCurrentProjectName || !/\.rpp$/i.test(nikCurrentProjectName)) return "\u00A0";
+    return nikCurrentProjectName.replace(/\.rpp$/i, "");
 }
 
 var NIK_INSTRUMENTISTA_STALE_MS = 1500;
@@ -178,7 +179,7 @@ function nikInstrumentistaPaintSectionRow(curIdx) {
 
     prevEl.textContent = prev ? prev.displayName : "";
     prevEl.style.color = "";
-    curEl.textContent = cur ? cur.displayName : "—";
+    curEl.textContent = cur ? cur.displayName : "\u00A0";
     curEl.style.color = cur ? (cur.resolvedColor || "") : "";
     nikInstrumentistaPrepareNextLabel(next);
     void nextFillEl.offsetHeight;
@@ -215,6 +216,7 @@ function nikInstrumentistaResetSectionFill() {
 }
 
 function nikInstrumentistaFlipTransform(beforeRect, afterRect) {
+    if (!beforeRect.height || !afterRect.height) return "";
     var dx = (beforeRect.left + beforeRect.width / 2) - (afterRect.left + afterRect.width / 2);
     var dy = (beforeRect.top + beforeRect.height / 2) - (afterRect.top + afterRect.height / 2);
     var s = beforeRect.height / afterRect.height;
@@ -277,10 +279,11 @@ function nikInstrumentistaShiftSectionRow(newCurIdx) {
     var newCur = byIndex(newCurIdx);
     var newNext = byIndex(newCurIdx + 1);
 
-    prevEl.textContent = curEl.textContent;
+    var newPrev = byIndex(newCurIdx - 1);
+    prevEl.textContent = newPrev ? newPrev.displayName : "";
     prevEl.style.color = curEl.style.color || "var(--ms-fg)";
     prevEl.style.opacity = "1";
-    curEl.textContent = newCur ? newCur.displayName : "—";
+    curEl.textContent = newCur ? newCur.displayName : "\u00A0";
     curEl.style.color = newCur ? (newCur.resolvedColor || "") : "";
     nikInstrumentistaPrepareNextLabel(newNext);
 
@@ -365,7 +368,7 @@ function nikInstrumentistaRenderSectionRow() {
         }
         nikInstrumentistaSectionPrevTriple = newTriple;
         return;
-    } else if (newTriple.prevId === old.curId && newTriple.curId === old.nextId && !nikInstrumentistaChordLastRenderJumped) {
+    } else if (newTriple.curId !== null && newTriple.prevId === old.curId && newTriple.curId === old.nextId && !nikInstrumentistaChordLastRenderJumped) {
         nikInstrumentistaShiftSectionRow(curIdx);
         nikInstrumentistaSectionFillArmedIdx = null;
     } else {
