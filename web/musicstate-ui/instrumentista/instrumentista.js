@@ -733,6 +733,7 @@ function nikInstrumentistaRenderBeat() {
             nikInstrumentistaResetBeatProgress();
             nikInstrumentistaBeatProgressFilling = false;
         }
+        nikInstrumentistaChordEventLastKey = null;
         return;
     }
 
