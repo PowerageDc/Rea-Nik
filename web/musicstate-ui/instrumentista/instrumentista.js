@@ -722,7 +722,7 @@ function nikInstrumentistaRenderBeat() {
 
     var pulseCount = nikBeat.pulseCountAt(pos.bar);
     var pulseIdx = nikBeat.currentPulseIndex(pos.bar, pos.qn_offset);
-    var pulseKey = pos.bar + "_" + pulseIdx;
+    var pulseKey = pos.bar + "_" + pulseIdx + "_" + pulseCount;
     if (pulseKey !== nikInstrumentistaBeatLastKey) {
         nikInstrumentistaBeatLastKey = pulseKey;
         nikInstrumentistaFlashBeatDot(pulseIdx, pulseCount);
