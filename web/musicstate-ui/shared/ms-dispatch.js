@@ -46,6 +46,12 @@ var g_markers = [];                    // mismo formato que main.js: array de to
                                         // por marker ([.., nombre, id, pos, color]) — layout
                                         // confirmado contra core/wwr-dispatch.js (getValFromAr).
 
+var NIK_MS_DEBUG = true;
+function nikMsLog(tag, extra) {
+    if (!NIK_MS_DEBUG) return;
+    console.log("[ms " + Math.round(performance.now()) + "] " + tag + (extra !== undefined ? " " + extra : ""));
+}
+
 // ---- Parser central ----
 
 function wwr_onreply(results, sentAtMs) {
@@ -72,6 +78,7 @@ function wwr_onreply(results, sentAtMs) {
                 if (tok[1] == "NikRemote" && tok[2] == "active_project_name") {
                     if (tok[3] != nikCurrentProjectName) {
                         nikCurrentProjectName = tok[3];
+                        nikMsLog("NAME_CHANGE", JSON.stringify(tok[3]) + " markers=" + g_markers.length);
                         // Limpiar ANTES de re-pedir: si el proyecto nuevo no tiene
                         // datos propios (pestaña "sin guardar"), el puente Lua no
                         // tiene ProjExtState de origen para pisar el ExtState global
@@ -122,6 +129,7 @@ function wwr_onreply(results, sentAtMs) {
                     if (typeof nikMusicStateSetTimesigMap === "function") nikMusicStateSetTimesigMap(tok[3]);
                 }
                 if (tok[1] == "NikMusicState" && tok[2] == "harmony_data") {
+                    nikMsLog("HARMONY_IN", "len=" + (tok[3] ? tok[3].length : 0));
                     if (typeof nikMusicStateSetHarmonyData === "function") nikMusicStateSetHarmonyData(tok[3]);
                 }
                 if (tok[1] == "NikMusicState" && tok[2] == "project_key") {
@@ -162,6 +170,7 @@ function wwr_onreply(results, sentAtMs) {
                 g_markers.push(tok);
                 break;
             case "MARKER_LIST_END":
+                nikMsLog("MARKERS_IN", "count=" + g_markers.length);
                 // ms-section.js (todavía no escrito) resuelve la sección actual
                 // sobre g_markers ya ordenado — guard de existencia, mismo
                 // motivo que arriba.
@@ -182,6 +191,7 @@ function nikMsResetProjectState() {
     if (typeof nikMusicStateSetProjectRoles === "function") nikMusicStateSetProjectRoles(null);
     if (typeof nikMsTempoSetMap === "function") nikMsTempoSetMap(null);
     nikMsLastKnownPublishVersion = null;
+    nikMsLog("RESET");
     g_markers = [];
     if (typeof nikMsSectionOnMarkersUpdated === "function") nikMsSectionOnMarkersUpdated();
     nikReaPitchLastSemitone = "none";

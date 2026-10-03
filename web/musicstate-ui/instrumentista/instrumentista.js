@@ -369,9 +369,11 @@ function nikInstrumentistaRenderSectionRow() {
         nikInstrumentistaSectionPrevTriple = newTriple;
         return;
     } else if (newTriple.curId !== null && newTriple.prevId === old.curId && newTriple.curId === old.nextId && !nikInstrumentistaChordLastRenderJumped) {
+        nikMsLog("SECTION_SHIFT", "cur=" + newTriple.curId);
         nikInstrumentistaShiftSectionRow(curIdx);
         nikInstrumentistaSectionFillArmedIdx = null;
     } else {
+        nikMsLog("SECTION_JUMP", "cur=" + newTriple.curId);
         nikInstrumentistaJumpSectionRow(curIdx);
         nikInstrumentistaSectionFillArmedIdx = null;
     }
@@ -707,9 +709,11 @@ function nikInstrumentistaRenderChordStrip() {
 
     var delta = nikInstrumentistaDetectShift(nikInstrumentistaChordPrevWindow, newList);
     if (delta === null) {
+        nikMsLog("CHORDS_JUMP");
         nikInstrumentistaChordLastRenderJumped = true;
         nikInstrumentistaRebuildChordSlots(newList, true);
     } else {
+        nikMsLog("CHORDS_SHIFT");
         nikInstrumentistaShiftChordSlots(newList);
     }
     nikInstrumentistaChordPrevWindow = newList;
