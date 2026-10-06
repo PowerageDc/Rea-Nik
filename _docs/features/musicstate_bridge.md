@@ -31,8 +31,7 @@ Centraliza el copiado `ProjExtState → ExtState` para que el Helper y
 (`musicstate_data_model.md` §4.7) no pasan por `bridgeKey` ni por
 `bridgeAll`: su origen no es `ProjExtState` sino el track `🎤 Lyrics`
 dentro del `.rpp`, y los publica directo a `ExtState`
-`Nik_MusicState_PublishLyrics.lua` (*diseño acordado, pendiente de
-implementar*). No se agregan a `M.KEYS` a propósito: `bridgeAll` no
+`Nik_MusicState_PublishLyrics.lua`. No se agregan a `M.KEYS` a propósito: `bridgeAll` no
 encontraría dato en `ProjExtState` y las borraría del lado global en
 cada llamada. Ese script replica por su cuenta el criterio de
 `bridgeKey`: si el proyecto activo no tiene track de lyrics, borra las

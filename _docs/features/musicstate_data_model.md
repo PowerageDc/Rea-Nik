@@ -17,9 +17,9 @@ Documentos relacionados:
 - `features/musicstate_helper.md`: el panel ReaImGui de carga.
 - `features/musicstate_instrumentista.md`: UI de instrumentista
   (prompter), modelo de sincronización con el transporte.
-- `features/musicstate_lyrics.md`: UI de lyrics para cantantes
-  (*pendiente de redactar*). El contrato de datos está en §4.7 de este
-  doc.
+- `features/musicstate_lyrics.md`: estado y decisiones de la feature de
+  lyrics para cantantes (doc liviano, en construcción). El contrato de
+  datos está en §4.7 de este doc.
 - `07_RED_SALA_ENSAYO.md`: diagnóstico e infraestructura de red para la
   sala (no es parte de esta feature, pero la UI de instrumentista
   depende de que la red aguante).
@@ -109,6 +109,23 @@ para este mecanismo se arma **compacto en una sola línea** en el script
 Lua, sin whitespace ni saltos; no se confía en que el cliente limpie el
 escape. Mismo criterio que los strings planos de `tempo_map` y
 `timesig_map`.
+
+**El web control duplica cada barra invertida.** Una `\` en el valor
+vuelve como `\\`. En un JSON afecta a todo escape: `\"` llega como
+`\\"` y rompe el `JSON.parse` (verificado con `lyrics_data` y una línea
+con comillas; los acentos y el resto del UTF-8 llegan bien). Como el
+payload compacto nunca lleva tabs ni saltos de línea reales, la reversión
+es exacta y determinista: el lector reemplaza cada par `\\` por `\`
+**antes** del `JSON.parse`:
+
+```js
+raw.replace(/\\\\/g, "\\")
+```
+
+Aplica a toda key cuyo valor pueda llevar texto libre con comillas o
+barras. Reproducible con `Tests-Debug/Nik_Tests_ExtStateProbe.lua`.
+Si REAPER dejara de escapar así, una letra con comillas dejaría de
+parsear: repetir la prueba ante cualquier cambio de versión.
 
 
 ## 4. Modelo de datos
@@ -246,7 +263,8 @@ redondeo porque el display de REAPER trunca a centésimas.
 
 ### 4.7. `lyrics_data` y `lyrics_version`
 
-*Diseño acordado, pendiente de implementar.* Es la única key de este
+*Publicador implementado (`Nik_MusicState_PublishLyrics.lua`); capa
+cliente pendiente.* Es la única key de este
 namespace cuyo origen no es el Helper ni `ProjExtState`: las líneas de
 letra viven como eventos lyric MIDI dentro del `.rpp`, en un track
 dedicado (`🎤 Lyrics`; el script lo descubre por nombre, sin distinguir
@@ -290,6 +308,11 @@ igual a la duración del compás.
 
 **Orden.** Por `(compás, qn_offset)` dentro de cada compás, igual que el
 resto de las keys keyed por compás.
+
+**Lectura.** El setter del cliente debe des-escapar las barras
+invertidas antes del `JSON.parse` (ver §3): una línea con comillas
+(`Dijo "hola"`) o con barra (`a\b`) llega duplicada y no parsea sin ese
+paso. Verificado con una letra de prueba con ambos casos.
 
 **`lyrics_version`.** Contador entero que `PublishLyrics` incrementa en
 cada publicación. **No reusa `publish_version`:** el Helper carga ese
@@ -352,10 +375,11 @@ Helper y el puente juntos.
 Ningún bug de protocolo o de modelo de datos sin corregir hoy. Sí hay
 verificaciones pendientes antes de implementar `lyrics_data` (§4.7):
 
-- **Comillas dobles en el texto de una línea:** probar el round-trip
-  completo (el web control escapa `\` como `\\`; el JSON escapa `"` como
-  `\"`) con `Nik_Tests_ExtStateProbe.lua` y una línea de prueba con
-  comillas. Nunca se ejercitó: ninguna key actual lleva comillas internas.
+- **`cues_data` y el escape de barras (§3):** el texto de una cue es
+  libre y puede llevar comillas o barras. Revisar cómo las escapa el
+  Helper al guardar y si el cliente aplica el des-escape antes del
+  `JSON.parse` en `nikMusicStateSetCuesData`; hoy solo está verificado
+  para `lyrics_data`.
 - **Tamaño máximo de `EXTSTATE`:** la documentación del web control solo
   menciona un tope de ~16k para `PROJEXTSTATE`; el de `EXTSTATE` no está
   documentado. Medir con una letra larga real.
