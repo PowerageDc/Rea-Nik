@@ -16,7 +16,9 @@ Centraliza el copiado `ProjExtState → ExtState` para que el Helper y
 
 - `M.NAMESPACE = "NSAUDIOMUSIC"` (ProjExtState, por proyecto),
   `M.BRIDGE_NAMESPACE = "NikMusicState"` (ExtState global).
-- `M.KEYS`: las cinco keys de `musicstate_data_model.md` §2, en orden fijo.
+- `M.KEYS`: las cinco keys de `musicstate_data_model.md` §2 con origen en
+  `ProjExtState`, en orden fijo. **No incluye** `lyrics_data` ni
+  `lyrics_version` (ver más abajo).
 - `M.bridgeKey(proj, key)`: copia una key. **Si no hay dato para ese
   proyecto, borra la key del lado global** (`DeleteExtState`) en vez de
   dejar pegado el valor del proyecto anterior. Sin este borrado, un
@@ -24,6 +26,17 @@ Centraliza el copiado `ProjExtState → ExtState` para que el Helper y
   valores de la sesión anterior, silenciosamente.
 - `M.bridgeAll(proj)`: recorre `M.KEYS` con `bridgeKey`, devuelve cuántas
   se copiaron y cuáles fallaron.
+
+**Lyrics, fuera del puente.** `lyrics_data` y `lyrics_version`
+(`musicstate_data_model.md` §4.7) no pasan por `bridgeKey` ni por
+`bridgeAll`: su origen no es `ProjExtState` sino el track `🎤 Lyrics`
+dentro del `.rpp`, y los publica directo a `ExtState`
+`Nik_MusicState_PublishLyrics.lua` (*diseño acordado, pendiente de
+implementar*). No se agregan a `M.KEYS` a propósito: `bridgeAll` no
+encontraría dato en `ProjExtState` y las borraría del lado global en
+cada llamada. Ese script replica por su cuenta el criterio de
+`bridgeKey`: si el proyecto activo no tiene track de lyrics, borra las
+dos keys globales en vez de dejar pegada la letra del proyecto anterior.
 
 ## 2. `Nik_MusicState_PublishAll.lua`
 
@@ -33,7 +46,8 @@ consola cuántas se copiaron. Cubre el caso en que el puente global quedó
 desactualizado sin que el Helper haya vuelto a guardar nada (por ejemplo,
 un cambio de pestaña de proyecto): un refresco de puente, no una carga de
 datos. Se dispara on-demand (conexión de UI, cambio de proyecto), igual
-que `Nik_Playrate_ReadTempoMap.lua`; no vive en el poll de fondo.
+que `Nik_Playrate_ReadTempoMap.lua`; no vive en el poll de fondo. No
+toca las keys de lyrics (§1): tienen su propio script de publicación.
 
 ## 3. Guardado desde el Helper (`nikMusicStateSaveAndPublish`)
 
@@ -92,6 +106,16 @@ de proyecto ya dispara un `nikMusicStateRequestAll()` propio (§4); el
 chequeo de `publish_version` es una capa aparte, para el caso de que la
 armonía cambie mientras la UI ya está conectada al proyecto correcto.
 
+
+**`lyrics_version`.** Cumple el mismo rol para la letra
+(`musicstate_data_model.md` §4.7), con un contador propio que
+incrementa `PublishLyrics`. No reusa `publish_version`: el Helper carga
+ese valor al abrirse y le suma 1 al guardar, así que si otro script lo
+incrementara, el siguiente guardado repetiría el mismo número con datos
+distintos y el cliente no detectaría el cambio. La UI de lyrics lo
+compara igual que `publish_version` y lo resetea a `null` en cada
+cambio de proyecto, y pide la letra con un pedido propio, separado de
+`nikMusicStateRequestAll()`.
 
 ## 6. Cómo testear: round-trip manual
 
