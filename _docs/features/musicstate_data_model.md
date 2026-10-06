@@ -17,6 +17,9 @@ Documentos relacionados:
 - `features/musicstate_helper.md`: el panel ReaImGui de carga.
 - `features/musicstate_instrumentista.md`: UI de instrumentista
   (prompter), modelo de sincronización con el transporte.
+- `features/musicstate_lyrics.md`: UI de lyrics para cantantes
+  (*pendiente de redactar*). El contrato de datos está en §4.7 de este
+  doc.
 - `07_RED_SALA_ENSAYO.md`: diagnóstico e infraestructura de red para la
   sala (no es parte de esta feature, pero la UI de instrumentista
   depende de que la red aguante).
@@ -59,6 +62,15 @@ Helper (ReaImGui) ── guarda ──► ProjExtState  NSAUDIOMUSIC/<key>
                                         │  GET/EXTSTATE (web control)
                                         ▼
         Cliente JS: core/music-state.js ──► UIs (prompter, ...)
+
+Segundo camino (solo lyrics, no pasa por ProjExtState ni por el Bridge):
+
+  Track "🎤 Lyrics" (eventos lyric MIDI, dentro del .rpp)
+                                        │
+             Nik_MusicState_PublishLyrics.lua (one-shot)
+                                        ▼
+        ExtState global  NikMusicState/lyrics_data + lyrics_version
+        (misma lectura por GET/EXTSTATE que el resto, ver arriba)
 ```
 
 | Key | ProjExtState (`NSAUDIOMUSIC`) | ExtState global (`NikMusicState`) | Contenido |
@@ -68,6 +80,8 @@ Helper (ReaImGui) ── guarda ──► ProjExtState  NSAUDIOMUSIC/<key>
 | `project_roles` | sí | sí | lista de roles de intérprete (§4.3) |
 | `cues_data` | sí | sí | indicaciones por rol (§4.4) |
 | `publish_version` | sí | sí | contador entero que el Helper incrementa en cada "Guardar y Publicar"; el cliente lo usa para detectar datos nuevos (ver `musicstate_bridge.md` §5) |
+| `lyrics_data` | no (el origen es el track `🎤 Lyrics` dentro del `.rpp`, ver §4.7) | sí | líneas de letra por compás (§4.7) |
+| `lyrics_version` | no | sí | contador entero que `Nik_MusicState_PublishLyrics.lua` incrementa en cada publicación de lyrics; independiente de `publish_version` (§4.7) |
 
 Además, la capa cliente consume dos keys que **no** pertenecen a este
 namespace: `NikRemote/tempo_map` y `NikRemote/timesig_map` (§4.5).
@@ -102,7 +116,8 @@ escape. Mismo criterio que los strings planos de `tempo_map` y
 Convenciones comunes: los compases son **1-indexed**; las posiciones
 dentro de un compás se expresan en **`qn_offset`** (negras desde el
 downbeat del compás) con grilla de 0.25 (semicorchea, independiente del
-compás).
+compás). **Excepción:** `lyrics_data` (§4.7) no usa la grilla, su
+`qn_offset` es libre.
 
 ### 4.1. `harmony_data`
 
@@ -229,6 +244,79 @@ cliente, QN → beat en el Helper). El resultado tiene un pequeño error de
 redondeo porque el display de REAPER trunca a centésimas.
 
 
+### 4.7. `lyrics_data` y `lyrics_version`
+
+*Diseño acordado, pendiente de implementar.* Es la única key de este
+namespace cuyo origen no es el Helper ni `ProjExtState`: las líneas de
+letra viven como eventos lyric MIDI dentro del `.rpp`, en un track
+dedicado (`🎤 Lyrics`; el script lo descubre por nombre, sin distinguir
+mayúsculas). `Nik_MusicState_PublishLyrics.lua` (one-shot) las lee y las
+publica directo a `ExtState`, sin pasar por `ProjExtState` ni por
+`Bridge.KEYS`/`bridgeAll` (ver `musicstate_bridge.md`).
+
+**Origen.** Eventos de texto tipo LYRIC (tipo 5) de los items MIDI del
+track, leídos con `MIDI_GetTextSysexEvt`. Se acepta que no haya notas: un
+lyric sin nota es válido. No se usa `GetTrackMIDILyrics`: devuelve la
+posición truncada a centésimas de beat y mezcla el texto con tabs.
+
+**Formato.** JSON compacto en una sola línea, keyed por número de compás
+(string), con un array de eventos por compás. Misma estructura que
+`harmony_data` y `cues_data`, así que el cliente reusa el mismo aplanado:
+
+```json
+{"1":[{"qn_offset":0.0,"text":"Cuando llega la noche"}],"2":[{"qn_offset":0.0,"text":null}],"3":[{"qn_offset":0.0,"text":"¿Qué será, mañana? ñandú"}],"4":[{"qn_offset":0.376,"text":"Evento fuera de grilla"}]}
+```
+
+- **Cada evento es una línea de letra completa** (v1). Una pausa dentro
+  de una línea se carga como líneas distintas.
+- **`"text": null` es fin de línea explícito.** En el editor MIDI se
+  carga como un evento con el texto `·` (U+00B7): el editor no acepta
+  texto vacío, y el símbolo es visible en el carril. Corta el carry-over
+  de la línea vigente. Es el equivalente de `"chord": null` en §4.1.
+- **Sin marcador de fin, carry-over:** la línea vigente se mantiene hasta
+  el próximo evento. El marcador es opcional.
+- **`qn_offset` libre, sin grilla de 0.25.** La resolución real es la del
+  PPQ de REAPER (1/960 de negra), más que suficiente para sílabas o
+  progreso de línea a futuro.
+
+**Conversión de posición.** `ppq → QN absoluto` con
+`MIDI_GetProjQNFromPPQPos`; compás y offset con `TimeMap_QNToMeasures`,
+que devuelve el compás **1-indexed** (a diferencia de `measurepos` de
+`GetTempoTimeSigMarker`, ver §4.5). `qn_offset` es el QN absoluto menos
+el QN de inicio del compás. El QN absoluto se redondea (3 decimales)
+**antes** de partirlo en compás y offset: sin eso, un evento justo en un
+downbeat puede caer como 3.9999 del compás anterior, o con un offset
+igual a la duración del compás.
+
+**Orden.** Por `(compás, qn_offset)` dentro de cada compás, igual que el
+resto de las keys keyed por compás.
+
+**`lyrics_version`.** Contador entero que `PublishLyrics` incrementa en
+cada publicación. **No reusa `publish_version`:** el Helper carga ese
+valor al abrirse y le suma 1 al guardar, así que si otro script lo
+incrementara, el siguiente guardado del Helper repetiría el mismo número
+con datos distintos y el cliente no detectaría el cambio. El cliente
+compara `lyrics_version` igual que `publish_version` (ver
+`musicstate_bridge.md` §5), y se resetea a `null` en cada cambio de
+proyecto.
+
+**Higiene por proyecto.** `ExtState` es global y no etiqueta el proyecto
+(§2). Si el proyecto activo no tiene track de lyrics, `PublishLyrics`
+**borra** `lyrics_data` y `lyrics_version` del lado global
+(`DeleteExtState`); si no, quedarían las letras del proyecto anterior.
+Mismo criterio que `bridgeKey`.
+
+**Refresco.** Como la letra se edita en el editor MIDI y no en el
+Helper, nada incrementa `lyrics_version` solo: la UI la recibe al
+conectar y al cambiar de proyecto, y se refresca al republicar con la
+acción de `PublishLyrics`.
+
+**Extensibilidad.** El cliente ignora campos que no conoce, así que se
+pueden sumar campos opcionales por evento sin romper nada de v1 (por
+ejemplo, sílabas con sus offsets o una duración tomada de una nota MIDI
+para progreso por palabra/sílaba). Fuera de v1: karaoke fill, agrupación
+sílaba→línea y pausa dentro de una línea como evento propio.
+
 ## 5. Cómo testear
 
 ### 5.1. Protocolo `ProjExtState` → `ExtState`
@@ -261,9 +349,21 @@ Helper y el puente juntos.
 
 ## 6. Pendientes de esta capa
 
-Ningún bug de protocolo o de modelo de datos sin corregir hoy. Los
-pendientes de la feature están repartidos por capa, en el doc que los
-toca resolver:
+Ningún bug de protocolo o de modelo de datos sin corregir hoy. Sí hay
+verificaciones pendientes antes de implementar `lyrics_data` (§4.7):
+
+- **Comillas dobles en el texto de una línea:** probar el round-trip
+  completo (el web control escapa `\` como `\\`; el JSON escapa `"` como
+  `\"`) con `Nik_Tests_ExtStateProbe.lua` y una línea de prueba con
+  comillas. Nunca se ejercitó: ninguna key actual lleva comillas internas.
+- **Tamaño máximo de `EXTSTATE`:** la documentación del web control solo
+  menciona un tope de ~16k para `PROJEXTSTATE`; el de `EXTSTATE` no está
+  documentado. Medir con una letra larga real.
+- **Emparejamiento lyric↔nota MIDI** (para duración o progreso por
+  sílaba a futuro): no verificado, la prueba de lyrics se hizo sin notas.
+
+Los demás pendientes de la feature están repartidos por capa, en el doc
+que los toca resolver:
 
 - `musicstate_client.md` §4: bug de grafía con delta 0 en la
   transposición.
