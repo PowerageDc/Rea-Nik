@@ -127,3 +127,49 @@ foco a mitad de edición. La mitigación es usar un valor **congelado**,
 capturado al entrar en edición, para todo lo que no sea el propio input,
 y aplicar el valor final recién cuando la transición confirma que se
 terminó de editar.
+
+## 4. Botón o tecla de "mantener": flancos, layout estable y widgets que cambian
+
+Primer caso: la cola de tap-to-sync de la tab Lyrics del MusicState Helper
+(`features/musicstate_lyrics.md` §8.5). Aplica a cualquier control que
+dependa de mantener apretado (tap con hold, push-to-talk, arrastre manual).
+
+- **Una sola señal `held`, flancos por comparación con el frame
+  anterior.** Si el gesto puede venir de una tecla y de un botón, no
+  mezclar `IsKeyPressed`/`IsKeyReleased` con `IsItemActive`: la tecla se
+  lee con `IsKeyDown` y el botón con `IsItemActive`, se combinan en un
+  booleano, y el "presionó" y el "soltó" salen de comparar con el valor
+  del frame anterior (guardado en el estado). Un `IsKeyDown` tampoco
+  tiene auto-repeat, así que no hace falta el `false` de `IsKeyPressed`.
+- **Guards de la tecla:** ventana enfocada con
+  `FocusedFlags_ChildWindows()` y ningún item activo
+  (`IsAnyItemActive`), salvo el propio botón (si no, el click sostenido
+  se bloquearía a sí mismo). Si la ventana pierde el foco con la tecla
+  apretada, `held` pasa a `false` y se genera el "soltó". Si el control
+  puede quedar oculto (header colapsado, tab cerrada), reiniciar el
+  valor previo en esa rama, o el próximo frame visible genera un flanco
+  falso.
+- **Un widget que se deshabilita mientras se lo mantiene pierde el
+  release.** `BeginDisabled` o dejar de dibujarlo hace que ImGui lo dé
+  por inactivo ese mismo frame, y el "soltó" se pierde. Mantenerlo
+  habilitado y cambiar solo la etiqueta (con `###id` fijo, ver §2).
+- **El layout alrededor tiene que ser estable.** Un texto condicional
+  que aparece o desaparece encima o al lado de un botón lo corre
+  mientras se lo aprieta, y el mouse suelta fuera de él: el click se
+  pierde sin error. Pasa también con avisos que dependen del estado
+  del propio botón (`IsAnyItemActive` es `true` durante el click).
+  Reservar siempre la línea, con un texto vacío o `' '` como relleno.
+- **Colores de un botón "encendido":** el estado apretado o con mouse
+  encima pisa a `Col_Button`. Para que un color se vea también con el
+  mouse hay que empujar los tres (`Col_Button`, `Col_ButtonHovered`,
+  `Col_ButtonActive`) y sacar los tres (`PopStyleColor(ctx, 3)`). Con la
+  tecla no se nota, porque el botón no está apretado.
+- **Parámetros que se ajustan seguido:** `DragInt` o `SliderInt` en lugar
+  de `InputInt`. Un `InputInt` queda con foco tras tipear y bloquea los
+  atajos de teclado sin avisar. Persistir con
+  `IsItemDeactivatedAfterEdit`, no en cada frame del arrastre. Si igual
+  puede haber un item activo, un aviso visible ("atajo desactivado: hay
+  un campo en edición") evita la confusión.
+- **`ImGui_GetKeyName` no existe** en la versión de ReaImGui instalada
+  (error de `nil`): la etiqueta de una tecla se guarda como texto fijo
+  junto a la constante de la tecla.
