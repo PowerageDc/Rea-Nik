@@ -112,4 +112,73 @@ function M.EnsureTake(track, t_from, t_to)
   return reaper.GetActiveTake(prev)
 end
 
+function M.CleanText(s)
+  s = s:gsub("[\t\r\n]+", " ")
+  return (s:gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+function M.GetTimeContext()
+  local s, e = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
+  if e - s > M.EPS_TIME * 2 then return s, e end
+  return reaper.GetCursorPosition(), nil
+end
+
+function M.InsertAt(track, t_from, t_to, time, text)
+  local take = M.EnsureTake(track, t_from, t_to)
+  local ppq = reaper.MIDI_GetPPQPosFromProjTime(take, time)
+  reaper.MIDI_InsertTextSysexEvt(take, false, false, ppq, 5, text)
+  reaper.MIDI_Sort(take)
+end
+
+function M.PlanLine(track, t1, t2)
+  local has_sel = t2 ~= nil
+  local end_time = has_sel and t2 or t1
+  local events = track and M.CollectEvents(track) or {}
+  local ctx = {
+    t1 = t1,
+    t2 = t2,
+    has_sel = has_sel,
+    end_time = end_time,
+    events = events,
+    at_start = M.EventsNear(events, t1),
+    at_end = M.EventsNear(events, end_time),
+    inside = has_sel and M.EventsBetween(events, t1, t2) or {},
+    prefill = "",
+  }
+  for _, ev in ipairs(ctx.at_start) do
+    if ev.text ~= M.END_MARK then
+      ctx.prefill = ev.text
+      break
+    end
+  end
+  return ctx
+end
+
+function M.ApplyLine(track, ctx, text, opts)
+  opts = opts or {}
+  if text == "" and #ctx.at_end > 0 then
+    return false, "end_occupied"
+  end
+  local undo_name = text == "" and "Lyrics: marcador de fin" or "Lyrics: ingresar línea"
+  reaper.Undo_BeginBlock()
+  if not track then track = M.CreateLyricsTrack() end
+  if text == "" then
+    M.InsertAt(track, ctx.t1, ctx.end_time, ctx.end_time, M.END_MARK)
+  else
+    local to_delete = {}
+    for _, ev in ipairs(ctx.at_start) do to_delete[#to_delete + 1] = ev end
+    if opts.replace_inside then
+      for _, ev in ipairs(ctx.inside) do to_delete[#to_delete + 1] = ev end
+    end
+    if #to_delete > 0 then M.DeleteEvents(to_delete) end
+    M.InsertAt(track, ctx.t1, ctx.end_time, ctx.t1, text)
+    if ctx.has_sel and #ctx.at_end == 0 then
+      M.InsertAt(track, ctx.t1, ctx.end_time, ctx.t2, M.END_MARK)
+    end
+  end
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock(undo_name, -1)
+  return true, track
+end
+
 return M
