@@ -115,20 +115,22 @@ local function drawQueue(ctx, Sy, Lyrics)
   reaper.ImGui_BeginDisabled(ctx, done)
   if Sy.held_prev then
     reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), COLOR_TAP_HELD)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), COLOR_TAP_HELD)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), COLOR_TAP_HELD)
   end
   reaper.ImGui_Button(ctx, string.format('TAP (mantener)  [%s]###tap', KEY_TAP_LABEL), avail_w, 56)
   local btn_active = reaper.ImGui_IsItemActive(ctx)
-  if Sy.held_prev then reaper.ImGui_PopStyleColor(ctx) end
+  if Sy.held_prev then reaper.ImGui_PopStyleColor(ctx, 3) end
   reaper.ImGui_EndDisabled(ctx)
 
   local held = readHeld(ctx, btn_active)
   if held and not Sy.held_prev then onTapPress(Sy, Lyrics) end
   Sy.held_prev = held
 
-  if not playing and not done then
-    reaper.ImGui_TextDisabled(ctx, 'Inicia la reproduccion para tapear.')
-  elseif reaper.ImGui_IsAnyItemActive(ctx) and not btn_active then
+  if reaper.ImGui_IsAnyItemActive(ctx) and not btn_active then
     reaper.ImGui_TextDisabled(ctx, 'Tecla de tap desactivada: hay un campo en edicion.')
+  elseif not playing and not done then
+    reaper.ImGui_TextDisabled(ctx, 'Inicia la reproduccion para tapear.')
   elseif Sy.msg ~= '' then
     reaper.ImGui_TextDisabled(ctx, Sy.msg)
   end
@@ -162,8 +164,34 @@ local function drawQueue(ctx, Sy, Lyrics)
   reaper.ImGui_TextDisabled(ctx, 'negativo = inserta antes')
 end
 
+local function tapExists(S, Lyrics, e)
+  for _, ev in ipairs(Lyrics.EventsNear(S.events, e.time)) do
+    if ev.text ~= Lyrics.END_MARK then return true end
+  end
+  return false
+end
+
+-- Ctrl+Z de REAPER o un borrado a mano pueden sacar lineas que la cola ya
+-- dio por tapeadas. Solo se revisa cuando la cantidad de lineas baja (un
+-- nudge no la cambia) y solo desde el final de hist hacia atras.
+local function reconcile(Sy, S, Lyrics)
+  local prev = Sy.seen_lines
+  Sy.seen_lines = S.line_count
+  if not prev or S.line_count >= prev then return end
+  while #Sy.hist > 0 do
+    local i = #Sy.hist
+    while i > 0 and Sy.hist[i].skip do i = i - 1 end
+    if i == 0 or tapExists(S, Lyrics, Sy.hist[i]) then return end
+    for j = #Sy.hist, i, -1 do
+      table.remove(Sy.hist, j)
+      Sy.pos = Sy.pos - 1
+    end
+  end
+end
+
 function M.draw(ctx, S, H, helpers)
   local Sy = getSync(S, H)
+  reconcile(Sy, S, helpers.Lyrics)
   local label = 'Sincronizar (tap)'
   if #Sy.queue > 0 then
     label = string.format('%s - %d/%d', label, math.min(Sy.pos, #Sy.queue), #Sy.queue)
