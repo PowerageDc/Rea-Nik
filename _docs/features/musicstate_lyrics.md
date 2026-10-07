@@ -16,6 +16,7 @@ El contrato de datos (formato JSON, protocolo) vive en
 |---|---|
 | Contrato de datos (`lyrics_data`, `lyrics_version`) | Documentado en `data_model` §4.7 |
 | Publicador `Nik_MusicState_PublishLyrics.lua` | Implementado y verificado (ver §4) |
+| Ingreso `Nik_MusicState_LyricsInput.lua` | MVP con `GetUserInputs` implementado y verificado: línea en cursor o selección, marcador `·` de fin, upsert, aviso ante eventos dentro de la selección. Ventana persistente pendiente (tab del Helper) |
 | Doc del puente | Actualizado (lyrics fuera de `Bridge.KEYS`) |
 | Capa cliente (setter, consultas, lead propio) | Implementada y verificada en dev (ver §4); detalle en `musicstate_client.md` §1.6 |
 | Cableado (`ms-dispatch.js`: pedidos, versión, reset, opt-in) | Implementado y verificado en dev |
@@ -178,6 +179,8 @@ prompter):
 ## 7. Archivos
 
 - `MusicState/Nik_MusicState_PublishLyrics.lua` — publicador one-shot.
+- `MusicState/Nik_MusicState_LyricsInput.lua` — ingreso de líneas (UI mínima sobre el módulo).
+- `MusicState/MusicStateLyrics_common_logic.lua` — descubrimiento del track y lógica de edición (`PlanLine`/`ApplyLine`), sin diálogos ni ImGui.
 - `Tests-Debug/Nik_Tests_LyricsProbe.lua` — volcado de los eventos lyric
   y de `GetTrackMIDILyrics` a consola.
 - `core/music-state.js` — bloque de lyrics (setter, consultas, pedidos).
