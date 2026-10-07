@@ -26,6 +26,9 @@ dominio consumidor, ver `01_CONVENCIONES.md`):
 - `MusicStateRoles_common_logic.lua`
 - `MusicStateArmonia_common_logic.lua`
 - `MusicStateCues_common_logic.lua`
+- `MusicStateLyricsTab_common_logic.lua` (la letra no vive en `H`: cache
+  de lectura en `H._lyrics`, ver `musicstate_lyrics.md` §8; el contenedor
+  expone `helpers.Lyrics`)
 
 Cada uno expone `M.draw(ctx, H, helpers)`. `H` es la tabla de estado
 global, mutada in-place. `helpers` es una tabla de dependencias armada

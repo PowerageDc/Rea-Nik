@@ -16,7 +16,8 @@ El contrato de datos (formato JSON, protocolo) vive en
 |---|---|
 | Contrato de datos (`lyrics_data`, `lyrics_version`) | Documentado en `data_model` §4.7 |
 | Publicador `Nik_MusicState_PublishLyrics.lua` | Implementado y verificado (ver §4) |
-| Ingreso `Nik_MusicState_LyricsInput.lua` | MVP con `GetUserInputs` implementado y verificado: línea en cursor o selección, marcador `·` de fin, upsert, aviso ante eventos dentro de la selección. Ventana persistente pendiente (tab del Helper) |
+| Ingreso `Nik_MusicState_LyricsInput.lua` | MVP con `GetUserInputs` implementado y verificado: línea en cursor o selección, marcador `·` de fin, upsert, aviso ante eventos dentro de la selección. Ventana persistente: ver la tab del Helper (fila siguiente) |
+| Tab Lyrics del Helper (`MusicStateLyricsTab_common_logic.lua`) | Paso 3a implementado y verificado (visor de solo lectura: click → cursor y duración de la línea). Pasos 3b a 3d pendientes (§8) |
 | Doc del puente | Actualizado (lyrics fuera de `Bridge.KEYS`) |
 | Capa cliente (setter, consultas, lead propio) | Implementada y verificada en dev (ver §4); detalle en `musicstate_client.md` §1.6 |
 | Cableado (`ms-dispatch.js`: pedidos, versión, reset, opt-in) | Implementado y verificado en dev |
@@ -66,6 +67,29 @@ El contrato de datos (formato JSON, protocolo) vive en
 - **Sin karaoke fill en v1.** El modelo admite campos opcionales por
   evento (sílabas con offsets, duración tomada de una nota) sin romper
   nada: el cliente ignora los campos que no conoce.
+- **Ingreso por API, no por el diálogo del editor MIDI.**
+  `MIDI_InsertTextSysexEvt` (tipo 5) inserta el lyric directo en el take,
+  sin editor abierto. La posición se convierte con
+  `MIDI_GetPPQPosFromProjTime`, así que sigue al mapa de tempo y no se
+  cuantiza. Un único item MIDI en el track cubre la posición: se crea
+  (desde el inicio del proyecto) o se extiende (`MIDI_SetItemExtents`).
+- **Edición idempotente (upsert).** El texto en el punto de inicio
+  reemplaza al evento existente (el campo se precarga con él). Texto
+  vacío = solo marcador de fin `·`. El `·` no se duplica ni se inserta si
+  en esa posición ya hay un `·` o una línea real. Con eventos dentro de
+  la selección de tiempo, aviso Sí (reemplazar) / No (conservar) /
+  Cancelar. Todo en un solo bloque de undo.
+- **Lógica sin UI en el módulo.** `PlanLine` lee el estado y `ApplyLine`
+  lo aplica; ninguna abre diálogos, así que las usan por igual el script
+  de ingreso (diálogos nativos) y la tab del Helper.
+- **La tab de Lyrics no usa `H` para la letra.** La fuente de verdad son
+  los eventos MIDI y cada edición se aplica directo, con su undo. La tab
+  mantiene solo un cache de lectura (`H._lyrics`), recargado cuando
+  cambia `GetProjectStateChangeCount` o el proyecto activo.
+- **Publicación desde la tab vía `Lyrics.Publish(proj)`**, a extraer al
+  módulo; `PublishLyrics` queda como cáscara fina y sigue siendo el
+  punto de entrada del cliente web (§8, paso 3d). Decidido, no
+  implementado.
 
 ## 3. Descartado, y por qué
 
@@ -85,6 +109,13 @@ El contrato de datos (formato JSON, protocolo) vive en
   convierte a compás con el tempo y el playrate; un lead en QN no
   resolvía ninguna de las dos cosas.
 - **Re-disparar `PublishLyrics` al detectar un cambio de `lyrics_version`:** bucle (§2).
+- **Diálogo nativo de texto del editor MIDI como vía de ingreso:** exige
+  el editor abierto con su propio cursor, distinto del de arrange.
+- **Editar la posición con `RowInputs` o las conversiones del Helper:**
+  el redondeo a la grilla de 0.25 destruye el `qn_offset` libre, y
+  editar la posición en vivo trae los bugs de reorden y foco de
+  `musicstate_helper.md` §5. La posición se ajusta con nudge, "mover al
+  cursor" y tap.
 
 ## 4. Verificado empíricamente
 
@@ -181,6 +212,7 @@ prompter):
 - `MusicState/Nik_MusicState_PublishLyrics.lua` — publicador one-shot.
 - `MusicState/Nik_MusicState_LyricsInput.lua` — ingreso de líneas (UI mínima sobre el módulo).
 - `MusicState/MusicStateLyrics_common_logic.lua` — descubrimiento del track y lógica de edición (`PlanLine`/`ApplyLine`), sin diálogos ni ImGui.
+- `MusicState/MusicStateLyricsTab_common_logic.lua` — tab Lyrics del Helper (`M.draw(ctx, H, helpers)`).
 - `Tests-Debug/Nik_Tests_LyricsProbe.lua` — volcado de los eventos lyric
   y de `GetTrackMIDILyrics` a consola.
 - `core/music-state.js` — bloque de lyrics (setter, consultas, pedidos).
@@ -190,3 +222,96 @@ prompter):
   bootstrap y panel de debug temporal.
 - Docs tocados: `musicstate_data_model.md` (§2, §3, §4, §4.7, §6),
   `musicstate_bridge.md` (§1, §2, §5), `musicstate_client.md` (§1.6).
+
+## 8. Ingreso de lyrics y tab del Helper (en construcción)
+
+### 8.1 Estado por paso
+
+| Paso | Estado |
+|---|---|
+| Módulo `MusicStateLyrics_common_logic.lua` + `Nik_MusicState_LyricsInput.lua` (MVP con `GetUserInputs`) | Hecho, 6 pruebas verificadas |
+| Refactor: `PlanLine`/`ApplyLine` al módulo, script como capa de UI | Hecho, verificado |
+| 3a. Tab Lyrics del Helper, solo lectura | Hecho, 7 pruebas verificadas |
+| 3b. Cola de tap-to-sync | Pendiente |
+| 3c. Edición (inline, nudge, mover al cursor, borrar, agregar línea) | Pendiente |
+| 3d. `Lyrics.Publish`, botón Publicar y auto-publicar | Pendiente |
+
+### 8.2 API del módulo
+
+Constantes: `END_MARK` (`·`), `DEFAULT_TRACK_NAME` (`🎤 Lyrics`),
+`EPS_TIME` (0.01 s, tolerancia para "misma posición"), `PAD_TIME` (5 s,
+margen al crear o extender el item).
+
+- `FindLyricsTrack(proj)`, `CreateLyricsTrack()`.
+- `CollectEvents(track)`: eventos lyric (tipo 5) de todos los items,
+  ordenados por tiempo, con `take`, `idx`, `text` y `time`.
+- `EventsNear(list, t)`, `EventsBetween(list, t1, t2)`: ambos con epsilon;
+  `EventsBetween` es estricto en los dos bordes.
+- `DeleteEvents(list)`: borra por take en índice descendente, en un solo
+  lote (los índices se desfasan si se borra de a uno).
+- `EnsureTake(track, t_from, t_to)`, `InsertAt(...)`, `CleanText(s)`,
+  `GetTimeContext()` (selección de tiempo si mide más de 2×`EPS_TIME`; si
+  no, el edit cursor y `nil`).
+- `PlanLine(track, t1, t2)`: contexto con `prefill`, `at_start`, `at_end`,
+  `inside` y `end_time`. No modifica nada.
+- `ApplyLine(track, ctx, text, opts)`: con `track = nil` lo crea.
+  `opts.replace_inside` decide si se borran los eventos dentro de la
+  selección. Devuelve `false, "end_occupied"` si el texto es vacío y ya
+  hay un evento en la posición del marcador; si no, `true, track`.
+
+### 8.3 Gotchas verificados
+
+- `GetUserInputs` con un solo campo: se usa
+  `extrawidth=350,separator=\n` para que las comas de la letra no
+  partan el valor.
+- Los archivos que contienen `·`, `🎤` o `→` tienen que guardarse en
+  UTF-8; si no, el `·` se inserta mal y el publicador no lo reconoce.
+- Para limpiar la selección de tiempo: `GetSet_LoopTimeRange(true, false,
+  0, 0, false)`.
+
+### 8.4 Tab 3a: cómo está hecha
+
+- Cache en `H._lyrics`: se relee la lista solo cuando cambia
+  `GetProjectStateChangeCount(0)` o `H.last_proj`. El botón "Recargar"
+  es la salida de emergencia.
+- Fila vigente: sigue la posición de reproducción mientras suena y el edit
+  cursor cuando está detenido. Mismo highlight que Armonía (verde sólido si
+  coincide exacto, tenue por carry-over) y auto-scroll cuando cambia la
+  fila vigente. Separadores de sección (fila gris, no `CollapsingHeader`).
+- Click en una línea: mueve el edit cursor (`SetEditCurPos(t, true,
+  false)`, sin seek en reproducción) y, con el toggle activo, selecciona el
+  tiempo hasta el evento siguiente (línea o `·`). En la última línea, o en
+  un `·`, limpia la selección. Toggle persistido con `SetExtState`
+  (sección `NikMusicStateHelper`, clave `lyrics_autoselect`).
+- Registrada en el contenedor del Helper: `dofile` del módulo y de la tab,
+  `helpers.Lyrics` y un `BeginTabItem('Lyrics')`. Los dos archivos están
+  en el `@provides` del Helper.
+
+### 8.5 Plan restante
+
+- **3b. Cola de tap-to-sync.** Pegar la letra: cada línea es un ítem, una
+  línea en blanco es un `·`. Cada tap inserta el siguiente ítem en la
+  posición de reproducción, con compensación de latencia ajustable (por
+  ejemplo −150 ms) y "deshacer último tap". La tecla no puede ser Enter,
+  Space ni las flechas (globales en el contenedor); revisar
+  `globalKeyPressed` en `ImGuiInputCommit_common_logic.lua` antes de
+  elegirla, y no dispararla si un `InputText` tiene foco. Un script satélite
+  (flag en `ExtState`, mapeable a footswitch) queda aplazado.
+- **3c. Edición.** Texto inline con commit al terminar de editar (patrón de
+  transición de `active`, `08_REAIMGUI_PATTERNS.md` §3), nudge de ±1/16 de
+  beat o ms, mover inicio y fin al cursor, borrar línea o marcador, y
+  agregar línea en cursor o selección (reemplaza al diálogo).
+- **3d. Publicación.** Extraer `Lyrics.Publish(proj)` de
+  `Nik_MusicState_PublishLyrics.lua` (el script queda como cáscara de pocas
+  líneas), que devuelva versión, cantidad de líneas y tamaño en bytes. Botón
+  Publicar y toggle de auto-publicar con debounce. No hay bucle: el cliente
+  usa `FetchLyrics` al detectar el cambio de versión. Aprovechar para
+  probar el pendiente 3 de §6 (tope de `EXTSTATE`) con una letra larga.
+- Al cerrar el paso 3: actualizar este doc y `musicstate_helper.md`.
+
+### 8.6 Para retomar en otra sesión
+
+Adjuntar: este doc, `musicstate_helper.md`, `Nik_MusicState_Helper.lua`,
+`MusicStateLyricsTab_common_logic.lua`, `MusicStateLyrics_common_logic.lua`,
+`08_REAIMGUI_PATTERNS.md`. Para 3b, además `ImGuiInputCommit_common_logic.lua`; para
+3d, `Nik_MusicState_PublishLyrics.lua`.
