@@ -17,7 +17,7 @@ El contrato de datos (formato JSON, protocolo) vive en
 | Contrato de datos (`lyrics_data`, `lyrics_version`) | Documentado en `data_model` §4.7 |
 | Publicador `Nik_MusicState_PublishLyrics.lua` | Implementado y verificado (ver §4) |
 | Ingreso `Nik_MusicState_LyricsInput.lua` | MVP con `GetUserInputs` implementado y verificado: línea en cursor o selección, marcador `·` de fin, upsert, aviso ante eventos dentro de la selección. Ventana persistente: ver la tab del Helper (fila siguiente) |
-| Tab Lyrics del Helper (`MusicStateLyricsTab_common_logic.lua`) | Paso 3a implementado y verificado (visor de solo lectura: click → cursor y duración de la línea). Pasos 3b a 3d pendientes (§8) |
+| Tab Lyrics del Helper (`MusicStateLyricsTab_common_logic.lua`) | Pasos 3a y 3b implementados y verificados (visor de solo lectura y cola de tap-to-sync). Pasos 3c y 3d pendientes (§8) |
 | Doc del puente | Actualizado (lyrics fuera de `Bridge.KEYS`) |
 | Capa cliente (setter, consultas, lead propio) | Implementada y verificada en dev (ver §4); detalle en `musicstate_client.md` §1.6 |
 | Cableado (`ms-dispatch.js`: pedidos, versión, reset, opt-in) | Implementado y verificado en dev |
@@ -218,6 +218,7 @@ prompter):
 - `MusicState/Nik_MusicState_LyricsInput.lua` — ingreso de líneas (UI mínima sobre el módulo).
 - `MusicState/MusicStateLyrics_common_logic.lua` — descubrimiento del track y lógica de edición (`PlanLine`/`ApplyLine`), sin diálogos ni ImGui.
 - `MusicState/MusicStateLyricsTab_common_logic.lua` — tab Lyrics del Helper (`M.draw(ctx, H, helpers)`).
+- `MusicState/MusicStateLyricsSync_common_logic.lua` — cola de tap-to-sync (`M.draw(ctx, S, H, helpers)`), consumida por la tab vía `helpers.LyricsSync`.
 - `Tests-Debug/Nik_Tests_LyricsProbe.lua` — volcado de los eventos lyric
   y de `GetTrackMIDILyrics` a consola.
 - `core/music-state.js` — bloque de lyrics (setter, consultas, pedidos).
@@ -237,7 +238,7 @@ prompter):
 | Módulo `MusicStateLyrics_common_logic.lua` + `Nik_MusicState_LyricsInput.lua` (MVP con `GetUserInputs`) | Hecho, 6 pruebas verificadas |
 | Refactor: `PlanLine`/`ApplyLine` al módulo, script como capa de UI | Hecho, verificado |
 | 3a. Tab Lyrics del Helper, solo lectura | Hecho, 7 pruebas verificadas |
-| 3b. Cola de tap-to-sync | Pendiente |
+| 3b. Cola de tap-to-sync (hold con gap mínimo) | Hecho, verificado por etapas (cola, tap, fin por hold) |
 | 3c. Edición (inline, nudge, mover al cursor, borrar, agregar línea) | Pendiente |
 | 3d. `Lyrics.Publish`, botón Publicar y auto-publicar | Pendiente |
 
@@ -273,6 +274,12 @@ margen al crear o extender el item).
   UTF-8; si no, el `·` se inserta mal y el publicador no lo reconoce.
 - Para limpiar la selección de tiempo: `GetSet_LoopTimeRange(true, false,
   0, 0, false)`.
+- `reaper.ImGui_GetKeyName` no existe en la versión instalada (error de
+  `nil`): la etiqueta de la tecla de tap es un texto fijo
+  (`KEY_TAP_LABEL`) junto a la constante `KEY_TAP`.
+- Un botón que se deshabilita o se desplaza mientras se lo mantiene
+  pierde el release o el click (patrón general en
+  `08_REAIMGUI_PATTERNS.md` §4).
 
 ### 8.4 Tab 3a: cómo está hecha
 
@@ -292,40 +299,66 @@ margen al crear o extender el item).
   `helpers.Lyrics` y un `BeginTabItem('Lyrics')`. Los dos archivos están
   en el `@provides` del Helper.
 
-### 8.5 Plan restante
+### 8.5 Tab 3b: cola de tap-to-sync
 
-- **3b. Cola de tap-to-sync (hold con gap mínimo).** Pegar la letra: cada
-  línea con contenido es un ítem de la cola; las líneas en blanco se
-  ignoran (separan estrofas, no generan `·`), así que da igual que la
-  letra venga con o sin ellas. El fin de línea sale del gesto, no del
-  texto: se **mantiene** la tecla mientras dura la línea.
-  - **Presionar** (`IsKeyPressed(key, false)`, sin auto-repeat) inserta el
-    siguiente ítem en `GetPlayPosition()` menos la compensación. Se usa
-    `GetPlayPosition` y no `GetPlayPosition2`, que no descuenta la
-    latencia de salida de audio. Solo opera con reproducción activa.
-  - **Soltar** (`IsKeyReleased`) deja un `·` **pendiente** en esa
-    posición. Se resuelve por frame: si pasa el gap mínimo (ajustable,
-    default 400 ms) sin otro press, el `·` se inserta; si llega un press
-    antes, se descarta y queda carry-over. Sin el gap, un `·` pegado a
-    la línea siguiente haría parpadear la línea apagada en el prompter.
-    El pendiente también se resuelve al detenerse la reproducción o al
-    vaciarse la cola.
-  - **Compensación de latencia:** un solo valor en ms (default −150, a
-    ojo), aplicado a inicio y fin, ajustable en la tab y persistido con
-    `SetExtState` (clave `lyrics_tap_latency_ms`, sección
-    `NikMusicStateHelper`). Se calibra tapeando 3 o 4 líneas con ataques
-    claros y comparando contra el stem de Vocals. No se mezcla con
-    `nikMusicStateLyricsLeadSec`, que solo afecta al mostrar.
-  - **Toggle "cerrar líneas con `·`":** apagado, es un tap por línea con
-    puro carry-over.
-  - **Deshacer último tap:** quita la línea y su `·` (insertado o
-    pendiente) juntos. Cada inserción usa `PlanLine`/`ApplyLine`, con su
-    propio bloque de undo.
-  - **Tecla:** no puede ser Enter, Space ni las flechas (globales en el
-    contenedor); revisar `globalKeyPressed` en
-    `ImGuiInputCommit_common_logic.lua` antes de elegirla, y no
-    dispararla si un `InputText` tiene foco. Un script satélite (flag en
-    `ExtState`, mapeable a footswitch) queda aplazado.
+- **Dónde vive.** Módulo `MusicStateLyricsSync_common_logic.lua`, cargado
+  por el contenedor (`helpers.LyricsSync`). La tab dibuja su panel
+  colapsable ("Sincronizar (tap)") **antes** del `return` de "sin track
+  de Lyrics", porque el primer tap puede crear el track. Estado en
+  `S.sync` (`S = H._lyrics`), solo en memoria: se descarta al cambiar de
+  proyecto, y la cola no sobrevive al cierre del Helper.
+- **Dos fases.** Preparar: `InputTextMultiline` para pegar; cada línea
+  con contenido es un ítem y las líneas en blanco y los `·` sueltos se
+  ignoran (el fin sale del gesto, no del texto). Sincronizar: se muestra
+  el siguiente ítem y los dos que siguen, con TAP, Saltar, Deshacer y
+  Vaciar. Con la cola cargada no hay `InputText` activo, así que la
+  tecla de tap no choca con ningún campo.
+- **Tap.** Una sola señal `held` alimentada por la tecla (`KEY_TAP`, hoy
+  `B`, con `KEY_TAP_LABEL` aparte) y por el botón TAP (`IsItemActive`).
+  Los flancos salen de comparar con el frame anterior (`IsKeyDown`, no
+  `IsKeyPressed`/`IsKeyReleased`, para unificar con el botón). La tecla
+  exige ventana enfocada (`ChildWindows`) y ningún item activo; si la
+  ventana pierde el foco, cuenta como soltada. Solo opera con
+  reproducción activa. Inserta con `PlanLine`/`ApplyLine` en
+  `GetPlayPosition()` (no `GetPlayPosition2`, que no descuenta la
+  latencia de salida de audio) más la compensación.
+- **Compensación.** Un valor en ms para inicio y fin (default −150,
+  rango −500..+200, `DragInt`), persistido al soltar el control en
+  `NikMusicStateHelper` / `lyrics_tap_latency_ms`. Se calibra tapeando
+  3 o 4 líneas con ataques claros contra el stem de Vocals. Independiente
+  de `nikMusicStateLyricsLeadSec`, que solo afecta al mostrar.
+- **Fin por hold.** Al soltar, si el hold duró al menos 250 ms
+  (`MIN_HOLD_S`, fijo) y el toggle está activo (`lyrics_tap_close`), el
+  `·` queda **pendiente**. Se resuelve por frame (también con el header
+  colapsado): se inserta si pasa el gap mínimo (`lyrics_tap_gap_ms`,
+  default 400 ms, medido en tiempo de proyecto, o sea independiente del
+  playrate), si se detiene la reproducción o si hay un seek hacia atrás;
+  se descarta si llega un press dentro del gap (carry-over). "Vaciar
+  cola" inserta el pendiente antes de vaciar; un cambio de proyecto lo
+  descarta sin insertar.
+- **Deshacer y reconciliación.** Cada entrada de `hist` es
+  `{time, text, end_time}` o `{skip = true}`, con la invariante
+  `pos == #hist + 1`. "Deshacer" borra por identidad (`EventsNear` sobre
+  `time` y `end_time`), no con el undo de REAPER, y cancela el `·` si
+  seguía pendiente. Si la cantidad de líneas del track baja (Ctrl+Z, borrado
+  a mano), la cola retrocede hasta la última línea tapeada que todavía
+  existe.
+- **Layout estable.** El botón TAP no se deshabilita al completar la cola
+  (pasa a "Cola completa"): deshabilitarlo con el botón apretado perdía
+  el release de la última línea. La línea de aviso bajo el botón se
+  reserva siempre: si aparece y desaparece, el layout se corre y se
+  pierde el click de "Saltar" o "Deshacer".
+- **Limitaciones conocidas.** (1) Redo (Ctrl+Shift+Z) devuelve la línea al
+  track pero no a la cola, y volver a tapearla deja dos copias.
+  (2) Borrar a mano la última línea y recuperarla con Ctrl+Z no refresca
+  la cola: la reconciliación solo reacciona cuando la cantidad de líneas
+  baja. (3) Los taps hacen upsert en su posición y no borran letra
+  existente; para re-sincronizar desde cero hay que borrar a mano hasta
+  el 3c. (4) Un re-tap sobre una línea existente reemplaza el texto, y
+  "Deshacer" no lo restaura.
+
+### 8.6 Plan restante
+
 - **3c. Edición.** Texto inline con commit al terminar de editar (patrón de
   transición de `active`, `08_REAIMGUI_PATTERNS.md` §3), nudge de ±1/16 de
   beat o ms, mover inicio y fin al cursor, borrar línea o marcador, y
@@ -338,9 +371,10 @@ margen al crear o extender el item).
   probar el pendiente 3 de §6 (tope de `EXTSTATE`) con una letra larga.
 - Al cerrar el paso 3: actualizar este doc y `musicstate_helper.md`.
 
-### 8.6 Para retomar en otra sesión
+### 8.7 Para retomar en otra sesión
 
 Adjuntar: este doc, `musicstate_helper.md`, `Nik_MusicState_Helper.lua`,
 `MusicStateLyricsTab_common_logic.lua`, `MusicStateLyrics_common_logic.lua`,
-`08_REAIMGUI_PATTERNS.md`. Para 3b, además `ImGuiInputCommit_common_logic.lua`; para
+`MusicStateLyricsSync_common_logic.lua` y `08_REAIMGUI_PATTERNS.md`. Para
+3c, además `ImGuiInputCommit_common_logic.lua` (commit de `InputText`); para
 3d, `Nik_MusicState_PublishLyrics.lua`.
