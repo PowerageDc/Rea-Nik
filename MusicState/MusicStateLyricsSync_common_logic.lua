@@ -203,8 +203,8 @@ local function drawQueue(ctx, Sy, Lyrics)
     reaper.ImGui_TextDisabled(ctx, 'Tecla de tap desactivada: hay un campo en edicion.')
   elseif not playing and not done then
     reaper.ImGui_TextDisabled(ctx, 'Inicia la reproduccion para tapear.')
-  elseif Sy.msg ~= '' then
-    reaper.ImGui_TextDisabled(ctx, Sy.msg)
+  else
+    reaper.ImGui_TextDisabled(ctx, Sy.msg ~= '' and Sy.msg or ' ')
   end
 
   reaper.ImGui_BeginDisabled(ctx, done)
