@@ -29,6 +29,10 @@ dominio consumidor, ver `01_CONVENCIONES.md`):
 - `MusicStateLyricsTab_common_logic.lua` (la letra no vive en `H`: cache
   de lectura en `H._lyrics`, ver `musicstate_lyrics.md` §8; el contenedor
   expone `helpers.Lyrics`)
+- `MusicStateLyricsSync_common_logic.lua` (submódulo de la tab Lyrics: cola
+  de tap-to-sync, ver `musicstate_lyrics.md` §8.5). No es una tab propia:
+  la tab lo invoca vía `helpers.LyricsSync.draw(ctx, S, H, helpers)`, con
+  `S = H._lyrics`, y su estado vive en `S.sync`.
 
 Cada uno expone `M.draw(ctx, H, helpers)`. `H` es la tabla de estado
 global, mutada in-place. `helpers` es una tabla de dependencias armada
@@ -183,12 +187,6 @@ juntas.
 
 **Bugs confirmados, sin corregir:**
 
-- **Header `@provides` desactualizado.** `Nik_MusicState_Helper.lua`
-  todavía lista `../_Shared/MusicStateBridge_common_logic.lua` y
-  `../_Shared/MusicStateRowInputs_common_logic.lua`, pero ambos módulos
-  se movieron a `MusicState/` (§1) y los `dofile` ya apuntan ahí. Un
-  paquete de ReaPack armado hoy buscaría esos dos archivos en la ruta
-  vieja. Corregir el header para que coincida con la ubicación real.
 - **Oferta de grafías del Helper.** El Helper ofrece 17 tónicas (incluidas
   ambas grafías de los enarmónicos). Como el círculo de quintas siempre
   fuerza una sola grafía por tonalidad resultante
