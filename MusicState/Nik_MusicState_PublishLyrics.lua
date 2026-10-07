@@ -8,11 +8,11 @@ local DEBUG = true -- false = sin mensajes en consola
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
+local Lyrics = dofile(script_dir .. "MusicStateLyrics_common_logic.lua")
 
 local NS = Bridge.BRIDGE_NAMESPACE
 local KEY_DATA = "lyrics_data"
 local KEY_VERSION = "lyrics_version"
-local TRACK_NAME_PATTERN = "lyrics" -- se busca en minusculas, texto plano
 local END_MARK = "·"                -- U+00B7, fin de linea explicito
 local LYRIC_TYPE = 5
 
@@ -37,16 +37,7 @@ local function jsonString(s)
   return '"' .. s .. '"'
 end
 
-local function findLyricsTrack(proj)
-  for i = 0, reaper.CountTracks(proj) - 1 do
-    local tr = reaper.GetTrack(proj, i)
-    local _, name = reaper.GetSetMediaTrackInfo_String(tr, "P_NAME", "", false)
-    if name:lower():find(TRACK_NAME_PATTERN, 1, true) then
-      return tr, name
-    end
-  end
-  return nil
-end
+local findLyricsTrack = Lyrics.FindLyricsTrack
 
 -- Devuelve bars (bar -> lista de {off, text, is_end, seq}), cantidad de
 -- eventos publicables y cantidad de eventos ignorados (texto en blanco).
