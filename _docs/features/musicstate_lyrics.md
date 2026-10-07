@@ -116,6 +116,11 @@ El contrato de datos (formato JSON, protocolo) vive en
   editar la posición en vivo trae los bugs de reorden y foco de
   `musicstate_helper.md` §5. La posición se ajusta con nudge, "mover al
   cursor" y tap.
+- **Línea en blanco de la letra pegada = `·` (primera versión de 3b):**
+  obligaba a preparar el texto a mano antes de sincronizar, y la letra
+  copiada de internet casi nunca trae esas líneas en blanco, mientras que
+  cerrar casi cada línea es el caso común. El fin pasa a salir del gesto
+  (mantener la tecla, §8.5) y las líneas en blanco se ignoran.
 
 ## 4. Verificado empíricamente
 
@@ -289,14 +294,38 @@ margen al crear o extender el item).
 
 ### 8.5 Plan restante
 
-- **3b. Cola de tap-to-sync.** Pegar la letra: cada línea es un ítem, una
-  línea en blanco es un `·`. Cada tap inserta el siguiente ítem en la
-  posición de reproducción, con compensación de latencia ajustable (por
-  ejemplo −150 ms) y "deshacer último tap". La tecla no puede ser Enter,
-  Space ni las flechas (globales en el contenedor); revisar
-  `globalKeyPressed` en `ImGuiInputCommit_common_logic.lua` antes de
-  elegirla, y no dispararla si un `InputText` tiene foco. Un script satélite
-  (flag en `ExtState`, mapeable a footswitch) queda aplazado.
+- **3b. Cola de tap-to-sync (hold con gap mínimo).** Pegar la letra: cada
+  línea con contenido es un ítem de la cola; las líneas en blanco se
+  ignoran (separan estrofas, no generan `·`), así que da igual que la
+  letra venga con o sin ellas. El fin de línea sale del gesto, no del
+  texto: se **mantiene** la tecla mientras dura la línea.
+  - **Presionar** (`IsKeyPressed(key, false)`, sin auto-repeat) inserta el
+    siguiente ítem en `GetPlayPosition()` menos la compensación. Se usa
+    `GetPlayPosition` y no `GetPlayPosition2`, que no descuenta la
+    latencia de salida de audio. Solo opera con reproducción activa.
+  - **Soltar** (`IsKeyReleased`) deja un `·` **pendiente** en esa
+    posición. Se resuelve por frame: si pasa el gap mínimo (ajustable,
+    default 400 ms) sin otro press, el `·` se inserta; si llega un press
+    antes, se descarta y queda carry-over. Sin el gap, un `·` pegado a
+    la línea siguiente haría parpadear la línea apagada en el prompter.
+    El pendiente también se resuelve al detenerse la reproducción o al
+    vaciarse la cola.
+  - **Compensación de latencia:** un solo valor en ms (default −150, a
+    ojo), aplicado a inicio y fin, ajustable en la tab y persistido con
+    `SetExtState` (clave `lyrics_tap_latency_ms`, sección
+    `NikMusicStateHelper`). Se calibra tapeando 3 o 4 líneas con ataques
+    claros y comparando contra el stem de Vocals. No se mezcla con
+    `nikMusicStateLyricsLeadSec`, que solo afecta al mostrar.
+  - **Toggle "cerrar líneas con `·`":** apagado, es un tap por línea con
+    puro carry-over.
+  - **Deshacer último tap:** quita la línea y su `·` (insertado o
+    pendiente) juntos. Cada inserción usa `PlanLine`/`ApplyLine`, con su
+    propio bloque de undo.
+  - **Tecla:** no puede ser Enter, Space ni las flechas (globales en el
+    contenedor); revisar `globalKeyPressed` en
+    `ImGuiInputCommit_common_logic.lua` antes de elegirla, y no
+    dispararla si un `InputText` tiene foco. Un script satélite (flag en
+    `ExtState`, mapeable a footswitch) queda aplazado.
 - **3c. Edición.** Texto inline con commit al terminar de editar (patrón de
   transición de `active`, `08_REAIMGUI_PATTERNS.md` §3), nudge de ±1/16 de
   beat o ms, mover inicio y fin al cursor, borrar línea o marcador, y
