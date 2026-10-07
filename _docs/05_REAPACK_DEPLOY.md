@@ -10,7 +10,8 @@ setup de git (`04_GIT_TOOLING.md`).
 Solo un subconjunto del repo: hoy, `AutoColor/` (script suelto),
 `RemoteControl/` (metapaquete + `.www`, ver abajo) y `MusicState/`
 (metapaquete de scripts; el `.www` de MusicState/prompter comparte
-manifiesto con el de RemoteControl, ver abajo). El resto
+manifiesto con el de RemoteControl, que también cubre la UI de
+cantante, ver abajo). El resto
 (`RenderWorkflow/`, `TempoTools/`, `MvsepImporter/`, `StemFragment/`,
 `Tests-Debug/`) es uso local: no necesita exclusión explícita, porque
 `reapack-index` solo indexa lo que tiene header de metadata — sin header,
@@ -122,8 +123,9 @@ dominio. El manifiesto necesita **extensión `.www`** (no `.html`):
   feature**, si conviven bajo el mismo `reaper_www_root/` y no amerita
   separarlas. Caso real: `Nik_RemoteControl_WebUI.www` provee tanto
   `nsaudio_remote_control.html` (control remoto) como
-  `nsaudio_prompter.html` + `musicstate-ui/*/*.{css,js}` (MusicState /
-  prompter) — un solo `@version`, un solo bump cubre cambios en
+  `nsaudio_prompter.html` + `nsaudio_cantante.html` +
+  `musicstate-ui/*/*.{css,js}` (MusicState / prompter y cantante) — un
+  solo `@version`, un solo bump cubre cambios en
   cualquiera de las dos. No confundir con el metapaquete de **scripts**
   Lua de cada dominio, que sí son anclas separadas (`Nik_RemoteState_Poll.lua`
   para RemoteControl, `Nik_MusicState_Helper.lua` para MusicState) aunque
@@ -140,6 +142,15 @@ como implementación de referencia).
 
 - **No se autoejecuta.** Correrlo a mano desde el Action List una vez por
   PC, después de cada instalación o actualización del paquete.
+- **Cada script que una UI web dispara por Command ID necesita su
+  entrada en la tabla `SCRIPTS` del generador** (la `key` es la de
+  `NIK_LUA_COMMANDS` en `config.js`; para scripts fuera de
+  `RemoteControl/`, `dir` con la ruta relativa, ej. `../MusicState/`).
+  Si falta, o si el generador no se volvió a correr tras actualizar, la
+  UI usa el default de dev de `config.js` y el pedido falla en silencio
+  en destino. Caso real: `musicStatePublishLyrics` (UI de cantante). El
+  guard de `nikMusicStateRequestLyrics` solo avisa si la key falta del
+  todo, no si trae un ID que no existe en esa PC.
 - El HTML/JS de la interfaz debe cargar `config.local.js` **después** de
   cualquier default hardcodeado, y cualquier valor derivado de esos IDs
   (strings compuestos, closures) debe recalcularse on-demand después de

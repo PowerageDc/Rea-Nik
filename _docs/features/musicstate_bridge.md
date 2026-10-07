@@ -37,6 +37,13 @@ cada llamada. Ese script replica por su cuenta el criterio de
 `bridgeKey`: si el proyecto activo no tiene track de lyrics, borra las
 dos keys globales en vez de dejar pegada la letra del proyecto anterior.
 
+Del módulo solo usa `M.BRIDGE_NAMESPACE`, para escribir y borrar
+`lyrics_data` y `lyrics_version` en el mismo namespace global que el
+resto, sin duplicar el nombre. Por esa dependencia
+`MusicStateBridge_common_logic.lua` tiene que seguir en el `@provides`
+del metapaquete de MusicState (`musicstate_helper.md` §9): sin él,
+`PublishLyrics` no carga en una PC instalada vía ReaPack.
+
 ## 2. `Nik_MusicState_PublishAll.lua`
 
 One-shot, sin generar datos: el Helper es la única fuente de verdad de
@@ -86,7 +93,8 @@ de REAPER.
 la limitación de que `ExtState` es un store global sin ninguna forma de
 etiquetar a qué proyecto corresponde una respuesta, están descritos en
 `features/musicstate_instrumentista.md` §6 (ciclo de vida por proyecto) y
-no se duplican acá.
+no se duplican acá. El reset de lyrics y su re-pedido, que es opt-in por
+UI, están en `musicstate_client.md` §1.6.
 
 ## 5. `publish_version` y refresco automático
 
@@ -112,9 +120,28 @@ incrementa `PublishLyrics`. No reusa `publish_version`: el Helper carga
 ese valor al abrirse y le suma 1 al guardar, así que si otro script lo
 incrementara, el siguiente guardado repetiría el mismo número con datos
 distintos y el cliente no detectaría el cambio. La UI de lyrics lo
-compara igual que `publish_version` y lo resetea a `null` en cada
-cambio de proyecto, y pide la letra con un pedido propio, separado de
-`nikMusicStateRequestAll()`.
+compara con `nikMsLastKnownLyricsVersion` y lo resetea a `null` en cada
+cambio de proyecto.
+
+**A diferencia de `publish_version`, cada ejecución de `PublishLyrics`
+incrementa el contador** (a `publish_version` lo incrementa el Helper;
+`PublishAll` no lo toca). Consecuencias:
+
+- El cliente pide la letra de dos formas, ninguna dentro de
+  `nikMusicStateRequestAll()`. `nikMusicStateRequestLyrics()` **dispara**
+  el script, y por lo tanto sube la versión: se usa al conectar y al
+  cambiar de proyecto. `nikMusicStateFetchLyrics()` es solo `GET` de
+  `lyrics_data`: es lo que corre al detectar un cambio de versión. Si
+  ese camino volviera a disparar el script, cada disparo subiría la
+  versión y dispararía otro: un bucle (`musicstate_client.md` §1.6).
+- El cambio de proyecto dispara el script dos veces (inmediato y a los
+  400 ms, igual que `RequestAll`), así que la versión sube dos veces.
+  Inocuo: es un contador, no se compara contra ningún valor fijo.
+- El re-pedido es opt-in por UI (`NIK_MS_LYRICS_ENABLED`): una UI que no
+  muestra letra, como instrumentista, no dispara el script.
+- Un valor vacío (el script borró la key porque el proyecto no tiene
+  track de lyrics) cuenta como cambio a `null`, así una letra que
+  desaparece se refresca.
 
 ## 6. Cómo testear: round-trip manual
 
@@ -133,6 +160,11 @@ Con el Helper (`musicstate_helper.md`) y `nsaudio_musicstate_test.html`
 4. Cambiar de pestaña de proyecto en REAPER y volver: `H` del Helper debe
    recargarse con los datos de cada proyecto (§4), sin arrastrar nada del
    anterior.
+5. Lyrics (aparte: no pasa por "Guardar y Publicar"): con
+   `nsaudio_cantante.html` abierto, editar una línea en el track
+   `🎤 Lyrics` y ejecutar `Nik_MusicState_PublishLyrics.lua`. El panel
+   debe actualizarse solo, y `lyrics_version` subir una vez y quedar
+   estable (si sigue subiendo, hay un bucle, ver §5).
 
 Protocolo de bajo nivel (`Nik_Tests_ExtStateProbe.lua`) y qué mirar
 cuando un dato no llega a ninguna UI: `musicstate_data_model.md` §5.

@@ -104,7 +104,8 @@ render, pero conviven en el mismo proyecto/entorno):
   músicos sincronizados con el transporte, tolerando una red inestable.
   Modelo de datos y protocolo (punto de entrada de la feature): ver
   `features/musicstate_data_model.md`. UI de instrumentista: ver
-  `features/musicstate_instrumentista.md`.
+  `features/musicstate_instrumentista.md`. UI de cantante (letra, en
+  construcción): ver `features/musicstate_lyrics.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color + MusicState) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -120,8 +121,8 @@ render, pero conviven en el mismo proyecto/entorno):
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
-| MusicState / Prompter     | Helper y prompter (vertical y landscape) funcionales y validados en dev y en sala con router propio. Indicador de pulso (dots + barra, ver `features/musicstate_instrumentista.md` §4.8), tira de acordes y fila de sección (preludio + cruce animado) animadas por `transform` (técnica FLIP), y cambio de proyecto sincronizado (secciones y acordes juntos, §6). Pendientes: selector de rol, desfase de los dots en proyectos con mapas de tempo extensos, datos parciales al cambiar de proyecto, y el resto de §11 de la feature |
-| Deploy vía ReaPack        | Completo (AutoColor + RemoteControl + MusicState deployados vía metapaquete + .www) |
+| MusicState / Prompter     | Helper y prompter (vertical y landscape) funcionales y validados en dev y en sala con router propio. Indicador de pulso (dots + barra, ver `features/musicstate_instrumentista.md` §4.8), tira de acordes y fila de sección (preludio + cruce animado) animadas por `transform` (técnica FLIP), y cambio de proyecto sincronizado (secciones y acordes juntos, §6). Pendientes: selector de rol, desfase de los dots en proyectos con mapas de tempo extensos, datos parciales al cambiar de proyecto, y el resto de §11 de la feature. Lyrics para cantantes: publicador, capa cliente y cableado verificados en dev; UI real pendiente (ver `features/musicstate_lyrics.md`) |
+| Deploy vía ReaPack        | Completo (AutoColor + RemoteControl + MusicState deployados vía metapaquete + .www). Lyrics (`PublishLyrics` + UI de cantante) registrado en el repo, pendiente de validar en una PC de destino |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma

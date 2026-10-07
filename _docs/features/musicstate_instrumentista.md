@@ -3,8 +3,10 @@
 Referencia del estado actual del prompter de celular para instrumentistas.
 Primera de las UIs por perfil planteadas en `IMPL_MusicState.md` (sección
 8, punto 4). Perfil cubierto: instrumentistas en general (guitarra,
-teclados, bajo, etc.). Cantantes y panel coordinador/Helper quedan como
-perfiles futuros con el mismo esquema de archivos.
+teclados, bajo, etc.). La UI de cantantes está en construcción (bootstrap
+y panel de debug temporales, ver `musicstate_lyrics.md`); el panel
+coordinador/Helper queda como perfil futuro con el mismo esquema de
+archivos.
 
 Este doc describe **cómo está hecho hoy**, no cómo se llegó ahí (para eso,
 `git log`). Convenciones generales (nomenclatura, carpetas, modo de
@@ -58,6 +60,7 @@ que guarda el Helper, que es la única fuente de verdad de esos datos.
 reaper_www_root/
 ├── nsaudio_remote_control.html            control remoto general (no se toca)
 ├── nsaudio_prompter.html                  shell de esta UI
+├── nsaudio_cantante.html                  shell de la UI de cantante (debug temporal)
 ├── nsaudio_musicstate_test.html           panel de debug crudo (diagnóstico)
 ├── main.js                                de REAPER, NO modificar
 ├── config.js                              Command IDs (fuente única, sin fork)
@@ -69,9 +72,11 @@ reaper_www_root/
     │   ├── ms-tempo.js       lookup de tempo puro
     │   ├── ms-beat.js        pulso por compás + distancia a próximo evento de armonía
     │   └── ms-section.js     sección actual y posición efectiva en segundos
-    └── instrumentista/
-        ├── instrumentista.js   bootstrap de polls + render
-        └── instrumentista.css  estilos del perfil
+    ├── instrumentista/
+    │   ├── instrumentista.js   bootstrap de polls + render
+    │   └── instrumentista.css  estilos del perfil
+    └── cantante/
+        └── cantante.js         bootstrap de polls + panel de debug (ver musicstate_lyrics.md)
 ```
 
 **Orden de carga del shell** (importa: cada archivo depende de los
@@ -88,7 +93,11 @@ fallan en silencio, sin error en consola.
 
 **Dispatcher propio, no `wwr-dispatch.js`:** el del control remoto tiene
 `case`s sin guard `if (elemento)` que asumen DOM de tracks/faders/sends
-que esta UI no tiene. `ms-dispatch.js` atiende solo lo necesario.
+que esta UI no tiene. `ms-dispatch.js` atiende solo lo necesario. Es
+compartido con la UI de cantante (`cantante.js`): lo que solo aplica a
+lyrics (pedido de letra en el cambio de proyecto) es opt-in por UI con
+`NIK_MS_LYRICS_ENABLED`, que en esta UI queda en `false`, así que acá no
+cambia nada (`musicstate_client.md` §1.6).
 
 **Separación bootstrap/render:** `nikInstrumentistaInit()` (polls y
 pedidos on-demand) no asume IDs de DOM, así que puede correr sin la
@@ -321,6 +330,8 @@ wrapper de objeto: hay estado propio cacheado).
 | `nikMsHandleProjectSwitch(source)` | ms-dispatch.js | punto único de cambio de proyecto (reset + re-pedidos); `source` es `"name"` o `"markers"` (§6) |
 | `nikMsMarkersSig` | ms-dispatch.js | firma de la última lista de markers, para detectar cambio de proyecto (`null` hasta la primera lista) |
 | `nikMsLastSwitchAtMs` / `NIK_MS_SWITCH_DEDUPE_MS` | ms-dispatch.js | ventana de dedupe (2000 ms) entre disparadores; el timestamp arranca en `-Infinity` (§8) |
+| `NIK_MS_LYRICS_ENABLED` | ms-dispatch.js | opt-in a lyrics (default `false`); habilita el re-pedido de la letra en el cambio de proyecto. Lo activa `cantante.js`; esta UI no lo toca |
+| `nikMsLastKnownLyricsVersion` | ms-dispatch.js | último `lyrics_version` visto en el proyecto activo (`null` tras cada cambio de proyecto); esta UI no pollea esa key |
 | `nikMsLog(tag, extra)` / `NIK_MS_DEBUG` | ms-dispatch.js | logging de diagnóstico, apagado por defecto (§9) |
 | `nikInstrumentistaSectionId(sec)` | instrumentista.js | identidad de sección para comparar triples prev/actual/next: `id\|displayName` (§7) |
 | `nikInstrumentistaChordLastRenderJumped` | instrumentista.js | `true` si en este tick la tira de acordes hizo jump (fade); la fila de sección lo consulta para no animar un cruce tras un seek (§7) |
@@ -340,8 +351,8 @@ wrapper de objeto: hay estado propio cacheado).
   markers a mano con la UI abierta dispara `"markers"` (un reset y una
   recarga).
 - **Reset:** `nikMsResetProjectState()` limpia el estado por-proyecto
-  (armonía, cues, tonalidad, roles, tempo map, semitono, versión
-  publicada) **antes** de re-pedir. Es necesario porque, si el proyecto
+  (armonía, cues, tonalidad, roles, letra, tempo map, semitono, versión
+  publicada y versión de lyrics) **antes** de re-pedir. Es necesario porque, si el proyecto
   nuevo no tiene `ProjExtState` (pestaña "sin guardar"), el puente Lua no
   tiene nada que puentear y quedarían colgados los valores del anterior.
   **No vacía `g_markers`**: la lista ya es del proyecto activo y se
@@ -360,6 +371,10 @@ wrapper de objeto: hay estado propio cacheado).
   visto (`nikMsLastKnownPublishVersion`, en `null` tras cada cambio de
   proyecto) y dispara `nikMusicStateRequestAll()` siempre que cambie; un
   pedido redundante ocasional es inocuo, perder un refresco no.
+- **Lyrics:** el reset vacía la letra y su versión (es seguro: solo
+  limpia memoria), pero el re-pedido de `PublishLyrics` en el cambio de
+  proyecto es opt-in y esta UI no lo activa. Qué hace la UI que sí lo
+  activa: `musicstate_client.md` §1.6.
 - **Secciones:** `nikMsSectionOnMarkersUpdated()` reordena y resuelve la
   cadena de colores en cada `MARKER_LIST_END` (500 ms). Se resuelve toda
   la timeline de una vez para que una cadena `x2/x3...` herede el color
@@ -644,7 +659,8 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
   refactoriza.
 
 **Fuera de alcance:** exploración manual con scroll táctil de acordes
-pasados/futuros; perfiles de cantante y coordinador/Helper (mismo esquema,
-`musicstate-ui/<perfil>/`, en sesiones propias); lo declarado fuera de
-alcance en `SPEC` §18 e `IMPL_MusicState.md` (Regions, escalas, roman
-numerals, lyrics, edición de armonía desde el celular).
+pasados/futuros; perfil de coordinador/Helper (mismo esquema,
+`musicstate-ui/<perfil>/`, en sesión propia); la UI de cantante
+(en construcción, estado y decisiones en `musicstate_lyrics.md`); lo
+declarado fuera de alcance en `SPEC` §18 e `IMPL_MusicState.md` (Regions,
+escalas, roman numerals, lyrics, edición de armonía desde el celular).

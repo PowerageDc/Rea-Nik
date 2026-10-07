@@ -263,8 +263,9 @@ redondeo porque el display de REAPER trunca a centésimas.
 
 ### 4.7. `lyrics_data` y `lyrics_version`
 
-*Publicador implementado (`Nik_MusicState_PublishLyrics.lua`); capa
-cliente pendiente.* Es la única key de este
+*Publicador (`Nik_MusicState_PublishLyrics.lua`) y capa cliente
+(`musicstate_client.md` §1.6) implementados; UI de cantante pendiente
+(`musicstate_lyrics.md`).* Es la única key de este
 namespace cuyo origen no es el Helper ni `ProjExtState`: las líneas de
 letra viven como eventos lyric MIDI dentro del `.rpp`, en un track
 dedicado (`🎤 Lyrics`; el script lo descubre por nombre, sin distinguir
@@ -312,10 +313,13 @@ resto de las keys keyed por compás.
 **Lectura.** El setter del cliente debe des-escapar las barras
 invertidas antes del `JSON.parse` (ver §3): una línea con comillas
 (`Dijo "hola"`) o con barra (`a\b`) llega duplicada y no parsea sin ese
-paso. Verificado con una letra de prueba con ambos casos.
+paso. Verificado con una letra de prueba con ambos casos. Implementado
+en `nikMusicStateSetLyricsData` (`musicstate_client.md` §1.6).
 
 **`lyrics_version`.** Contador entero que `PublishLyrics` incrementa en
-cada publicación. **No reusa `publish_version`:** el Helper carga ese
+cada publicación, es decir, en cada ejecución del script, incluidas las
+que dispara el cliente al conectar y al cambiar de proyecto
+(`musicstate_bridge.md` §5). **No reusa `publish_version`:** el Helper carga ese
 valor al abrirse y le suma 1 al guardar, así que si otro script lo
 incrementara, el siguiente guardado del Helper repetiría el mismo número
 con datos distintos y el cliente no detectaría el cambio. El cliente
@@ -332,7 +336,9 @@ Mismo criterio que `bridgeKey`.
 **Refresco.** Como la letra se edita en el editor MIDI y no en el
 Helper, nada incrementa `lyrics_version` solo: la UI la recibe al
 conectar y al cambiar de proyecto, y se refresca al republicar con la
-acción de `PublishLyrics`.
+acción de `PublishLyrics`. Al detectar un cambio de versión, el cliente
+solo vuelve a leer `lyrics_data`: no re-dispara el script, porque cada
+ejecución sube la versión y sería un bucle (`musicstate_bridge.md` §5).
 
 **Extensibilidad.** El cliente ignora campos que no conoce, así que se
 pueden sumar campos opcionales por evento sin romper nada de v1 (por
@@ -373,7 +379,8 @@ Helper y el puente juntos.
 ## 6. Pendientes de esta capa
 
 Ningún bug de protocolo o de modelo de datos sin corregir hoy. Sí hay
-verificaciones pendientes antes de implementar `lyrics_data` (§4.7):
+verificaciones pendientes en la capa de datos (`lyrics_data` ya está
+implementado de punta a punta, §4.7):
 
 - **`cues_data` y el escape de barras (§3):** el texto de una cue es
   libre y puede llevar comillas o barras. Revisar cómo las escapa el
