@@ -23,6 +23,46 @@ local function findSectionIdx(sections, time)
   return nil
 end
 
+-- Deriva el par linea/fin por posicion (no se guarda). En un grupo de eventos
+-- a menos de eps entre si, los fines cierran la linea anterior y las lineas
+-- abren una nueva. Un fin sin linea previa (o repetido) queda sin owner.
+local function pairEvents(events, eps)
+  local cur = nil
+  local i, n = 1, #events
+  while i <= n do
+    local j = i
+    while j < n and events[j + 1].time - events[j].time <= eps do j = j + 1 end
+    for k = i, j do
+      local ev = events[k]
+      if ev.is_end and cur and not events[cur].end_idx then
+        events[cur].end_idx = k
+        ev.owner = cur
+      end
+    end
+    for k = i, j do
+      if not events[k].is_end then cur = k end
+    end
+    i = j + 1
+  end
+end
+
+-- La seleccion se identifica por {time, is_end}, no por indice: refresh
+-- recarga todo y los indices se corren.
+local function findSelIdx(S, Lyrics)
+  local sel = S.sel
+  if not sel then return nil end
+  local best, best_d = nil, nil
+  for i, ev in ipairs(S.events) do
+    if ev.is_end == sel.is_end then
+      local d = math.abs(ev.time - sel.time)
+      if d <= Lyrics.EPS_TIME and (not best_d or d < best_d) then
+        best, best_d = i, d
+      end
+    end
+  end
+  return best
+end
+
 local function getState(H)
   if not H._lyrics then
     H._lyrics = {
@@ -33,6 +73,7 @@ local function getState(H)
       line_count = 0,
       last_active = nil,
       scroll_target = nil,
+      sel = nil,
       autoselect = reaper.GetExtState(EXT_SECTION, EXT_KEY_AUTOSELECT) ~= '0',
     }
   end
@@ -53,15 +94,22 @@ local function refresh(S, H, helpers)
     ev.section = s_idx and sections[s_idx].name or nil
     if not ev.is_end then lines = lines + 1 end
   end
+  pairEvents(events, Lyrics.EPS_TIME)
+  for _, ev in ipairs(events) do
+    if ev.end_idx then ev.dur = events[ev.end_idx].time - ev.time end
+  end
+  if S.proj ~= H.last_proj then S.sel = nil end
   S.track = track
   S.events = events
   S.line_count = lines
   S.proj = H.last_proj
   S.state_count = reaper.GetProjectStateChangeCount(0)
+  if S.sel and not findSelIdx(S, Lyrics) then S.sel = nil end
 end
 
 local function onRowClick(S, Lyrics, idx)
   local ev = S.events[idx]
+  S.sel = { time = ev.time, is_end = ev.is_end }
   reaper.SetEditCurPos(ev.time, true, false)
   if not S.autoselect then return end
   local next_time = nil
@@ -128,6 +176,7 @@ function M.draw(ctx, H, helpers)
     S.last_active = active_idx
   end
 
+  local sel_idx = findSelIdx(S, Lyrics)
   local click_idx = nil
   local body_visible = reaper.ImGui_BeginChild(ctx, 'lyrics_body', 0, body_h, 0, reaper.ImGui_WindowFlags_NoNav())
   if body_visible then
@@ -154,15 +203,19 @@ function M.draw(ctx, H, helpers)
         end
 
         reaper.ImGui_TableNextColumn(ctx)
-        local clicked = reaper.ImGui_Selectable(ctx, ev.pos_str .. '###line', false,
+        local clicked = reaper.ImGui_Selectable(ctx, ev.pos_str .. '###line', i == sel_idx,
           reaper.ImGui_SelectableFlags_SpanAllColumns())
         if clicked then click_idx = i end
 
         reaper.ImGui_TableNextColumn(ctx)
         if ev.is_end then
-          reaper.ImGui_TextDisabled(ctx, '- fin -')
+          reaper.ImGui_TextDisabled(ctx, ev.owner and '- fin -' or '- fin (sin linea) -')
         else
           reaper.ImGui_Text(ctx, ev.text)
+          if ev.dur then
+            reaper.ImGui_SameLine(ctx, 0, 10)
+            reaper.ImGui_TextDisabled(ctx, string.format('%s %.2f s', Lyrics.END_MARK, ev.dur))
+          end
         end
 
         if S.scroll_target == i then
