@@ -12,6 +12,8 @@
 --   MusicStateRoles_common_logic.lua
 --   MusicStateArmonia_common_logic.lua
 --   MusicStateCues_common_logic.lua
+--   MusicStateLyrics_common_logic.lua
+--   MusicStateLyricsTab_common_logic.lua
 -- @about
 --   Panel nativo ReaImGui para cargar y publicar metadata musical
 --   (tonalidad, roles, armonia, cues) en ProjExtState, mas el script
