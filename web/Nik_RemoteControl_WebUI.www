@@ -1,11 +1,12 @@
 -- @description Nik RemoteControl — Interfaz web (control remoto)
 -- @author Nik
--- @version 1.6
+-- @version 1.7
 -- @provides
 --   config.js
 --   modal-loader.js
 --   nsaudio_remote_control.html
 --   nsaudio_prompter.html
+--   nsaudio_cantante.html
 --   styles.css
 --   core/*.js
 --   markers/*.js

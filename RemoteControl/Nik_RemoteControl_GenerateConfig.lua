@@ -16,6 +16,7 @@ local SCRIPTS = {
   { key = "tabNext",                     file = "NikRemote_TabNext.lua" },
   { key = "preMarkerSeek",               file = "Nik_Markers_SeekRelative.lua" },
   { key = "musicStatePublishAll",        file = "Nik_MusicState_PublishAll.lua", dir = "../MusicState/" },
+  { key = "musicStatePublishLyrics",     file = "Nik_MusicState_PublishLyrics.lua", dir = "../MusicState/" },
 }
 
 local lines = {

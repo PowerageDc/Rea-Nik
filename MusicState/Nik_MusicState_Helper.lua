@@ -1,9 +1,10 @@
 -- @description Nik MusicState — Suite completa (metadata musical + publish)
--- @version 1.2
+-- @version 1.3
 -- @author Nik
 -- @metapackage
 -- @provides
 --   [main] Nik_MusicState_PublishAll.lua
+--   [main] Nik_MusicState_PublishLyrics.lua
 --   ../_Shared/ImGuiInputCommit_common_logic.lua
 --   MusicStateBridge_common_logic.lua
 --   MusicStateRowInputs_common_logic.lua
@@ -15,7 +16,8 @@
 --   Panel nativo ReaImGui para cargar y publicar metadata musical
 --   (tonalidad, roles, armonia, cues) en ProjExtState, mas el script
 --   que puentea esos datos a ExtState global para que la UI web de
---   instrumentista los consuma.
+--   instrumentista los consuma, y el script que publica la letra
+--   (lyrics) del proyecto para la UI de cantante.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
