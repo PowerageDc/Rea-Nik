@@ -29,6 +29,8 @@ local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
 local Armonia = dofile(script_dir .. "MusicStateArmonia_common_logic.lua")
 local Cues = dofile(script_dir .. "MusicStateCues_common_logic.lua")
+local Lyrics = dofile(script_dir .. "MusicStateLyrics_common_logic.lua")
+local LyricsTab = dofile(script_dir .. "MusicStateLyricsTab_common_logic.lua")
 
 local ctx = reaper.ImGui_CreateContext('MusicState Helper', 0)    -- Context creation, config_flags=0 para desactivar Nav
 local font = reaper.ImGui_CreateFont('sans-serif', 16)
@@ -316,6 +318,7 @@ local helpers = {
   captureCursorPosition = nikMusicStateCaptureCursorPosition,
   RowInputs = RowInputs,
   InputCommit = InputCommit,
+  Lyrics = Lyrics,
   moveCursorToRow = nikMusicStateMoveCursorToRow,
   rowToTime = nikMusicStateRowToTime,
   getSections = nikMusicStateGetSections,
@@ -479,6 +482,10 @@ local function loop()
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Cues') then
         Cues.draw(ctx, H, helpers)
+        reaper.ImGui_EndTabItem(ctx)
+      end
+      if reaper.ImGui_BeginTabItem(ctx, 'Lyrics') then
+        LyricsTab.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
       reaper.ImGui_EndTabBar(ctx)
