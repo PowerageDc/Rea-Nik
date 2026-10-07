@@ -109,7 +109,9 @@ end
 
 local function onRowClick(S, Lyrics, idx)
   local ev = S.events[idx]
-  S.sel = { time = ev.time, is_end = ev.is_end }
+  local was_sel = S.sel and S.sel.is_end == ev.is_end
+    and math.abs(S.sel.time - ev.time) <= Lyrics.EPS_TIME
+  S.sel = (not was_sel) and { time = ev.time, is_end = ev.is_end } or nil
   reaper.SetEditCurPos(ev.time, true, false)
   if not S.autoselect then return end
   local next_time = nil
