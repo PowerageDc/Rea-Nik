@@ -82,6 +82,13 @@ var NIK_LUA_COMMANDS = {
         luaFile: "Nik_MusicState_PublishAll.lua",
         commandId: "_RS79030cbf502d5745efda6628fa8b10e36f9b898d"
     },
+    // Publica lyrics_data + lyrics_version desde el track "🎤 Lyrics". Cada
+    // ejecución INCREMENTA lyrics_version: solo se dispara al conectar y al
+    // cambiar de proyecto, nunca en respuesta a un cambio de versión.
+    musicStatePublishLyrics: {
+        luaFile: "Nik_MusicState_PublishLyrics.lua",
+        commandId: "_RSd54f79de554e285d622f22a5599d1497f4b788fa"
+    },
     // Botones ⏮/⏭ del nikTabBar — van encadenados con la acción nativa 40667
     // (no forman parte del objeto, van hardcodeados junto a este Command ID
     // en el propio onclick). 

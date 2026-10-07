@@ -46,6 +46,16 @@ var g_markers = [];                    // mismo formato que main.js: array de to
                                         // por marker ([.., nombre, id, pos, color]) — layout
                                         // confirmado contra core/wwr-dispatch.js (getValFromAr).
 
+// Opt-in por UI: solo la UI que muestra letra lo pone en true (ej. cantante.js).
+// Sin esto, el cambio de proyecto no dispara PublishLyrics. El typeof respeta
+// un valor definido antes de cargar este archivo.
+var NIK_MS_LYRICS_ENABLED = (typeof NIK_MS_LYRICS_ENABLED !== "undefined") ? NIK_MS_LYRICS_ENABLED : false;
+
+var nikMsLastKnownLyricsVersion = null; // último lyrics_version visto EN EL PROYECTO
+                                         // ACTIVO -- se resetea a null en cada cambio
+                                         // de proyecto, igual criterio que
+                                         // nikMsLastKnownPublishVersion.
+
 var NIK_MS_DEBUG = false;
 function nikMsLog(tag, extra) {
     if (!NIK_MS_DEBUG) return;
@@ -113,6 +123,22 @@ function wwr_onreply(results, sentAtMs) {
                 }
                 if (tok[1] == "NikMusicState" && tok[2] == "cues_data") {
                     if (typeof nikMusicStateSetCuesData === "function") nikMusicStateSetCuesData(tok[3]);
+                }
+                if (tok[1] == "NikMusicState" && tok[2] == "lyrics_data") {
+                    nikMsLog("LYRICS_IN", "len=" + (tok[3] ? tok[3].length : 0));
+                    if (typeof nikMusicStateSetLyricsData === "function") nikMusicStateSetLyricsData(tok[3]);
+                }
+                if (tok[1] == "NikMusicState" && tok[2] == "lyrics_version") {
+                    // Un valor vacío (el script borró la key: proyecto sin track de
+                    // lyrics) cuenta como cambio a null; así una letra que desaparece
+                    // se refresca igual. Solo GET, nunca re-disparar el script: cada
+                    // ejecución incrementa lyrics_version y esto haría un bucle.
+                    var lvParsed = parseInt(tok[3], 10);
+                    var lvNew = isNaN(lvParsed) ? null : lvParsed;
+                    if (lvNew !== nikMsLastKnownLyricsVersion) {
+                        nikMsLastKnownLyricsVersion = lvNew;
+                        if (typeof nikMusicStateFetchLyrics === "function") nikMusicStateFetchLyrics();
+                    }
                 }
                 if (tok[1] == "NikMusicState" && tok[2] == "publish_version") {
                     var pv = parseInt(tok[3], 10);
@@ -191,6 +217,7 @@ function nikMsHandleProjectSwitch(source) {
     // flag al cerrar la última tab).
     nikMsResetProjectState();
     if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
+    if (NIK_MS_LYRICS_ENABLED && typeof nikMusicStateRequestLyrics === "function") nikMusicStateRequestLyrics();
     nikMsRequestTempoAndTimesig();
     // Mitigación de carrera: si una respuesta rezagada del proyecto
     // anterior llega DESPUÉS del reset, repuebla con datos viejos (las
@@ -200,6 +227,7 @@ function nikMsHandleProjectSwitch(source) {
     // en Nik_RemoteState_Poll.lua.
     window.setTimeout(function () {
         if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
+        if (NIK_MS_LYRICS_ENABLED && typeof nikMusicStateRequestLyrics === "function") nikMusicStateRequestLyrics();
         nikMsRequestTempoAndTimesig();
     }, 400);
 }
@@ -214,6 +242,8 @@ function nikMsResetProjectState() {
     if (typeof nikMusicStateSetProjectKey === "function") nikMusicStateSetProjectKey(null);
     if (typeof nikMusicStateSetProjectRoles === "function") nikMusicStateSetProjectRoles(null);
     if (typeof nikMsTempoSetMap === "function") nikMsTempoSetMap(null);
+    if (typeof nikMusicStateSetLyricsData === "function") nikMusicStateSetLyricsData(null);
+    nikMsLastKnownLyricsVersion = null;
     nikMsLastKnownPublishVersion = null;
     nikMsLog("RESET");
     nikReaPitchLastSemitone = "none";

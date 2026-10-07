@@ -199,9 +199,10 @@ function nikMusicStateIsPlaying() {
         (nikTransportPlayState === 1 || nikTransportPlayState === 5);
 }
 
-function nikMusicStateAdvanceSongSec() {
+function nikMusicStateAdvanceSongSec(extraLeadSec) {
     if (!nikMusicStateIsPlaying()) return 0;
-    var sec = (nikMusicStateLookaheadSec + nikMusicStateExtrapolatedSec()) * nikMusicStatePlayRate();
+    var extra = (typeof extraLeadSec === "number" && extraLeadSec > 0) ? extraLeadSec : 0;
+    var sec = (nikMusicStateLookaheadSec + extra + nikMusicStateExtrapolatedSec()) * nikMusicStatePlayRate();
     return sec > 0 ? sec : 0;
 }
 
@@ -209,13 +210,13 @@ function nikMusicStateEffectiveSec() {
     return parseFloat(playPosSeconds) + nikMusicStateAdvanceSongSec();
 }
 
-function nikMusicStateCurrentPos() {
+function nikMusicStateCurrentPos(extraLeadSec) {
     var parsed = nikMusicStateParseBarBeat(nikLastPositionBeatsStr);
     if (!parsed) return null;
     var bar = parsed.bar;
     var beats = parsed.beatIndex - 1 + parsed.hundredths / 100;
 
-    var advanceSec = nikMusicStateAdvanceSongSec();
+    var advanceSec = nikMusicStateAdvanceSongSec(extraLeadSec);
     if (advanceSec > 0 && typeof nikMsTempoAt === "function") {
         var bpm = nikMsTempoAt(parseFloat(playPosSeconds));
         if (bpm != null && bpm > 0) {
@@ -327,6 +328,123 @@ function nikMusicStateActiveCues(roleFilter) {
     return active;
 }
 
+// --- Lyrics (cantantes) ---
+// lyrics_data: mismo formato keyed por compás que harmony_data/cues_data
+// (musicstate_data_model.md §4.7). "Línea" = evento con texto; "marcador"
+// = evento con text null (fin de línea explícito, sin él hay carry-over).
+var nikMusicStateLyricsFlat = [];   // eventos ordenados {bar, qn_offset, text, lastLine}, con marcadores
+var nikMusicStateLyricsLines = [];  // solo las líneas, con `index` absoluto
+
+// Adelanto EXTRA de lyrics en segundos, sumado a nikMusicStateLookaheadSec:
+// el cantante necesita leer antes de cantar. Sin calibrar.
+var nikMusicStateLyricsLeadSec = (typeof nikMusicStateLyricsLeadSec !== "undefined") ? nikMusicStateLyricsLeadSec : 1.0;
+
+function nikMusicStateLyricIsMarker(ev) {
+    return ev.text === null || ev.text === undefined;
+}
+
+// Igual que nikMusicStateComparePos, pero en la misma posición el
+// marcador va antes que la línea: la línea gana el desempate.
+function nikMusicStateCompareLyricPos(a, b) {
+    var c = nikMusicStateComparePos(a, b);
+    if (c !== 0) return c;
+    var aMarker = nikMusicStateLyricIsMarker(a);
+    var bMarker = nikMusicStateLyricIsMarker(b);
+    if (aMarker === bMarker) return 0;
+    return aMarker ? -1 : 1;
+}
+
+// Des-escapa las barras que duplica el web control (data_model §3) antes
+// del JSON.parse. Vacío, null o JSON inválido deja el estado en vacío.
+function nikMusicStateSetLyricsData(val) {
+    var raw = (typeof val === "string") ? val.replace(/\\\\/g, "\\") : val;
+    var flat = nikMusicStateFlattenBarKeyed(nikMusicStateParseJsonSafe(raw));
+    flat.sort(nikMusicStateCompareLyricPos);
+    var lines = [];
+    var last = -1;
+    for (var i = 0; i < flat.length; i++) {
+        if (!nikMusicStateLyricIsMarker(flat[i])) {
+            flat[i].index = lines.length;
+            lines.push(flat[i]);
+            last = flat[i].index;
+        }
+        flat[i].lastLine = last;
+    }
+    nikMusicStateLyricsFlat = flat;
+    nikMusicStateLyricsLines = lines;
+}
+
+// extraLeadSec numérico (0 incluido) se usa tal cual; sin argumento,
+// nikMusicStateLyricsLeadSec.
+function nikMusicStateLyricsLead(extraLeadSec) {
+    return (typeof extraLeadSec === "number") ? extraLeadSec : nikMusicStateLyricsLeadSec;
+}
+
+// Copia pública de una línea: la UI no toca el estado cacheado.
+function nikMusicStateLyricsPublic(line, isCurrent) {
+    var out = { index: line.index, bar: line.bar, qn_offset: line.qn_offset, text: line.text };
+    if (isCurrent !== undefined) out.isCurrent = isCurrent;
+    return out;
+}
+
+// {pos, lineIdx, ended} en la posición efectiva con lead de lyrics.
+// lineIdx = -1 si no hay línea vigente (intro). null sin datos o sin
+// posición. ended solo es true si hay línea vigente y el último evento
+// <= posición es un marcador.
+function nikMusicStateLyricsLocate(extraLeadSec) {
+    if (nikMusicStateLyricsFlat.length === 0) return null;
+    var pos = nikMusicStateCurrentPos(nikMusicStateLyricsLead(extraLeadSec));
+    if (!pos) return null;
+    var evIdx = nikMusicStateFindIndexAtOrBefore(nikMusicStateLyricsFlat, pos);
+    if (evIdx === -1) return { pos: pos, lineIdx: -1, ended: false };
+    var ev = nikMusicStateLyricsFlat[evIdx];
+    return {
+        pos: pos,
+        lineIdx: ev.lastLine,
+        ended: ev.lastLine !== -1 && nikMusicStateLyricIsMarker(ev)
+    };
+}
+
+// Última línea con inicio <= posición, aunque ya haya terminado (ver
+// nikMusicStateLyricEnded). null en intro o sin datos.
+function nikMusicStateCurrentLyric(extraLeadSec) {
+    var loc = nikMusicStateLyricsLocate(extraLeadSec);
+    if (!loc || loc.lineIdx === -1) return null;
+    return nikMusicStateLyricsPublic(nikMusicStateLyricsLines[loc.lineIdx]);
+}
+
+function nikMusicStateLyricEnded(extraLeadSec) {
+    var loc = nikMusicStateLyricsLocate(extraLeadSec);
+    return !!(loc && loc.ended);
+}
+
+// lookBack/lookForward en cantidad de LÍNEAS (los marcadores no cuentan).
+// En intro, lookForward cuenta desde antes de la primera línea: devuelve
+// las primeras lookForward líneas, ninguna con isCurrent.
+function nikMusicStateLyricsWindow(lookBack, lookForward, extraLeadSec) {
+    var lines = nikMusicStateLyricsLines;
+    var loc = nikMusicStateLyricsLocate(extraLeadSec);
+    if (!loc || lines.length === 0) return [];
+    var cur = loc.lineIdx;
+    var start = Math.max(0, cur - (lookBack || 0));
+    var end = Math.min(lines.length - 1, cur + (lookForward || 0));
+    var win = [];
+    for (var i = start; i <= end; i++) win.push(nikMusicStateLyricsPublic(lines[i], i === cur));
+    return win;
+}
+
+// QN hasta el inicio de la próxima LÍNEA (no marcador), medido desde la
+// misma posición que decide qué línea se muestra. null si no hay próxima.
+function nikMusicStateLyricsNextDistance(extraLeadSec) {
+    var loc = nikMusicStateLyricsLocate(extraLeadSec);
+    if (!loc) return null;
+    var next = nikMusicStateLyricsLines[loc.lineIdx + 1];
+    if (!next) return null;
+    var posQn = nikMusicStateBarStartQn(loc.pos.bar) + loc.pos.qn_offset;
+    var nextQn = nikMusicStateBarStartQn(next.bar) + next.qn_offset;
+    return { qn: nextQn - posQn, line: nikMusicStateLyricsPublic(next) };
+}
+
 // --- Trigger del one-shot (mismo criterio que nikPlayrateRequestTempoMap) ---
 // TODO: confirmar el nombre real de NIK_LUA_COMMANDS.<key>.commandId una
 // vez que se registre Nik_MusicState_PublishAll.lua en el Action List y
@@ -338,4 +456,26 @@ function nikMusicStateRequestAll() {
         ";GET/EXTSTATE/NikMusicState/project_key" +
         ";GET/EXTSTATE/NikMusicState/project_roles" +
         ";GET/EXTSTATE/NikMusicState/cues_data");
+}
+
+// Pedido propio de lyrics (no entra en nikMusicStateRequestAll, que lo
+// recibiría el control remoto general sin usarlo). DISPARA el script, que
+// incrementa lyrics_version: usar solo al conectar / cambiar de proyecto.
+// Con guard: un config.local.js viejo sin esta key no debe romper quien
+// llama (ej. nikMsHandleProjectSwitch).
+function nikMusicStateRequestLyrics() {
+    var cmd = NIK_LUA_COMMANDS.musicStatePublishLyrics;
+    if (!cmd || !cmd.commandId) {
+        console.warn("[music-state] musicStatePublishLyrics sin commandId (config.local.js desactualizado?)");
+        return;
+    }
+    wwr_req(cmd.commandId +
+        ";GET/EXTSTATE/NikMusicState/lyrics_data" +
+        ";GET/EXTSTATE/NikMusicState/lyrics_version");
+}
+
+// Solo lectura, sin disparar el script: para cuando el poll detecta que
+// lyrics_version cambió (alguien republicó desde REAPER).
+function nikMusicStateFetchLyrics() {
+    wwr_req("GET/EXTSTATE/NikMusicState/lyrics_data");
 }
