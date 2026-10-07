@@ -14,6 +14,7 @@
 --   MusicStateCues_common_logic.lua
 --   MusicStateLyrics_common_logic.lua
 --   MusicStateLyricsTab_common_logic.lua
+--   MusicStateLyricsSync_common_logic.lua
 -- @about
 --   Panel nativo ReaImGui para cargar y publicar metadata musical
 --   (tonalidad, roles, armonia, cues) en ProjExtState, mas el script
@@ -31,6 +32,7 @@ local Armonia = dofile(script_dir .. "MusicStateArmonia_common_logic.lua")
 local Cues = dofile(script_dir .. "MusicStateCues_common_logic.lua")
 local Lyrics = dofile(script_dir .. "MusicStateLyrics_common_logic.lua")
 local LyricsTab = dofile(script_dir .. "MusicStateLyricsTab_common_logic.lua")
+local LyricsSync = dofile(script_dir .. "MusicStateLyricsSync_common_logic.lua")
 
 local ctx = reaper.ImGui_CreateContext('MusicState Helper', 0)    -- Context creation, config_flags=0 para desactivar Nav
 local font = reaper.ImGui_CreateFont('sans-serif', 16)
@@ -319,6 +321,7 @@ local helpers = {
   RowInputs = RowInputs,
   InputCommit = InputCommit,
   Lyrics = Lyrics,
+  LyricsSync = LyricsSync,
   moveCursorToRow = nikMusicStateMoveCursorToRow,
   rowToTime = nikMusicStateRowToTime,
   getSections = nikMusicStateGetSections,

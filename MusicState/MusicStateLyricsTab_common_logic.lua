@@ -102,6 +102,8 @@ function M.draw(ctx, H, helpers)
   reaper.ImGui_TextDisabled(ctx, string.format('%d lineas', S.line_count))
   reaper.ImGui_Spacing(ctx)
 
+  helpers.LyricsSync.draw(ctx, S, H, helpers)
+
   if not S.track then
     reaper.ImGui_TextDisabled(ctx, 'No hay un track de Lyrics en este proyecto (nombre con "lyrics").')
     return
