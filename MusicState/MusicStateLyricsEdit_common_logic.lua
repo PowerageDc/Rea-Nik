@@ -98,6 +98,10 @@ function M.draw(ctx, S, H, helpers)
     if run(S, Ed, helpers, fn, key) then
       Ed.msg = ev.is_end and 'Fin borrado.' or 'Linea borrada.'
       S.sel = nil
+      if S.autoselect and not ev.is_end then
+        reaper.GetSet_LoopTimeRange(true, false, 0, 0, false)
+        reaper.UpdateArrange()
+      end
     end
   end
   reaper.ImGui_EndDisabled(ctx)
