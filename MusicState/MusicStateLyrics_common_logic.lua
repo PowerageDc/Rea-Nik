@@ -339,7 +339,8 @@ function M.MoveEvent(key, new_time, opts)
   local ev = list[i]
   local end_ev = (not ev.is_end and opts.with_end and ev.end_idx) and list[ev.end_idx] or nil
   local prev = list[i - 1]
-  local nxt = end_ev and list[ev.end_idx + 1] or list[i + 1]
+  local nxt
+  if end_ev then nxt = list[ev.end_idx + 1] else nxt = list[i + 1] end
   local lo = prev and (prev.time + M.MIN_SEP) or 0
   local hi = nxt and (nxt.time - M.MIN_SEP) or math.huge
   if end_ev then hi = hi - (end_ev.time - ev.time) end
