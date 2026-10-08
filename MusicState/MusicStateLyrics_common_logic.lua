@@ -98,16 +98,46 @@ function M.EnsureTake(track, t_from, t_to)
     end
   end
   if not prev then
-    prev = reaper.CreateNewMIDIItemInProj(track, 0, need_end, false)
-  else
-    local len = reaper.GetMediaItemInfo_Value(prev, "D_LENGTH")
-    if prev_pos + len < last + M.EPS_TIME then
-      reaper.MIDI_SetItemExtents(
-        prev,
-        reaper.TimeMap2_timeToQN(0, prev_pos),
-        reaper.TimeMap2_timeToQN(0, need_end)
-      )
+    -- Sin item previo al destino: si ya hay items MIDI, se extiende el inicio
+    -- del primero hasta 0 (los eventos conservan su tiempo de proyecto, probe
+    -- E0 T4). Un item nuevo desde 0 se solaparia con ellos (T5a).
+    local first, first_pos
+    for i = 0, reaper.CountTrackMediaItems(track) - 1 do
+      local it = reaper.GetTrackMediaItem(track, i)
+      local tk = reaper.GetActiveTake(it)
+      local pos = reaper.GetMediaItemInfo_Value(it, "D_POSITION")
+      if tk and reaper.TakeIsMIDI(tk) and (not first_pos or pos < first_pos) then
+        first, first_pos = it, pos
+      end
     end
+    if not first then
+      prev = reaper.CreateNewMIDIItemInProj(track, 0, need_end, false)
+      return reaper.GetActiveTake(prev)
+    end
+    local first_end = first_pos + reaper.GetMediaItemInfo_Value(first, "D_LENGTH")
+    reaper.MIDI_SetItemExtents(first, reaper.TimeMap2_timeToQN(0, 0),
+      reaper.TimeMap2_timeToQN(0, first_end))
+    prev, prev_pos = first, reaper.GetMediaItemInfo_Value(first, "D_POSITION")
+  end
+  local len = reaper.GetMediaItemInfo_Value(prev, "D_LENGTH")
+  if prev_pos + len < last + M.EPS_TIME then
+    -- La extension no pasa del inicio del item siguiente (T5b: lo solapaba).
+    local cap
+    for i = 0, reaper.CountTrackMediaItems(track) - 1 do
+      local it = reaper.GetTrackMediaItem(track, i)
+      local tk = reaper.GetActiveTake(it)
+      local pos = reaper.GetMediaItemInfo_Value(it, "D_POSITION")
+      if tk and reaper.TakeIsMIDI(tk) and pos > prev_pos + M.EPS_TIME
+        and (not cap or pos < cap) then
+        cap = pos
+      end
+    end
+    if cap and cap > last + M.EPS_TIME and need_end > cap then need_end = cap end
+    reaper.MIDI_SetItemExtents(
+      prev,
+      reaper.TimeMap2_timeToQN(0, prev_pos),
+      reaper.TimeMap2_timeToQN(0, need_end)
+    )
   end
   return reaper.GetActiveTake(prev)
 end
