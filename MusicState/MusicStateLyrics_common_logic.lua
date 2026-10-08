@@ -211,6 +211,24 @@ function M.ApplyLine(track, ctx, text, opts)
   return true, track
 end
 
+-- Decide como agregar una linea a partir del ctx de PlanLine y el texto ya
+-- limpio. Sin UI. kind: apply | confirm_line | confirm_inside | reject.
+function M.DecideAdd(ctx, text)
+  if text == M.END_MARK then return { kind = "reject", code = "reserved" } end
+  if text == "" then
+    if #ctx.at_end > 0 then return { kind = "reject", code = "end_occupied" } end
+    return { kind = "apply" }
+  end
+  local has_line, has_end = false, false
+  for _, ev in ipairs(ctx.at_start) do
+    if ev.text == M.END_MARK then has_end = true else has_line = true end
+  end
+  local n = #ctx.inside
+  local kind = "apply"
+  if n > 0 then kind = "confirm_inside" elseif has_line then kind = "confirm_line" end
+  return { kind = kind, n = n, has_line = has_line, replaces_end = has_end }
+end
+
 -- 3c: pares y edicion. Las funciones de edicion reciben una clave
 -- {time, is_end} y releen el track al ejecutarse (ev.take/ev.idx caducan
 -- con cualquier edicion).
