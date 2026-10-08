@@ -91,6 +91,11 @@ local function onRowClick(S, Lyrics, idx)
   S.sel = (not was_sel) and { time = ev.time, is_end = ev.is_end } or nil
   reaper.SetEditCurPos(ev.time, true, false)
   if not S.autoselect then return end
+  if was_sel then
+    reaper.GetSet_LoopTimeRange(true, false, 0, 0, false)
+    reaper.UpdateArrange()
+    return
+  end
   local next_time = nil
   if not ev.is_end then
     for j = idx + 1, #S.events do
