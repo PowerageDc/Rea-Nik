@@ -151,6 +151,30 @@ local function undoEntry(Sy, Lyrics)
   reaper.Undo_EndBlock('Lyrics: deshacer tap', -1)
 end
 
+-- Contrato con 3c (musicstate_lyrics.md 8.6). flush se llama antes de una
+-- edicion (inserta el fin pendiente, si hay) y onEdit despues, para que hist
+-- siga apuntando a eventos que existen. Sy puede ser nil (cola nunca abierta).
+function M.flush(Sy, Lyrics)
+  if Sy then insertEnd(Sy, Lyrics) end
+end
+
+function M.onEdit(Sy, Lyrics, change)
+  if not Sy or change.kind ~= 'delete' then return end
+  -- Borrado propio, no un Ctrl+Z: que reconcile no retroceda la cola.
+  Sy.seen_lines = nil
+  local eps = Lyrics.EPS_TIME
+  for _, e in ipairs(Sy.hist) do
+    if change.which == 'start' then
+      -- Linea borrada: la entrada pasa a comportarse como un salto.
+      if not e.skip and math.abs(e.time - change.old_time) <= eps then
+        e.skip = true
+      end
+    elseif e.end_time and math.abs(e.end_time - change.old_time) <= eps then
+      e.end_time = nil
+    end
+  end
+end
+
 local function drawPrep(ctx, Sy, Lyrics)
   reaper.ImGui_TextDisabled(ctx, 'Pega la letra: una linea por renglon (las lineas en blanco se ignoran).')
   local changed, text = reaper.ImGui_InputTextMultiline(ctx, '##lyrics_paste', Sy.buf, -1, 120)

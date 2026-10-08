@@ -23,29 +23,6 @@ local function findSectionIdx(sections, time)
   return nil
 end
 
--- Deriva el par linea/fin por posicion (no se guarda). En un grupo de eventos
--- a menos de eps entre si, los fines cierran la linea anterior y las lineas
--- abren una nueva. Un fin sin linea previa (o repetido) queda sin owner.
-local function pairEvents(events, eps)
-  local cur = nil
-  local i, n = 1, #events
-  while i <= n do
-    local j = i
-    while j < n and events[j + 1].time - events[j].time <= eps do j = j + 1 end
-    for k = i, j do
-      local ev = events[k]
-      if ev.is_end and cur and not events[cur].end_idx then
-        events[cur].end_idx = k
-        ev.owner = cur
-      end
-    end
-    for k = i, j do
-      if not events[k].is_end then cur = k end
-    end
-    i = j + 1
-  end
-end
-
 -- La seleccion se identifica por {time, is_end}, no por indice: refresh
 -- recarga todo y los indices se corren.
 local function findSelIdx(S, Lyrics)
@@ -94,7 +71,7 @@ local function refresh(S, H, helpers)
     ev.section = s_idx and sections[s_idx].name or nil
     if not ev.is_end then lines = lines + 1 end
   end
-  pairEvents(events, Lyrics.EPS_TIME)
+  Lyrics.PairEvents(events)
   for _, ev in ipairs(events) do
     if ev.end_idx then ev.dur = events[ev.end_idx].time - ev.time end
   end
@@ -158,6 +135,9 @@ function M.draw(ctx, H, helpers)
     reaper.ImGui_TextDisabled(ctx, 'No hay un track de Lyrics en este proyecto (nombre con "lyrics").')
     return
   end
+
+  helpers.LyricsEdit.draw(ctx, S, H, helpers)
+  reaper.ImGui_Spacing(ctx)
 
   local _, avail_h = reaper.ImGui_GetContentRegionAvail(ctx)
   local body_h = math.max(avail_h - helpers.getListFooterReserveH(), 60)

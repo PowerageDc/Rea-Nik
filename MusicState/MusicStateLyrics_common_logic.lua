@@ -181,4 +181,115 @@ function M.ApplyLine(track, ctx, text, opts)
   return true, track
 end
 
+-- 3c: pares y edicion. Las funciones de edicion reciben una clave
+-- {time, is_end} y releen el track al ejecutarse (ev.take/ev.idx caducan
+-- con cualquier edicion).
+
+-- Deriva el par linea/fin por posicion (no se guarda). En un grupo de
+-- eventos a menos de EPS_TIME entre si, los fines cierran la linea anterior
+-- y las lineas abren una nueva. Un fin sin linea previa queda sin owner.
+function M.PairEvents(events)
+  for _, ev in ipairs(events) do
+    ev.is_end = (ev.text == M.END_MARK)
+    ev.end_idx, ev.owner = nil, nil
+  end
+  local cur = nil
+  local i, n = 1, #events
+  while i <= n do
+    local j = i
+    while j < n and events[j + 1].time - events[j].time <= M.EPS_TIME do j = j + 1 end
+    for k = i, j do
+      local ev = events[k]
+      if ev.is_end and cur and not events[cur].end_idx then
+        events[cur].end_idx = k
+        ev.owner = cur
+      end
+    end
+    for k = i, j do
+      if not events[k].is_end then cur = k end
+    end
+    i = j + 1
+  end
+end
+
+-- Indice en list del evento que coincide con key (tolerancia EPS_TIME).
+function M.Resolve(list, key)
+  local best, best_d = nil, nil
+  for i, ev in ipairs(list) do
+    if (ev.text == M.END_MARK) == key.is_end then
+      local d = math.abs(ev.time - key.time)
+      if d <= M.EPS_TIME and (not best_d or d < best_d) then best, best_d = i, d end
+    end
+  end
+  return best
+end
+
+local function freshList()
+  local track = M.FindLyricsTrack(0)
+  if not track then return nil end
+  local list = M.CollectEvents(track)
+  M.PairEvents(list)
+  return list
+end
+
+local function deleteList(victims, name)
+  reaper.Undo_BeginBlock()
+  M.DeleteEvents(victims)
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock(name, -1)
+end
+
+-- Cambia el texto en el lugar. typeIn=5 explicito: con nil la API ignora el
+-- mensaje (verificado en el probe de E0).
+function M.SetText(key, text)
+  text = M.CleanText(text or '')
+  if text == '' then return false, 'empty' end
+  if text == M.END_MARK then return false, 'reserved' end
+  if key.is_end then return false, 'not_found' end
+  local list = freshList()
+  if not list then return false, 'no_track' end
+  local i = M.Resolve(list, key)
+  if not i then return false, 'not_found' end
+  local ev = list[i]
+  if ev.text ~= text then
+    reaper.Undo_BeginBlock()
+    reaper.MIDI_SetTextSysexEvt(ev.take, ev.idx, nil, nil, nil, 5, text, nil)
+    reaper.UpdateArrange()
+    reaper.Undo_EndBlock('Lyrics: editar texto', -1)
+  end
+  return true, { kind = 'text', time = ev.time }
+end
+
+-- Borra una linea junto con su fin (el par se deriva por posicion), en un
+-- solo bloque de undo. Dejar el fin suelto lo haria cerrar la linea anterior.
+function M.DeleteLine(key)
+  if key.is_end then return false, 'not_found' end
+  local list = freshList()
+  if not list then return false, 'no_track' end
+  local i = M.Resolve(list, key)
+  if not i then return false, 'not_found' end
+  local ev = list[i]
+  local victims = { ev }
+  local change = { kind = 'delete', which = 'start', old_time = ev.time }
+  if ev.end_idx then
+    victims[2] = list[ev.end_idx]
+    change.end_time = list[ev.end_idx].time
+  end
+  deleteList(victims, 'Lyrics: borrar linea')
+  return true, change
+end
+
+-- Borra un fin: key puede ser el propio fin o su linea.
+function M.DeleteEnd(key)
+  local list = freshList()
+  if not list then return false, 'no_track' end
+  local i = M.Resolve(list, key)
+  if not i then return false, 'not_found' end
+  local ev = list[i]
+  local end_ev = ev.is_end and ev or (ev.end_idx and list[ev.end_idx])
+  if not end_ev then return false, 'no_end' end
+  deleteList({ end_ev }, 'Lyrics: borrar fin')
+  return true, { kind = 'delete', which = 'end', old_time = end_ev.time }
+end
+
 return M
