@@ -72,6 +72,7 @@ reaper_www_root/
     │   ├── ms-tempo.js       lookup de tempo puro
     │   ├── ms-beat.js        pulso por compás + distancia a próximo evento de armonía
     │   ├── ms-section.js     sección actual y posición efectiva en segundos
+    │   ├── ms-section-row.js fila de sección prev/actual/next con animación (FLIP, preludio, jump)
     │   └── ms-stale.js       indicador de datos viejos (clase is-stale + tope de g_wwr_errcnt)
     ├── instrumentista/
     │   ├── instrumentista.js   bootstrap de polls + render
@@ -84,7 +85,7 @@ reaper_www_root/
 anteriores): `main.js`, `config.js`, `config.local.js` (por XHR síncrono
 + `eval`, se ignora si no existe), `core/utils.js`, `markers/markers.js`,
 `core/music-transpose.js`, `core/music-state.js`, `ms-tempo.js`,
-`ms-beat.js`, `ms-section.js`, `ms-stale.js`, `ms-dispatch.js`, `instrumentista.js`.
+`ms-beat.js`, `ms-section.js`, `ms-section-row.js`, `ms-stale.js`, `ms-dispatch.js`, `instrumentista.js`.
 Después el shell llama `nikInstrumentistaInit()` y `nikInstrumentistaStartRenderLoop(50)`.
 
 `config.local.js` es imprescindible en cada PC: sin él los Command IDs
@@ -412,25 +413,30 @@ se desplazó ±1, se reetiquetan los `data-offset` de los nodos existentes
 fantasma ±3. En cualquier otro caso (salto de posición) se reconstruye
 con fade (`is-jumping`).
 
-**Animación de la fila de sección:** el estado es un triple
+**Animación de la fila de sección** (`musicstate-ui/shared/ms-section-row.js`,
+compartido con la UI de cantante; punto de entrada
+`nikMsSectionRowRender(screenJumped)`, que `instrumentista.js` llama desde
+`nikInstrumentistaRenderSectionRow()` pasando el flag de jump de la tira de
+acordes; el módulo exige los ids `msSectionRow`, `msSectionPrev`,
+`msSection`, `msSectionNext` y `msSectionNextFill` en el shell): el estado es un triple
 prev/actual/next con identidad `id|displayName` (los ids solos no sirven:
 proyectos distintos los comparten). Por tick:
 - Triple igual: no se anima; solo se arma el preludio de next si falta
-  poco para la próxima sección (`NIK_INSTRUMENTISTA_SECTION_PRELUDE_SEC`) y
+  poco para la próxima sección (`NIK_MS_SECTION_PRELUDE_SEC`) y
   hay reproducción.
 - Avance de uno (`prevId === old.curId`, `curId === old.nextId`,
   `curId !== null`) y la tira de acordes no hizo jump en ese tick: cruce
   animado, FLIP con **escala uniforme** derivada del alto y alineación por
   **centros** (`transform-origin: 50% 50%`). El prev saliente es un
   fantasma que se achica a `scale(0.7)` mientras se desvanece; el actual
-  que pasa a prev hace transicionar color y opacidad. `FlipTransform`
+  que pasa a prev hace transicionar color y opacidad. `nikMsFlipTransform`
   devuelve `""` si algún rect mide alto 0.
 - Cualquier otro caso (seek, retroceso, cambio de proyecto, lista de
   markers reemplazada): fade (`is-jumping`). Los jumps consecutivos se
   fusionan en uno si llegan antes de terminar el fade-out (150 ms).
 
 El render de la tira de acordes corre **antes** que el de la fila de
-sección: esta consulta `nikInstrumentistaChordLastRenderJumped`. Si no hay
+sección: recibe `nikInstrumentistaChordLastRenderJumped` como parámetro. Si no hay
 armonía cargada el flag queda siempre en `false`, y un seek que cruce una
 sola sección animaría igual.
 
@@ -590,6 +596,13 @@ Ideas ya evaluadas, apoyadas en primitivas existentes:
 **Pendientes (ninguno bloqueante):**
 
 - Selector de rol en la UI (hoy solo por consola + `localStorage`).
+- Extraer la tira de acordes (`nikInstrumentistaRenderChordStrip`,
+  `ShiftChordSlots` y su estado) a un módulo `shared/`, como ya se hizo con
+  `ms-stale.js` y `ms-section-row.js`: la usaría el control remoto on demand
+  y, en una v2 o v3, la UI de cantante si el cantante también toca. A
+  resolver al extraer: los ids de DOM fijos y el flag
+  `nikInstrumentistaChordLastRenderJumped`, que hoy consume la fila de
+  sección (ya por parámetro, ver §7).
 - Rediseño de la tira de acordes a 4 slots para landscape (`anterior ·
   ACTUAL · próximo1 · próximo2`, con debounce de 150–200 ms si implica
   cambios de estructura por JS). Evaluado y pospuesto: el landscape
