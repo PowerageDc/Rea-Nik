@@ -144,7 +144,10 @@ local function undoEntry(Sy, Lyrics)
       if ev.text == Lyrics.END_MARK then victims[#victims + 1] = ev end
     end
   end
-  if #victims == 0 then return end
+  if #victims == 0 then
+    Sy.msg = 'No se encontro la linea (movida o borrada fuera de la cola).'
+    return
+  end
   reaper.Undo_BeginBlock()
   Lyrics.DeleteEvents(victims)
   reaper.UpdateArrange()
@@ -159,10 +162,34 @@ function M.flush(Sy, Lyrics)
 end
 
 function M.onEdit(Sy, Lyrics, change)
-  if not Sy or change.kind ~= 'delete' then return end
+  if not Sy then return end
+  local eps = Lyrics.EPS_TIME
+  if change.kind == 'move' then
+    for _, e in ipairs(Sy.hist) do
+      if not e.skip then
+        if change.which == 'start' then
+          if math.abs(e.time - change.old_time) <= eps then
+            e.time = change.new_time
+            if change.end_old and e.end_time then e.end_time = change.end_new end
+          end
+        elseif e.end_time and math.abs(e.end_time - change.old_time) <= eps then
+          e.end_time = change.new_time
+        end
+      end
+    end
+    return
+  elseif change.kind == 'endadd' then
+    for _, e in ipairs(Sy.hist) do
+      if not e.skip and not e.end_time and math.abs(e.time - change.line_time) <= eps then
+        e.end_time = change.new_time
+      end
+    end
+    return
+  elseif change.kind ~= 'delete' then
+    return
+  end
   -- Borrado propio, no un Ctrl+Z: que reconcile no retroceda la cola.
   Sy.seen_lines = nil
-  local eps = Lyrics.EPS_TIME
   for _, e in ipairs(Sy.hist) do
     if change.which == 'start' then
       -- Linea borrada: la entrada pasa a comportarse como un salto.

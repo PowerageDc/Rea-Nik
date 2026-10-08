@@ -12,6 +12,11 @@ local MSG = {
   not_found = 'La linea ya no existe.',
   no_track = 'No hay un track de Lyrics.',
   no_end = 'La linea no tiene fin.',
+  has_end = 'La linea ya tiene fin.',
+  same = 'Ya esta en esa posicion.',
+  at_limit = 'Tope: hay un evento vecino.',
+  blocked = 'No hay margen entre los eventos vecinos.',
+  out_of_range = 'Fuera de rango: cruzaria o pisaria un evento vecino.',
 }
 
 local function getEd(S)
@@ -25,16 +30,68 @@ end
 -- Ejecuta una edicion con el contrato de la cola: vacia el fin pendiente
 -- antes, avisa del cambio despues y fuerza el refresh del cache de la tab
 -- (state_count = -1: la tab recarga al inicio del proximo frame).
-local function run(S, Ed, helpers, fn, key, arg)
+local function run(S, Ed, helpers, fn, key, a, b)
   helpers.LyricsSync.flush(S.sync, helpers.Lyrics)
-  local ok, res = fn(key, arg)
+  local ok, res = fn(key, a, b)
   if ok then
     helpers.LyricsSync.onEdit(S.sync, helpers.Lyrics, res)
     S.state_count = -1
   else
     Ed.msg = MSG[res] or 'No se pudo aplicar el cambio.'
   end
-  return ok
+  return ok, res
+end
+
+local STEPS = { -100, -20, 20, 100 }
+
+-- Aplica un movimiento y deja la UI coherente en el frame de transicion: el
+-- cache de la tab recarga recien en el proximo frame, asi que se parchea el
+-- tiempo del evento movido, la clave del borrador y la seleccion (que sigue
+-- al evento) para que el panel no parpadee ni borre el aviso.
+local function applyMove(S, Ed, helpers, key, new_time, opts)
+  local Lyrics = helpers.Lyrics
+  local ok, res = run(S, Ed, helpers, Lyrics.MoveEvent, key, new_time, opts)
+  if not ok then return end
+  local eps = Lyrics.EPS_TIME
+  local ci = Lyrics.Resolve(S.events, key)
+  if ci then
+    S.events[ci].time = res.new_time
+    S.events[ci].pos_str = reaper.format_timestr_pos(res.new_time, '', 2)
+  end
+  if Ed.key_time and Ed.key_end == key.is_end and math.abs(Ed.key_time - key.time) <= eps then
+    Ed.key_time = res.new_time
+  end
+  if S.sel and S.sel.is_end == key.is_end and math.abs(S.sel.time - key.time) <= eps then
+    S.sel = { time = res.new_time, is_end = key.is_end }
+    S.scroll_sel = true
+  end
+  Ed.msg = res.clamped and 'Movido hasta el tope (evento vecino).'
+    or ('Movido a ' .. reaper.format_timestr_pos(res.new_time, '', 2))
+end
+
+-- Fila de nudge + "Al cursor". key: evento a mover (nil = deshabilitado).
+-- add_key: linea sin fin; con key nil, "Al cursor" crea su fin.
+local function moveRow(ctx, S, Ed, helpers, id, label, key, add_key, with_end)
+  reaper.ImGui_Text(ctx, label)
+  reaper.ImGui_SameLine(ctx, 60)
+  reaper.ImGui_BeginDisabled(ctx, not key)
+  for _, d in ipairs(STEPS) do
+    if reaper.ImGui_Button(ctx, string.format('%+d##%s%d', d, id, d), 48, 0) and key then
+      applyMove(S, Ed, helpers, key, key.time + d / 1000, { clamp = true, with_end = with_end })
+    end
+    reaper.ImGui_SameLine(ctx)
+  end
+  reaper.ImGui_EndDisabled(ctx)
+  reaper.ImGui_BeginDisabled(ctx, not (key or add_key))
+  if reaper.ImGui_Button(ctx, 'Al cursor##' .. id, 90, 0) and (key or add_key) then
+    local t = reaper.GetCursorPosition()
+    if key then
+      applyMove(S, Ed, helpers, key, t, { with_end = with_end })
+    elseif run(S, Ed, helpers, helpers.Lyrics.AddEnd, add_key, t) then
+      Ed.msg = 'Fin agregado.'
+    end
+  end
+  reaper.ImGui_EndDisabled(ctx)
 end
 
 function M.draw(ctx, S, H, helpers)
@@ -113,6 +170,27 @@ function M.draw(ctx, S, H, helpers)
     if run(S, Ed, helpers, Lyrics.DeleteEnd, key) then Ed.msg = 'Fin borrado.' end
   end
   reaper.ImGui_EndDisabled(ctx)
+
+  -- Posicion: nudge en ms y "Al cursor". Un evento nunca cruza ni pisa a un
+  -- vecino: el nudge se detiene en el tope, "Al cursor" rechaza.
+  local line_key, end_key, add_key
+  if ev then
+    if ev.is_end then
+      end_key = { time = ev.time, is_end = true }
+    else
+      line_key = { time = ev.time, is_end = false }
+      local e = ev.end_idx and S.events[ev.end_idx]
+      if e then end_key = { time = e.time, is_end = true } else add_key = line_key end
+    end
+  end
+  local has_end = ev and not ev.is_end and ev.end_idx ~= nil
+  moveRow(ctx, S, Ed, helpers, 'start', 'Inicio', line_key, nil, Ed.with_end and has_end)
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_BeginDisabled(ctx, not has_end)
+  local w_changed, w_val = reaper.ImGui_Checkbox(ctx, 'El fin acompaña', Ed.with_end or false)
+  if w_changed then Ed.with_end = w_val end
+  reaper.ImGui_EndDisabled(ctx)
+  moveRow(ctx, S, Ed, helpers, 'end', 'Fin', end_key, add_key, false)
 
   -- Linea de aviso siempre reservada (08_REAIMGUI_PATTERNS.md §4).
   reaper.ImGui_TextDisabled(ctx, Ed.msg)

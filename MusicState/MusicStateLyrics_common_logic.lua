@@ -322,4 +322,81 @@ function M.DeleteEnd(key)
   return true, { kind = 'delete', which = 'end', old_time = end_ev.time }
 end
 
+-- Separacion minima entre eventos vecinos: mayor que EPS_TIME, para que dos
+-- eventos nunca cuenten como "misma posicion" (EventsNear).
+M.MIN_SEP = M.EPS_TIME * 2
+
+-- Mueve el inicio de una linea (opts.with_end: junto con su fin) o un fin.
+-- Un evento nunca cruza ni pisa a un vecino: no hay reordenamiento ni
+-- colisiones. opts.clamp: se detiene en el tope en vez de rechazar.
+-- Mover = borrar + insertar por la misma ruta que los taps (EnsureTake).
+function M.MoveEvent(key, new_time, opts)
+  opts = opts or {}
+  local list = freshList()
+  if not list then return false, 'no_track' end
+  local i = M.Resolve(list, key)
+  if not i then return false, 'not_found' end
+  local ev = list[i]
+  local end_ev = (not ev.is_end and opts.with_end and ev.end_idx) and list[ev.end_idx] or nil
+  local prev = list[i - 1]
+  local nxt = end_ev and list[ev.end_idx + 1] or list[i + 1]
+  local lo = prev and (prev.time + M.MIN_SEP) or 0
+  local hi = nxt and (nxt.time - M.MIN_SEP) or math.huge
+  if end_ev then hi = hi - (end_ev.time - ev.time) end
+  if lo > hi then return false, 'blocked' end
+
+  local dir = new_time - ev.time
+  local t, clamped = new_time, false
+  if t < lo or t > hi then
+    if not opts.clamp then return false, 'out_of_range' end
+    t = math.min(math.max(t, lo), hi)
+    clamped = true
+  end
+  if (t - ev.time) * dir <= 0 then
+    return false, clamped and 'at_limit' or 'same'
+  end
+
+  local d = t - ev.time
+  local victims = { ev }
+  if end_ev then victims[2] = end_ev end
+  local track = M.FindLyricsTrack(0)
+  reaper.Undo_BeginBlock()
+  M.DeleteEvents(victims)
+  if end_ev then
+    local t_end = end_ev.time + d
+    M.InsertAt(track, t, t_end, t, ev.text)
+    M.InsertAt(track, t, t_end, t_end, M.END_MARK)
+  else
+    M.InsertAt(track, t, t, t, ev.text)
+  end
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock(ev.is_end and 'Lyrics: mover fin' or 'Lyrics: mover linea', -1)
+  return true, {
+    kind = 'move', which = ev.is_end and 'end' or 'start',
+    old_time = ev.time, new_time = t,
+    end_old = end_ev and end_ev.time or nil,
+    end_new = end_ev and (end_ev.time + d) or nil,
+    clamped = clamped,
+  }
+end
+
+-- Agrega el fin de una linea que no lo tiene, en el tiempo t (rango estricto).
+function M.AddEnd(key, t)
+  if key.is_end then return false, 'not_found' end
+  local list = freshList()
+  if not list then return false, 'no_track' end
+  local i = M.Resolve(list, key)
+  if not i then return false, 'not_found' end
+  local ev = list[i]
+  if ev.end_idx then return false, 'has_end' end
+  local nxt = list[i + 1]
+  local hi = nxt and (nxt.time - M.MIN_SEP) or math.huge
+  if t < ev.time + M.MIN_SEP or t > hi then return false, 'out_of_range' end
+  reaper.Undo_BeginBlock()
+  M.InsertAt(M.FindLyricsTrack(0), ev.time, t, t, M.END_MARK)
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock('Lyrics: agregar fin', -1)
+  return true, { kind = 'endadd', line_time = ev.time, new_time = t }
+end
+
 return M

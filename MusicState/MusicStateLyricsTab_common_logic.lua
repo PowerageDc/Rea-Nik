@@ -209,6 +209,10 @@ function M.draw(ctx, H, helpers)
           reaper.ImGui_SetScrollHereY(ctx, SCROLL_RATIO)
           S.scroll_target = nil
         end
+        if S.scroll_sel and i == sel_idx then
+          reaper.ImGui_SetScrollHereY(ctx, SCROLL_RATIO)
+          S.scroll_sel = nil
+        end
         reaper.ImGui_PopID(ctx)
       end
       reaper.ImGui_EndTable(ctx)
