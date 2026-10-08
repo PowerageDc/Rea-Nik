@@ -46,7 +46,7 @@ end
 -- Vacia la cola pero conserva el texto pegado, para poder corregirlo.
 function M.Clear(Sy)
   Sy.queue, Sy.pos, Sy.hist = {}, 1, {}
-  Sy.msg = ''
+  Sy.msg, Sy.warn = '', nil
   Sy.pending, Sy.cur_entry = nil, nil
 end
 
@@ -124,9 +124,11 @@ local function onTapPress(Sy, Lyrics)
   Sy.cur_entry = entry
   Sy.pos = Sy.pos + 1
   Sy.msg = 'Tap en ' .. reaper.format_timestr_pos(t, '', 2)
+  Sy.warn = nil
 end
 
 local function undoEntry(Sy, Lyrics)
+  Sy.warn = nil
   local e = table.remove(Sy.hist)
   if not e then return end
   Sy.pos = Sy.pos - 1
@@ -145,7 +147,7 @@ local function undoEntry(Sy, Lyrics)
     end
   end
   if #victims == 0 then
-    Sy.msg = 'No se encontro la linea (movida o borrada fuera de la cola).'
+    Sy.warn = 'No se encontro la linea (movida o borrada fuera de la cola).'
     return
   end
   reaper.Undo_BeginBlock()
@@ -250,7 +252,9 @@ local function drawQueue(ctx, Sy, Lyrics)
   end
   Sy.held_prev = held
 
-  if reaper.ImGui_IsAnyItemActive(ctx) and not btn_active then
+  if Sy.warn then
+    reaper.ImGui_TextDisabled(ctx, Sy.warn)
+  elseif reaper.ImGui_IsAnyItemActive(ctx) and not btn_active then
     reaper.ImGui_TextDisabled(ctx, 'Tecla de tap desactivada: hay un campo en edicion.')
   elseif not playing and not done then
     reaper.ImGui_TextDisabled(ctx, 'Inicia la reproduccion para tapear.')
