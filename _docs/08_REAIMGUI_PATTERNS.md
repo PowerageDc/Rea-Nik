@@ -173,3 +173,45 @@ dependa de mantener apretado (tap con hold, push-to-talk, arrastre manual).
 - **`ImGui_GetKeyName` no existe** en la versión de ReaImGui instalada
   (error de `nil`): la etiqueta de una tecla se guarda como texto fijo
   junto a la constante de la tecla.
+
+## 5. `InputText` de edición con borrador: commit, foco y atajos globales
+
+Primer caso: el panel de edición de la tab Lyrics del MusicState Helper
+(`features/musicstate_lyrics.md` §8.6). Aplica a editar un valor de la fila
+seleccionada de una lista con un `InputText` en un panel aparte, en vez de
+uno inline por fila.
+
+- **Borrador propio, atado a la identidad.** El texto tipeado vive en un
+  borrador (`buf`) junto con su valor original (`orig`) y la clave del
+  elemento al que pertenece (tiempo o id estable, nunca el índice, que se
+  corre con cada recarga). `InputText` recibe el borrador y, si `changed`,
+  se lo reasigna.
+- **Recarga solo con el campo inactivo.** El borrador se recarga desde el
+  dato cuando cambia el elemento seleccionado o el valor de origen (edición
+  externa, Ctrl+Z), pero nunca mientras el campo tiene foco (guardar
+  `IsItemActive` en el estado): si no, se pisa lo que el usuario tipea.
+- **Commit con `IsItemDeactivatedAfterEdit`** (Enter, Tab o click afuera).
+  En un `InputText` simple es confiable; la advertencia de §3 vale para
+  `InputInt` con steppers. Se compara el texto limpio con el original: si no
+  cambió, no hay nada que aplicar. En las pruebas Esc no produjo cambios por
+  esa misma vía. Si el commit falla (validación), restaurar el borrador al
+  original y mostrar el aviso.
+- **El commit usa la clave del borrador, no la selección actual.** El
+  click en otra fila desactiva el campo antes de que la selección cambie (el
+  `Selectable` actúa al soltar el mouse). Si el commit leyera la selección
+  actual, podría aplicar el texto a la fila equivocada.
+- **Atajos globales.** Si el contenedor evalúa los atajos
+  (`IsAnyItemActive`) antes de dibujar el panel, ese frame todavía ve el
+  `InputText` del frame anterior como activo: Enter y Space tipeados en el
+  campo no disparan Play/Stop, y no hace falta marcar la tecla como
+  consumida. Si el orden fuera el inverso (atajos después del panel), sí
+  hay que marcarla (`H.consumed_enter`).
+- **Refresh forzado tras editar.** Un cache que se recarga por
+  `GetProjectStateChangeCount` queda un frame viejo tras una edición propia.
+  Forzar la recarga con un valor centinela (`S.state_count = -1`) para que
+  ocurra al inicio del frame siguiente, antes de que nada lea el cache, y
+  parchear en el frame de transición solo lo que la UI use ese mismo frame
+  (el tiempo del evento movido, la clave del borrador, la selección).
+- **Panel de alto fijo.** Sin selección, deshabilitar los widgets
+  (`BeginDisabled`) en vez de ocultarlos, y reservar la línea de aviso:
+  aparecer y desaparecer corre la lista y puede hacer perder un click (§4).

@@ -33,6 +33,11 @@ dominio consumidor, ver `01_CONVENCIONES.md`):
   de tap-to-sync, ver `musicstate_lyrics.md` §8.5). No es una tab propia:
   la tab lo invoca vía `helpers.LyricsSync.draw(ctx, S, H, helpers)`, con
   `S = H._lyrics`, y su estado vive en `S.sync`.
+- `MusicStateLyricsEdit_common_logic.lua` (submódulo de la tab Lyrics: panel
+  de edición de la fila seleccionada, ver `musicstate_lyrics.md` §8.6).
+  Tampoco es una tab propia: la tab lo invoca vía
+  `helpers.LyricsEdit.draw(ctx, S, H, helpers)`, con `S = H._lyrics`, y su
+  estado vive en `S.edit`.
 
 Cada uno expone `M.draw(ctx, H, helpers)`. `H` es la tabla de estado
 global, mutada in-place. `helpers` es una tabla de dependencias armada
