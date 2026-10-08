@@ -71,7 +71,8 @@ reaper_www_root/
     │   ├── ms-dispatch.js    wwr_onreply propio, ancla de transporte
     │   ├── ms-tempo.js       lookup de tempo puro
     │   ├── ms-beat.js        pulso por compás + distancia a próximo evento de armonía
-    │   └── ms-section.js     sección actual y posición efectiva en segundos
+    │   ├── ms-section.js     sección actual y posición efectiva en segundos
+    │   └── ms-stale.js       indicador de datos viejos (clase is-stale + tope de g_wwr_errcnt)
     ├── instrumentista/
     │   ├── instrumentista.js   bootstrap de polls + render
     │   └── instrumentista.css  estilos del perfil
@@ -83,9 +84,8 @@ reaper_www_root/
 anteriores): `main.js`, `config.js`, `config.local.js` (por XHR síncrono
 + `eval`, se ignora si no existe), `core/utils.js`, `markers/markers.js`,
 `core/music-transpose.js`, `core/music-state.js`, `ms-tempo.js`,
-`ms-beat.js`, `ms-section.js`, `ms-dispatch.js`, `instrumentista.js`.
-Después el shell llama `nikInstrumentistaInit()` y
-`nikInstrumentistaStartRenderLoop(50)`.
+`ms-beat.js`, `ms-section.js`, `ms-stale.js`, `ms-dispatch.js`, `instrumentista.js`.
+Después el shell llama `nikInstrumentistaInit()` y `nikInstrumentistaStartRenderLoop(50)`.
 
 `config.local.js` es imprescindible en cada PC: sin él los Command IDs
 de `config.js` quedan con el default (de otra PC) y los pedidos Lua
@@ -194,7 +194,9 @@ porcentaje. El playrate afecta:
 
 ### 4.6 Indicador de datos viejos
 
-`nikInstrumentistaUpdateStaleIndicator()` corre al inicio de cada render.
+`nikInstrumentistaUpdateStaleIndicator()` corre al inicio de cada render
+y delega en `nikMsUpdateStaleIndicator(screenEl)` (`ms-stale.js`,
+compartido con la UI de cantante).
 Si pasan más de 1500 ms sin `TRANSPORT` nuevo, `.ms-screen` recibe la
 clase `is-stale`: se atenúa el bloque superior y la fila de sección, y
 aparece un cartel "SIN SEÑAL". Se desmarca sola al llegar el siguiente
@@ -321,7 +323,8 @@ wrapper de objeto: hay estado propio cacheado).
 | `nikMsEffectivePosSeconds()` | ms-section.js | atajo con fallback a la cruda |
 | `nikMsCurrentSection()` / `nikMsSectionAt(pos)` | ms-section.js | sección vigente |
 | `nikMsTempoAt(pos)` | ms-tempo.js | BPM del mapa (sin playrate) |
-| `NIK_INSTRUMENTISTA_STALE_MS` | instrumentista.js | umbral de datos viejos (1500) |
+| `NIK_MS_STALE_MS` | ms-stale.js | umbral de datos viejos (1500) |
+| `nikMsUpdateStaleIndicator(screenEl)` | ms-stale.js | marca `is-stale` y limita `g_wwr_errcnt` |
 | `nikInstrumentistaBeatLastKey` | instrumentista.js | key (`bar_pulseIndex_pulseCount`) del último pulso marcado, para detectar cruce; incluye la cantidad de pulsos para que un cambio de métrica reconstruya los dots |
 | `nikInstrumentistaChordEventLastKey` | instrumentista.js | key del evento de armonía vigente, para detectar cruce y recalcular la duración del fill una sola vez; se resetea a `null` al detener el transporte |
 | `nikInstrumentistaBeatDotCount` | instrumentista.js | cantidad de dots ya dibujados, para repoblar solo si cambia (4↔2 en cambios de compás) |

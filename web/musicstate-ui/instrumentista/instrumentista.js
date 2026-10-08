@@ -112,7 +112,6 @@ function nikInstrumentistaFormatSongName() {
     return nikCurrentProjectName.replace(/\.rpp$/i, "");
 }
 
-var NIK_INSTRUMENTISTA_STALE_MS = 1500;
 var nikInstrumentistaScreenEl = null;
 
 var nikInstrumentistaBeatLastKey = null;
@@ -122,11 +121,7 @@ var nikInstrumentistaBeatProgressFilling = false;
 
 function nikInstrumentistaUpdateStaleIndicator() {
     if (!nikInstrumentistaScreenEl) nikInstrumentistaScreenEl = document.querySelector(".ms-screen");
-    if (!nikInstrumentistaScreenEl) return;
-    var last = (typeof nikTransportAnchorMs === "number") ? nikTransportAnchorMs : 0;
-    var isStale = (performance.now() - last) > NIK_INSTRUMENTISTA_STALE_MS;
-    nikInstrumentistaScreenEl.classList.toggle("is-stale", isStale);
-    if (isStale && typeof g_wwr_errcnt === "number" && g_wwr_errcnt > 2) g_wwr_errcnt = 2;
+    nikMsUpdateStaleIndicator(nikInstrumentistaScreenEl);
 }
 
 function nikInstrumentistaRender() {
