@@ -36,6 +36,10 @@ local function run(S, Ed, helpers, fn, key, a, b)
   if ok then
     helpers.LyricsSync.onEdit(S.sync, helpers.Lyrics, res)
     S.state_count = -1
+    if res.kind == 'move' or res.kind == 'endadd'
+      or (res.kind == 'delete' and res.which == 'end') then
+      S.reselect = true
+    end
   else
     Ed.msg = MSG[res] or 'No se pudo aplicar el cambio.'
   end

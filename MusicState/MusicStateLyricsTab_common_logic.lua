@@ -84,18 +84,10 @@ local function refresh(S, H, helpers)
   if S.sel and not findSelIdx(S, Lyrics) then S.sel = nil end
 end
 
-local function onRowClick(S, Lyrics, idx)
+-- Selecciona el tiempo de la fila: desde una linea hasta el proximo evento;
+-- un fin no tiene rango (limpia la seleccion).
+local function applyTimeRange(S, Lyrics, idx)
   local ev = S.events[idx]
-  local was_sel = S.sel and S.sel.is_end == ev.is_end
-    and math.abs(S.sel.time - ev.time) <= Lyrics.EPS_TIME
-  S.sel = (not was_sel) and { time = ev.time, is_end = ev.is_end } or nil
-  reaper.SetEditCurPos(ev.time, true, false)
-  if not S.autoselect then return end
-  if was_sel then
-    reaper.GetSet_LoopTimeRange(true, false, 0, 0, false)
-    reaper.UpdateArrange()
-    return
-  end
   local next_time = nil
   if not ev.is_end then
     for j = idx + 1, #S.events do
@@ -113,12 +105,36 @@ local function onRowClick(S, Lyrics, idx)
   reaper.UpdateArrange()
 end
 
+local function onRowClick(S, Lyrics, idx)
+  local ev = S.events[idx]
+  local was_sel = S.sel and S.sel.is_end == ev.is_end
+    and math.abs(S.sel.time - ev.time) <= Lyrics.EPS_TIME
+  S.sel = (not was_sel) and { time = ev.time, is_end = ev.is_end } or nil
+  reaper.SetEditCurPos(ev.time, true, false)
+  if not S.autoselect then return end
+  if was_sel then
+    reaper.GetSet_LoopTimeRange(true, false, 0, 0, false)
+    reaper.UpdateArrange()
+    return
+  end
+  applyTimeRange(S, Lyrics, idx)
+end
+
 function M.draw(ctx, H, helpers)
   local Lyrics = helpers.Lyrics
   local S = getState(H)
 
   if S.proj ~= H.last_proj or S.state_count ~= reaper.GetProjectStateChangeCount(0) then
     refresh(S, H, helpers)
+  end
+
+  -- Tras una edicion que mueve un borde de la fila seleccionada, la
+  -- seleccion de tiempo (si el toggle esta activo) la sigue. Corre despues
+  -- del refresh, con S.events ya actualizado.
+  if S.reselect then
+    S.reselect = nil
+    local ri = findSelIdx(S, Lyrics)
+    if S.autoselect and ri then applyTimeRange(S, Lyrics, ri) end
   end
 
   local changed, value = reaper.ImGui_Checkbox(ctx, 'Seleccionar duracion al hacer click', S.autoselect)
