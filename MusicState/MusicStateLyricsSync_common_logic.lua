@@ -54,6 +54,7 @@ local function readHeld(ctx, btn_active)
   local focused = reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows())
   local key_down = focused
     and not reaper.ImGui_IsAnyItemActive(ctx)
+    and not reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
     and reaper.ImGui_IsKeyDown(ctx, KEY_TAP)
   return key_down or btn_active
 end
