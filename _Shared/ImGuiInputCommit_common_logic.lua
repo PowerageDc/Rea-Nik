@@ -21,6 +21,9 @@ end
 function M.globalKeyPressed(ctx, key, consumed)
   if consumed then return false end
   if reaper.ImGui_IsAnyItemActive(ctx) then return false end
+  -- Con un popup o modal abierto los atajos globales no actuan: el popup
+  -- lee sus propias teclas.
+  if reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId()) then return false end
   -- ChildWindows: una tabla con TableFlags_ScrollY crea una ventana hija
   -- interna para su region de scroll -- sin este flag, IsWindowFocused()
   -- en la ventana raiz da false apenas el foco cae ahi adentro, rompiendo
