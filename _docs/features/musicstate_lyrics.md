@@ -2,9 +2,10 @@
 
 **Doc liviano, en construcción.** Registra qué está decidido, qué se
 descartó, qué se verificó y qué falta, para poder retomar la feature en
-otra sesión sin reconstruir el contexto. Cuando la UI de cantante esté
-implementada, este doc se expande al formato de
-`musicstate_instrumentista.md`.
+otra sesión sin reconstruir el contexto. La UI de cantante (layout,
+módulos compartidos y decisiones de diseño del reel) vive en
+`musicstate_cantante.md`; este doc conserva el contrato, el publicador, la
+capa cliente y el ingreso de letras.
 
 El contrato de datos (formato JSON, protocolo) vive en
 `musicstate_data_model.md` §4.7 y no se repite acá. El puente está en
@@ -21,7 +22,7 @@ El contrato de datos (formato JSON, protocolo) vive en
 | Doc del puente | Actualizado (lyrics fuera de `Bridge.KEYS`) |
 | Capa cliente (setter, consultas, lead propio) | Implementada y verificada en dev (ver §4); detalle en `musicstate_client.md` §1.6 |
 | Cableado (`ms-dispatch.js`: pedidos, versión, reset, opt-in) | Implementado y verificado en dev |
-| UI de cantante (`musicstate-ui/cantante/`) | Bootstrap y panel de debug temporales (`cantante.js`, `nsaudio_cantante.html`); UI real pendiente, diseño conceptual en §5 |
+| UI de cantante (`musicstate-ui/cantante/`) | Shell, layout y cabecera hechos y validados en dev y Android; reel de letra pendiente. Detalle en `musicstate_cantante.md` |
 | Registro (`NIK_LUA_COMMANDS`, generador de `config.local.js`, `@provides` del metapaquete, manifiesto `.www`) | Hecho en el repo; **pendiente de validar en una PC de destino** (§6) |
 
 ## 2. Decisiones tomadas
@@ -156,19 +157,27 @@ prompter):
 
 ## 5. Diseño de UI acordado (conceptual, sin implementar)
 
+**Actualización:** el diseño detallado (composición única, slots según
+renglones, dos posiciones de lead, ancla, barrido de proximidad) pasó a
+`musicstate_cantante.md` §4. Lo que sigue es el planteo original; donde
+difiere, manda ese doc.
+
 - **Estados de la línea:** intro (antes de la primera línea: las primeras
   se muestran como "próximas", análogo al preludio de la fila de sección),
   cantando, silencio entre líneas (la actual se apaga y la siguiente queda
   "armada", con énfasis intermedio) y carry-over (sin marcador de fin, la
   actual se mantiene).
-- **Ventana de 5 slots** (2 anteriores, actual, 2 siguientes), con la
-  técnica FLIP de `01_CONVENCIONES.md` (escala uniforme por centros).
+- **Ventana de hasta 5 slots** (2 anteriores, actual, 2 siguientes), con la
+  técnica FLIP de `01_CONVENCIONES.md`. La cantidad real depende de los
+  renglones de cada línea y del alto del escenario
+  (`musicstate_cantante.md` §4.2).
 - **Lookahead propio de lyrics:** un cantante necesita leer antes que un
   instrumentista; implementado como adelanto extra sobre el de los
   acordes (`musicstate_client.md` §1.6). Falta calibrar el valor con una
   letra real.
 - **Líneas que envuelven en 2 renglones** cambian de alto por contenido y
-  no solo por `font-size`: fijar un tope de renglones antes de construir.
+  no solo por `font-size`: tope fijado en 2 renglones, sin ellipsis
+  (`musicstate_cantante.md` §4.1).
 - **Cuenta regresiva en pausas largas:** `nikBeat` calcula la distancia al
   próximo evento de armonía; se podría generalizar.
 - **Control remoto general:** acceso a lyrics y acordes en paneles
@@ -177,12 +186,12 @@ prompter):
   entra en `nikMusicStateRequestAll()`). Ahí también tendría que existir
   `nikMsTempoAt`, sin la cual el lead no se aplica
   (`musicstate_client.md` §4).
-- **Datos de boot de la UI real:** hoy `cantante.js` pide solo tempo,
-  timesig y lyrics. La UI real va a necesitar secciones
-  (`ms-section.js`), casi seguro cues, y posiblemente la tonalidad
-  (transpuesta o no); el pulso (`ms-beat.js`) depende de cómo se sienta
-  con el preludio de la línea siguiente. Cada dato suma su pedido de
-  boot y su script en el shell (`musicstate_client.md` §1.5).
+- **Datos de boot de la UI real:** `cantante.js` ya pide tempo, timesig y
+  lyrics, y el shell carga secciones (`ms-section.js`) y la tonalidad
+  transpuesta (`reapitch_semitone` en el poll lento). Quedan los cues y,
+  según cómo se sienta el preludio de la línea siguiente, el pulso
+  (`ms-beat.js`). Cada dato suma su pedido de boot y su script en el
+  shell (`musicstate_client.md` §1.5).
 
 ## 6. Pendientes, en orden
 
@@ -201,7 +210,8 @@ prompter):
    futuro): no verificado, la prueba se hizo sin notas.
 5. **`cues_data` y el escape de barras:** revisar si el Helper y
    `nikMusicStateSetCuesData` lo manejan (`data_model` §6).
-6. **UI de cantante real** (`musicstate-ui/cantante/`): filtro por rol
+6. **UI de cantante real** (`musicstate-ui/cantante/`; avance y pendientes
+   en `musicstate_cantante.md` §6): filtro por rol
    (`cantantes`) o letra para todos, estados de §5, datos de boot (§5) y
    calibrar el lead. El refresco por republicación ya llega por
    `lyrics_version`, pero nada lo incrementa solo al editar en el editor
@@ -247,8 +257,8 @@ prompter):
 - `core/music-state.js` — bloque de lyrics (setter, consultas, pedidos).
 - `musicstate-ui/shared/ms-dispatch.js` — handlers, reset y opt-in.
 - `config.js` — `musicStatePublishLyrics`.
-- `musicstate-ui/cantante/cantante.js` y `nsaudio_cantante.html` —
-  bootstrap y panel de debug temporal.
+- `musicstate-ui/cantante/cantante.js`, `cantante.css` y
+  `nsaudio_cantante.html` — UI de cantante; ver `musicstate_cantante.md`.
 - Docs tocados: `musicstate_data_model.md` (§2, §3, §4, §4.7, §6),
   `musicstate_bridge.md` (§1, §2, §5), `musicstate_client.md` (§1.6).
 

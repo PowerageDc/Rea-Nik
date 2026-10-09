@@ -234,8 +234,8 @@ frame).
   en cajas de ancho distinto.
 - **Guard:** si algún rect mide alto 0 (nodo vacío), no aplicar transform.
 - Implementaciones: `nikInstrumentistaShiftChordSlots` (la técnica) y
-  `nikInstrumentistaShiftSectionRow` (escala uniforme por centros), ver
-  `features/musicstate_instrumentista.md` §7.
+  `nikMsSectionRowShift` (`musicstate-ui/shared/ms-section-row.js`; escala
+  uniforme por centros), ver `features/musicstate_instrumentista.md` §7.
 
 ## Patrón de módulos JS de puro cálculo (wrapper de objeto único)
 
