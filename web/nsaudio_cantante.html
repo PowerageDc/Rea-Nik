@@ -2,16 +2,49 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>NS Audio — Cantante (debug)</title>
-<style>
-    body { background: #1a1a1a; color: #eee; margin: 0; padding: 16px; font-family: sans-serif; }
-    #cantanteDebug { font-family: monospace; font-size: 16px; white-space: pre-wrap; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>NS Audio — Cantante</title>
+<link rel="stylesheet" href="musicstate-ui/shared/ms-base.css">
+<link rel="stylesheet" href="musicstate-ui/cantante/cantante.css">
 </head>
 <body>
 
-<div id="cantanteDebug">—</div>
+<div class="ms-screen cn-screen">
+  <div class="ms-top-block cn-header">
+    <div class="ms-song-name cn-song-name" id="msSongName">—</div>
+
+    <hr class="ms-divider">
+
+    <div class="cn-meta-row">
+      <span class="ms-key-tonic-block cn-key">
+        <span class="ms-key-note">♪</span><span id="msKeyTonicText"></span>
+      </span>
+      <span class="cn-tempo" id="msTempo">—</span>
+    </div>
+  </div>
+
+  <hr class="ms-divider">
+
+  <div class="ms-section-row" id="msSectionRow">
+    <span class="ms-section-adj" id="msSectionPrev">—</span>
+    <span class="ms-section-current" id="msSection">—</span>
+    <span class="ms-section-adj-wrap">
+      <span class="ms-section-adj" id="msSectionNext">—</span>
+      <span class="ms-section-fill" id="msSectionNextFill" aria-hidden="true">—</span>
+    </span>
+  </div>
+
+  <!-- Escenario: ocupa todo el alto que sobra. En 3c lo gobierna el reel de
+       letra; por ahora aloja el panel de debug. -->
+  <div class="cn-stage" id="cnStage">
+    <div id="cantanteDebug">—</div>
+  </div>
+
+  <hr class="ms-divider">
+
+  <!-- Banda de cues: altura reservada siempre (1 renglón). Sin cablear todavía. -->
+  <div class="cn-cue-band" id="msCueBand"></div>
+</div>
 
 <script src="main.js"></script>
 <script src="config.js"></script>
@@ -32,12 +65,16 @@
 <script src="core/music-transpose.js"></script>
 <script src="core/music-state.js"></script>
 <script src="musicstate-ui/shared/ms-tempo.js"></script>
+<script src="musicstate-ui/shared/ms-section.js"></script>
+<script src="musicstate-ui/shared/ms-section-row.js"></script>
+<script src="musicstate-ui/shared/ms-header.js"></script>
+<script src="musicstate-ui/shared/ms-stale.js"></script>
 <script src="musicstate-ui/shared/ms-dispatch.js"></script>
 <script src="musicstate-ui/cantante/cantante.js"></script>
 
 <script>
 nikCantanteInit();
-nikCantanteStartRenderLoop(100);
+nikCantanteStartRenderLoop(50);
 </script>
 
 </body>

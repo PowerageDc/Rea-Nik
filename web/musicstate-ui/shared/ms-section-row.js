@@ -7,7 +7,10 @@
 // Contrato de DOM (los dos shells deben usar estos ids):
 //   msSectionRow, msSectionPrev, msSection, msSectionNext, msSectionNextFill
 // Contrato de CSS: clase .is-jumping en #msSectionRow (fade) y transiciones
-// de opacity/transform/color en prev/current/next.
+// de opacity/transform/color en prev/current/next. #msSectionRow debe ser
+// contenedor de posicionamiento (position distinto de static): el fantasma
+// de nikMsBuildGhost se posiciona en absoluto contra él (ms-base.css lo
+// garantiza con position: relative).
 //
 // Punto de entrada: nikMsSectionRowRender(screenJumped), una vez por render.
 // screenJumped = true si OTRA capa de la misma pantalla (tira de acordes,

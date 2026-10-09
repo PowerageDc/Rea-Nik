@@ -1,0 +1,195 @@
+/* cantante.css — layout del perfil Cantante (MusicState)
+
+   Se carga DESPUÉS de shared/ms-base.css (paleta, dividers, glifos de
+   tonalidad, fila de sección, is-stale). Acá solo layout.
+
+   A diferencia del prompter (elementos absolutos anclados al 50% de 100vh),
+   la pantalla es una COLUMNA EN FLUJO que llena el viewport visible:
+
+     [offset superior]   safe-area + --cn-top-offset (?top= en la URL)
+     nombre de canción
+     ─── divider
+     tonalidad | tempo
+     ─── divider
+     sección prev / actual / next
+     ESCENARIO           (1fr: todo lo que sobra)
+     ─── divider
+     banda de cues       (altura reservada siempre: 1 renglón)
+
+   Reglas:
+   - Una sola unidad de escala, --u (~1% del lado corto del viewport visible).
+     Fuentes y gaps salen de calc(var(--u) * n); no hay px sueltos.
+   - Los dividers son elementos del flujo, nunca absolutos; su espacio es
+     --cn-gap en los dos lados.
+   - Alto: 100dvh (descuenta la barra del navegador en iOS Safari) con 100vh
+     de fallback.
+*/
+
+:root {
+  --cn-top-offset: 0px;   /* lo pisa nikCantanteApplyTopOffset() (?top=px, persistido) */
+  --u: 1vmin;
+  --cn-gap: calc(var(--u) * 2.5);
+}
+
+@supports (height: 1dvh) {
+  :root {
+    --u: min(1vw, 1dvh);
+  }
+}
+
+.cn-screen {
+  height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-align: center;
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--cn-top-offset));
+  padding-right: calc(env(safe-area-inset-right, 0px) + var(--u) * 4);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--u) * 2);
+  padding-left: calc(env(safe-area-inset-left, 0px) + var(--u) * 4);
+}
+
+/* --- cabecera: nombre + tonalidad | tempo --- */
+
+.cn-header {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cn-song-name {
+  font-size: calc(var(--u) * 5.2);
+  font-weight: 500;
+  color: var(--ms-song-name-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.cn-screen .ms-divider {
+  flex: none;
+  margin: var(--cn-gap) auto;
+}
+
+.cn-meta-row {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: calc(var(--u) * 10);
+  white-space: nowrap;
+}
+
+.cn-key {
+  font-size: calc(var(--u) * 6);
+  font-weight: 700;
+}
+
+.cn-tempo {
+  font-size: calc(var(--u) * 4);
+  color: var(--ms-fg-dim);
+}
+
+/* --- fila de sección: prev/next más chicas que en el prompter --- */
+
+.cn-screen .ms-section-row {
+  flex: none;
+  padding: 0;
+}
+
+.cn-screen .ms-section-current {
+  font-size: calc(var(--u) * 6);
+}
+
+/* .ms-section-fill se superpone a #msSectionNext: mismo font-size */
+.cn-screen .ms-section-adj,
+.cn-screen .ms-section-fill {
+  font-size: calc(var(--u) * 3.4);
+}
+
+/* --- escenario --- */
+
+.cn-stage {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  /* TEMPORAL (3b): hace visibles los límites del escenario para validar el
+     layout en cada dispositivo. Se quita cuando entre el reel. */
+  outline: 1px dashed var(--ms-divider-color);
+  outline-offset: -1px;
+}
+
+#cantanteDebug {
+  font-family: monospace;
+  font-size: calc(var(--u) * 3);
+  line-height: 1.3;
+  white-space: pre-wrap;
+  text-align: left;
+  padding: calc(var(--u) * 1.5);
+  overflow: hidden;
+}
+
+/* --- cues: 1 renglón, altura siempre reservada (si colapsara, el escenario
+       cambiaría de tamaño a mitad de canción y la letra saltaría) --- */
+
+.cn-cue-band {
+  flex: none;
+  height: calc(var(--u) * 7);
+  line-height: calc(var(--u) * 7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ms-chord-color);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  font-size: calc(var(--u) * 4.2);
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.cn-cue-band.is-visible {
+  opacity: 1;
+}
+
+/* --- landscape: nombre y metadata en una sola fila para ahorrar alto --- */
+
+@media (min-aspect-ratio: 1/1) {
+  .cn-header {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: calc(var(--u) * 4);
+  }
+
+  .cn-header .ms-divider {
+    display: none;
+  }
+
+  .cn-song-name {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: left;
+    font-size: calc(var(--u) * 4.6);
+  }
+
+  .cn-meta-row {
+    flex: none;
+    gap: calc(var(--u) * 6);
+  }
+
+  .cn-key {
+    font-size: calc(var(--u) * 5.2);
+  }
+
+  .cn-tempo {
+    font-size: calc(var(--u) * 3.6);
+  }
+
+  .cn-screen .ms-divider {
+    margin: calc(var(--u) * 1.5) auto;
+  }
+}

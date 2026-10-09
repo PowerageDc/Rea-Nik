@@ -93,6 +93,7 @@ html, body {
 }
 
 .ms-section-row {
+  position: relative; /* contenedor del fantasma de nikMsBuildGhost; el perfil puede pisarlo (instrumentista: absolute) */
   display: flex;
   align-items: baseline;
   justify-content: center;
