@@ -202,7 +202,8 @@ function M.ApplyLine(track, ctx, text, opts)
     end
     if #to_delete > 0 then M.DeleteEvents(to_delete) end
     M.InsertAt(track, ctx.t1, ctx.end_time, ctx.t1, text)
-    if ctx.has_sel and #ctx.at_end == 0 then
+    local keeps_inside = not opts.replace_inside and #ctx.inside > 0
+    if ctx.has_sel and #ctx.at_end == 0 and not keeps_inside then
       M.InsertAt(track, ctx.t1, ctx.end_time, ctx.t2, M.END_MARK)
     end
   end
