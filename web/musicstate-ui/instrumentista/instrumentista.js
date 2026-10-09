@@ -71,47 +71,6 @@ function nikInstrumentistaIsRoleValid(role) {
 // tocar nada, y el render solo lo arranca el shell que sí tiene esta
 // estructura (nsaudio_musicstate_instrumentista_preview.html).
 
-// "maj"/"min" son los únicos casos confirmados (ejemplo del doc de
-// diseño). Cualquier otro modo cae al fallback genérico -- no confirmado
-// contra el string real que devuelve nikTranspose para modos no
-// estándar (dórico, mixolidio, etc.), no debería aparecer en el uso
-// actual pero no se descarta.
-var NIK_INSTRUMENTISTA_KEY_TONIC_REGEX = /^([A-G])([#b]?)$/;
-
-function nikInstrumentistaFormatKeyTonicHtml(key) {
-    if (!key || !key.tonic) return "—";
-    var m = NIK_INSTRUMENTISTA_KEY_TONIC_REGEX.exec(key.tonic);
-    if (!m) return nikInstrumentistaEscapeHtml(key.tonic); // fallback si el formato no matchea
-
-    var html = "<span>" + m[1] + "</span>";
-    if (m[2]) {
-        var isSharp = (m[2] === "#");
-        var accClass = isSharp ? "ms-key-accidental-sharp" : "ms-key-accidental-flat";
-        var accGlyph = isSharp ? "♯" : "♭";
-        html += '<span class="' + accClass + '">' + accGlyph + "</span>";
-    }
-    if (key.mode === "minor") {
-        html += '<span class="ms-key-minor">m</span>';
-    }
-    // major: no se agrega nada. Cualquier otro modo (dórico, mixolidio...):
-    // tampoco se agrega nada por ahora -- no confirmado contra un caso real,
-    // igual que el fallback que reemplaza.
-    return html;
-}
-
-function nikInstrumentistaFormatTempo() {
-    var pos = nikMsEffectivePosSeconds();
-    var bpm = (typeof nikMsTempoAt === "function") ? nikMsTempoAt(pos) : null;
-    if (bpm == null) return "—";
-    if (typeof nikMusicStatePlayRate === "function") bpm *= nikMusicStatePlayRate();
-    return '<span class="ms-tempo-number">' + Math.round(bpm) + "</span> BPM";
-}
-
-function nikInstrumentistaFormatSongName() {
-    if (!nikCurrentProjectName || !/\.rpp$/i.test(nikCurrentProjectName)) return "\u00A0";
-    return nikCurrentProjectName.replace(/\.rpp$/i, "");
-}
-
 var nikInstrumentistaScreenEl = null;
 
 var nikInstrumentistaBeatLastKey = null;
@@ -129,11 +88,7 @@ function nikInstrumentistaRender() {
     var role = nikInstrumentistaGetRole();
 
     document.getElementById("msRole").textContent = role || "(sin rol)";
-    document.getElementById("msKeyTonicText").innerHTML = nikInstrumentistaFormatKeyTonicHtml(
-        (typeof nikMusicStateCurrentProjectKey === "function") ? nikMusicStateCurrentProjectKey() : null
-    );
-    document.getElementById("msTempo").innerHTML = nikInstrumentistaFormatTempo();
-    document.getElementById("msSongName").textContent = nikInstrumentistaFormatSongName();
+    nikMsHeaderRender();
 
     nikInstrumentistaRenderChordStrip();
     nikInstrumentistaRenderSectionRow();
@@ -178,7 +133,7 @@ function nikInstrumentistaChordSlotText(entry) {
 }
 
 function nikInstrumentistaEscapeHtml(str) {
-    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return nikMsEscapeHtml(str);
 }
 
 var NIK_INSTRUMENTISTA_CHORD_REGEX =

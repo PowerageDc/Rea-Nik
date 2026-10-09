@@ -73,6 +73,7 @@ reaper_www_root/
     │   ├── ms-beat.js        pulso por compás + distancia a próximo evento de armonía
     │   ├── ms-section.js     sección actual y posición efectiva en segundos
     │   ├── ms-section-row.js fila de sección prev/actual/next con animación (FLIP, preludio, jump)
+    │   ├── ms-header.js      bloque superior: formateo de nombre, tonalidad y tempo
     │   └── ms-stale.js       indicador de datos viejos (clase is-stale + tope de g_wwr_errcnt)
     ├── instrumentista/
     │   ├── instrumentista.js   bootstrap de polls + render
@@ -84,8 +85,8 @@ reaper_www_root/
 **Orden de carga del shell** (importa: cada archivo depende de los
 anteriores): `main.js`, `config.js`, `config.local.js` (por XHR síncrono
 + `eval`, se ignora si no existe), `core/utils.js`, `markers/markers.js`,
-`core/music-transpose.js`, `core/music-state.js`, `ms-tempo.js`,
-`ms-beat.js`, `ms-section.js`, `ms-section-row.js`, `ms-stale.js`, `ms-dispatch.js`, `instrumentista.js`.
+`core/music-transpose.js`, `core/music-state.js`, `ms-tempo.js`, `ms-beat.js`, 
+`ms-section.js`, `ms-section-row.js`, `ms-header.js`, `ms-stale.js`, `ms-dispatch.js`, `instrumentista.js`.
 Después el shell llama `nikInstrumentistaInit()` y `nikInstrumentistaStartRenderLoop(50)`.
 
 `config.local.js` es imprescindible en cada PC: sin él los Command IDs
