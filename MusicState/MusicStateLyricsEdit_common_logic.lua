@@ -138,6 +138,31 @@ local function applyAdd(S, Ed, helpers, track, ctx, text, dec, replace_inside)
   return true
 end
 
+local PREVIEW_MAX_ROWS = 5
+local PREVIEW_MAX_CHARS = 50
+
+-- Vista previa de lo que el alta va a pisar: lineas en el inicio y dentro de
+-- la seleccion (los fines se cuentan aparte, no tienen texto). Se congela al
+-- planificar: el modal muestra esto, no el ctx.
+local function buildPreview(Lyrics, ctx)
+  local rows, ends = {}, 0
+  local function take(ev)
+    if ev.text == Lyrics.END_MARK then
+      ends = ends + 1
+      return
+    end
+    local text = ev.text
+    local cut = utf8.offset(text, PREVIEW_MAX_CHARS + 1)
+    if cut then text = text:sub(1, cut - 1) .. '...' end
+    rows[#rows + 1] = { pos = reaper.format_timestr_pos(ev.time, '', 2), text = text }
+  end
+  for _, ev in ipairs(ctx.at_start) do take(ev) end
+  for _, ev in ipairs(ctx.inside) do take(ev) end
+  local more = math.max(#rows - PREVIEW_MAX_ROWS, 0)
+  for i = #rows, PREVIEW_MAX_ROWS + 1, -1 do rows[i] = nil end
+  return { rows = rows, more = more, ends = ends }
+end
+
 local function tryAdd(S, Ed, helpers)
   local Lyrics = helpers.Lyrics
   local text = Lyrics.CleanText(Ed.add_buf or '')
@@ -148,7 +173,114 @@ local function tryAdd(S, Ed, helpers)
   elseif dec.kind == 'apply' then
     applyAdd(S, Ed, helpers, track, ctx, text, dec, false)
   else
+    Ed.add_pending = {
+      t1 = t1, t2 = t2, text = text, proj = S.proj, open = true,
+      kind = dec.kind, n = dec.n, has_line = dec.has_line,
+      preview = buildPreview(Lyrics, ctx),
+    }
     Ed.msg = 'Hay una linea o eventos en esa posicion (falta la confirmacion).'
+  end
+end
+
+-- Resuelve el alta pendiente. Re-planifica con la misma posicion y texto, y
+-- solo aplica si la decision sigue siendo la que el modal mostro: un tap, un
+-- Ctrl+Z o una edicion con el modal abierto la cancelan en vez de aplicar a
+-- ciegas. replace_inside: Reemplazar (true) o Conservar (false).
+local function resolveAdd(S, Ed, helpers, replace_inside)
+  local p = Ed.add_pending
+  Ed.add_pending = nil
+  if not p then return end
+  local track, ctx, dec = planAdd(S, helpers, p.t1, p.t2, p.text)
+  if dec.kind ~= p.kind or dec.n ~= p.n or dec.has_line ~= p.has_line then
+    Ed.msg = 'Cambio el contenido en esa posicion: se cancelo el alta.'
+    return
+  end
+  applyAdd(S, Ed, helpers, track, ctx, p.text, dec, replace_inside)
+end
+
+-- Modal de confirmacion del alta (patron del modal de pegado de Armonia).
+-- Muestra la vista previa congelada de Ed.add_pending, no el ctx vivo.
+local function drawAddModal(ctx, S, Ed, helpers)
+  local p = Ed.add_pending
+  if p and p.proj ~= S.proj then
+    Ed.add_pending, p = nil, nil
+  end
+  if p and p.open then
+    reaper.ImGui_OpenPopup(ctx, 'Agregar linea###lyrics_add_confirm')
+    p.open = false
+  end
+  if reaper.ImGui_BeginPopupModal(ctx, 'Agregar linea###lyrics_add_confirm', nil,
+      reaper.ImGui_WindowFlags_AlwaysAutoResize()) then
+    if not p then
+      reaper.ImGui_CloseCurrentPopup(ctx)
+    else
+      local esc = p.armed and reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Escape(), false)
+      local enter = p.armed and (reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter(), false)
+        or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter(), false))
+      p.armed = true
+      local pv = p.preview
+      local lines = #pv.rows + pv.more
+      if p.kind == 'confirm_line' then
+        reaper.ImGui_Text(ctx, 'Ya hay una linea en esa posicion:')
+      elseif lines == 0 then
+        reaper.ImGui_Text(ctx, 'Dentro de la seleccion hay marcadores de fin.')
+      elseif p.has_line then
+        reaper.ImGui_Text(ctx, string.format(
+          'Hay %d linea(s) en el inicio y dentro de la seleccion:', lines))
+      else
+        reaper.ImGui_Text(ctx, string.format(
+          'Hay %d linea(s) dentro de la seleccion:', lines))
+      end
+      for _, r in ipairs(pv.rows) do
+        reaper.ImGui_Text(ctx, string.format('%s   %s', r.pos, r.text))
+      end
+      if pv.more > 0 then
+        reaper.ImGui_TextDisabled(ctx, string.format('... y %d mas', pv.more))
+      end
+      if pv.ends > 0 then
+        reaper.ImGui_TextDisabled(ctx, string.format('Incluye %d marcador(es) de fin.', pv.ends))
+      end
+      if p.kind == 'confirm_inside' then
+        reaper.ImGui_TextDisabled(ctx, 'Conservar: solo se reemplaza lo que haya en el inicio.')
+      end
+      reaper.ImGui_TextDisabled(ctx, p.kind == 'confirm_inside'
+        and 'Enter o Esc: Cancelar' or 'Enter: Reemplazar  -  Esc: Cancelar')
+      reaper.ImGui_Spacing(ctx)
+      if p.kind == 'confirm_inside' then
+        if reaper.ImGui_Button(ctx, 'Reemplazar todo##add_all', 130, 0) then
+          resolveAdd(S, Ed, helpers, true)
+          reaper.ImGui_CloseCurrentPopup(ctx)
+        end
+        reaper.ImGui_SameLine(ctx)
+        if reaper.ImGui_Button(ctx, 'Conservar##add_keep', 100, 0) then
+          resolveAdd(S, Ed, helpers, false)
+          reaper.ImGui_CloseCurrentPopup(ctx)
+        end
+      else
+        if reaper.ImGui_Button(ctx, 'Reemplazar##add_one', 120, 0) then
+          resolveAdd(S, Ed, helpers, true)
+          reaper.ImGui_CloseCurrentPopup(ctx)
+        end
+      end
+      reaper.ImGui_SameLine(ctx)
+      if reaper.ImGui_Button(ctx, 'Cancelar##add_cancel', 100, 0) or esc then
+        Ed.add_pending = nil
+        Ed.msg = ' '
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      end
+      if enter and Ed.add_pending == p then
+        if p.kind == 'confirm_inside' then
+          Ed.add_pending = nil
+          Ed.msg = ' '
+        else
+          resolveAdd(S, Ed, helpers, true)
+        end
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      end
+    end
+    reaper.ImGui_EndPopup(ctx)
+  elseif p and not p.open then
+    Ed.add_pending = nil
   end
 end
 
@@ -160,13 +292,15 @@ local function drawAddRow(ctx, S, Ed, helpers)
   local a_changed, a_val = reaper.ImGui_InputTextWithHint(ctx, '##lyric_add',
     'Texto de la linea (vacio = solo fin)', Ed.add_buf)
   if a_changed then Ed.add_buf = a_val end
-  local a_deact = reaper.ImGui_IsItemDeactivatedAfterEdit(ctx)
+  local a_deact = reaper.ImGui_IsItemDeactivated(ctx)
   Ed.add_active = reaper.ImGui_IsItemActive(ctx)
-  local a_enter = a_deact and (reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter())
-    or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter()))
+  local a_enter = a_deact
+    and (reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter(), false)
+      or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter(), false))
   reaper.ImGui_SameLine(ctx)
   local a_click = reaper.ImGui_Button(ctx, 'Agregar##lyric_add_btn', 100, 0)
   if a_click or a_enter then tryAdd(S, Ed, helpers) end
+  drawAddModal(ctx, S, Ed, helpers)
 end
 
 function M.draw(ctx, S, H, helpers)
@@ -268,7 +402,7 @@ function M.draw(ctx, S, H, helpers)
   moveRow(ctx, S, Ed, helpers, 'end', 'Fin', end_key, add_key, false)
 
   -- Alta de linea en el cursor o la seleccion de tiempo. Siempre habilitada.
-  -- Enter agrega solo si el commit trae edicion: Tab o click afuera no.
+  -- Enter agrega (igual que el boton, vacio = solo fin): Tab o click afuera no.
   drawAddRow(ctx, S, Ed, helpers)
 
   -- Linea de aviso siempre reservada (08_REAIMGUI_PATTERNS.md §4).
