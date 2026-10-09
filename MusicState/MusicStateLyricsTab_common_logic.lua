@@ -97,6 +97,13 @@ local function applyTimeRange(S, Lyrics, idx)
       end
     end
   end
+  if not next_time and not ev.is_end and ev.take
+    and reaper.ValidatePtr2(0, ev.take, 'MediaItem_Take*') then
+    local item = reaper.GetMediaItemTake_Item(ev.take)
+    local item_end = reaper.GetMediaItemInfo_Value(item, 'D_POSITION')
+      + reaper.GetMediaItemInfo_Value(item, 'D_LENGTH')
+    if item_end > ev.time + Lyrics.EPS_TIME * 2 then next_time = item_end end
+  end
   if next_time then
     reaper.GetSet_LoopTimeRange(true, false, ev.time, next_time, false)
   else
