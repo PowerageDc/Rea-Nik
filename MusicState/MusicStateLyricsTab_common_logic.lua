@@ -161,6 +161,8 @@ function M.draw(ctx, H, helpers)
 
   if not S.track then
     reaper.ImGui_TextDisabled(ctx, 'No hay un track de Lyrics en este proyecto (nombre con "lyrics").')
+    reaper.ImGui_Spacing(ctx)
+    helpers.LyricsEdit.drawAddOnly(ctx, S, H, helpers)
     return
   end
 

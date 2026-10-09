@@ -17,12 +17,13 @@ local MSG = {
   at_limit = 'Tope: hay un evento vecino.',
   blocked = 'No hay margen entre los eventos vecinos.',
   out_of_range = 'Fuera de rango: cruzaria o pisaria un evento vecino.',
+  end_occupied = 'Ya hay un evento en la posicion del fin.',
 }
 
 local function getEd(S)
   if not S.edit then
     S.edit = { key_time = nil, key_end = false, buf = '', orig = '',
-               active = false, msg = ' ' }
+               active = false, msg = ' ', add_buf = '', add_active = false }
   end
   return S.edit
 end
@@ -96,6 +97,76 @@ local function moveRow(ctx, S, Ed, helpers, id, label, key, add_key, with_end)
     end
   end
   reaper.ImGui_EndDisabled(ctx)
+end
+
+-- Alta de linea (campo "Agregar"). planAdd vacia el fin pendiente de la cola
+-- ANTES de leer el track: si se insertara despues, el ctx quedaria viejo.
+local function planAdd(S, helpers, t1, t2, text)
+  local Lyrics = helpers.Lyrics
+  helpers.LyricsSync.flush(S.sync, Lyrics)
+  local track = Lyrics.FindLyricsTrack(0)
+  local ctx = Lyrics.PlanLine(track, t1, t2)
+  return track, ctx, Lyrics.DecideAdd(ctx, text)
+end
+
+-- Aplica el alta y deja la UI coherente: la seleccion pasa a la linea nueva
+-- (o al fin creado, con texto vacio) y el cache recarga en el frame siguiente.
+local function applyAdd(S, Ed, helpers, track, ctx, text, dec, replace_inside)
+  local ok, res = helpers.Lyrics.ApplyLine(track, ctx, text, { replace_inside = replace_inside })
+  if not ok then
+    Ed.msg = MSG[res] or 'No se pudo agregar la linea.'
+    return false
+  end
+  S.state_count = -1
+  if text ~= '' then
+    S.sel = { time = ctx.t1, is_end = false }
+  else
+    S.sel = { time = ctx.end_time, is_end = true }
+  end
+  S.scroll_sel = true
+  if S.autoselect then S.reselect = true end
+  Ed.add_buf = ''
+  if text == '' then
+    Ed.msg = 'Fin agregado.'
+  elseif dec.has_line then
+    Ed.msg = 'Linea reemplazada.'
+  elseif dec.replaces_end then
+    Ed.msg = 'Linea agregada (reemplazo el fin que estaba en el inicio).'
+  else
+    Ed.msg = 'Linea agregada.'
+  end
+  return true
+end
+
+local function tryAdd(S, Ed, helpers)
+  local Lyrics = helpers.Lyrics
+  local text = Lyrics.CleanText(Ed.add_buf or '')
+  local t1, t2 = Lyrics.GetTimeContext()
+  local track, ctx, dec = planAdd(S, helpers, t1, t2, text)
+  if dec.kind == 'reject' then
+    Ed.msg = MSG[dec.code] or 'No se pudo agregar la linea.'
+  elseif dec.kind == 'apply' then
+    applyAdd(S, Ed, helpers, track, ctx, text, dec, false)
+  else
+    Ed.msg = 'Hay una linea o eventos en esa posicion (falta la confirmacion).'
+  end
+end
+
+local function drawAddRow(ctx, S, Ed, helpers)
+  reaper.ImGui_Separator(ctx)
+  reaper.ImGui_Text(ctx, 'Agregar')
+  reaper.ImGui_SameLine(ctx, 60)
+  reaper.ImGui_SetNextItemWidth(ctx, -110)
+  local a_changed, a_val = reaper.ImGui_InputTextWithHint(ctx, '##lyric_add',
+    'Texto de la linea (vacio = solo fin)', Ed.add_buf)
+  if a_changed then Ed.add_buf = a_val end
+  local a_deact = reaper.ImGui_IsItemDeactivatedAfterEdit(ctx)
+  Ed.add_active = reaper.ImGui_IsItemActive(ctx)
+  local a_enter = a_deact and (reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter())
+    or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter()))
+  reaper.ImGui_SameLine(ctx)
+  local a_click = reaper.ImGui_Button(ctx, 'Agregar##lyric_add_btn', 100, 0)
+  if a_click or a_enter then tryAdd(S, Ed, helpers) end
 end
 
 function M.draw(ctx, S, H, helpers)
@@ -196,7 +267,18 @@ function M.draw(ctx, S, H, helpers)
   reaper.ImGui_EndDisabled(ctx)
   moveRow(ctx, S, Ed, helpers, 'end', 'Fin', end_key, add_key, false)
 
+  -- Alta de linea en el cursor o la seleccion de tiempo. Siempre habilitada.
+  -- Enter agrega solo si el commit trae edicion: Tab o click afuera no.
+  drawAddRow(ctx, S, Ed, helpers)
+
   -- Linea de aviso siempre reservada (08_REAIMGUI_PATTERNS.md §4).
+  reaper.ImGui_TextDisabled(ctx, Ed.msg)
+end
+
+-- Solo la fila de alta, para la tab sin track de Lyrics: el alta crea el track.
+function M.drawAddOnly(ctx, S, H, helpers)
+  local Ed = getEd(S)
+  drawAddRow(ctx, S, Ed, helpers)
   reaper.ImGui_TextDisabled(ctx, Ed.msg)
 end
 
