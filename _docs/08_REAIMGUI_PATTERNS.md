@@ -215,3 +215,53 @@ uno inline por fila.
 - **Panel de alto fijo.** Sin selección, deshabilitar los widgets
   (`BeginDisabled`) en vez de ocultarlos, y reservar la línea de aviso:
   aparecer y desaparecer corre la lista y puede hacer perder un click (§4).
+
+## 6. Modales de confirmación y teclas con un popup abierto
+
+Primer caso: el alta de línea de la tab Lyrics del MusicState Helper
+(`features/musicstate_lyrics.md` §8.6). Complementa al modal de colisión de
+pegado de Armonía, que ya tiene el esqueleto (`OpenPopup`,
+`BeginPopupModal`, `EndPopup` solo si devolvió `true`).
+
+- **Estado pendiente, no contexto.** Al hacer click se guardan los datos de
+  entrada (posición, texto) y una vista previa congelada de lo que se va a
+  pisar; nunca el resultado de una consulta al proyecto (sus índices
+  caducan con cualquier edición). Al confirmar se vuelve a consultar y se
+  compara con lo que el modal mostró: si cambió (un tap, un Ctrl+Z con el
+  modal abierto), se cancela con aviso en vez de aplicar a ciegas. Un cambio
+  de proyecto descarta el pendiente.
+- **Dibujarlo desde quien dibuja el botón.** `OpenPopup` y
+  `BeginPopupModal` tienen que compartir el ID stack y el string; si la
+  fila del botón se reutiliza en más de una rama (por ejemplo, con y sin
+  track), el modal va dentro de esa función y queda cubierto en todas.
+- **El título de un modal es su ID.** `BeginPopupModal(ctx, 'lyrics_add')`
+  muestra ese identificador. Usar `'Texto visible###id_fijo'` en las dos
+  llamadas (`OpenPopup` y `BeginPopupModal`), como en §2.
+- **Esc no cierra un popup con `NoNav`.** ImGui cierra los popups con Esc
+  por la ruta de navegación, desactivada en estos paneles. Se lee a mano
+  dentro del modal con `IsKeyPressed(ctx, Key_Escape(), false)`. Los
+  popups sí dejan navegar con las flechas entre sus botones (no heredan el
+  `NoNav` del root).
+- **Enter no se apoya en `SetItemDefaultFocus`.** En la prueba no marcó el
+  botón por defecto. Se lee Enter a mano **después de dibujar los
+  botones**, y solo actúa si el pendiente sigue siendo el mismo: si un
+  botón se activó ese frame (flechas más Enter), manda ese. La acción por
+  defecto es la no destructiva cuando hay varios botones (Cancelar), y el
+  modal muestra la ayuda de teclas.
+- **Primer frame y auto-repeat.** Esc y Enter se ignoran el primer frame
+  del modal (flag `armed` en el pendiente) y se leen con `repeat = false`:
+  el Enter que abre el modal desde un campo no tiene que confirmarlo.
+- **Con un popup abierto, ningún atajo global actúa.** Los guards de
+  `globalKeyPressed` (ningún item activo, ventana con foco incluyendo
+  `ChildWindows`) no detectan el modal: un popup cuenta como hijo de la
+  raíz y sus botones no están activos, así que Espacio, Enter y las flechas
+  seguían llegando a REAPER. Se agrega
+  `IsPopupOpen(ctx, '', PopupFlags_AnyPopupId())` al guard (efecto
+  colateral buscado: también bloquea con un combo desplegado). Todo control
+  que lea teclas por su cuenta (`IsKeyDown`, como `readHeld` de la tecla de
+  tap) necesita el mismo guard.
+- **Campo que agrega con Enter.** Usar `IsItemDeactivated` más
+  `IsKeyPressed(Enter, false)`, no `IsItemDeactivatedAfterEdit` (§5 es para
+  editar un valor existente): tras cancelar un modal el texto sigue ahí sin
+  editarse y el commit no dispararía. Tab y click afuera no agregan porque
+  exigen Enter.

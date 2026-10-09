@@ -17,7 +17,7 @@ El contrato de datos (formato JSON, protocolo) vive en
 | Contrato de datos (`lyrics_data`, `lyrics_version`) | Documentado en `data_model` §4.7 |
 | Publicador `Nik_MusicState_PublishLyrics.lua` | Implementado y verificado (ver §4) |
 | Ingreso `Nik_MusicState_LyricsInput.lua` | MVP con `GetUserInputs` implementado y verificado: línea en cursor o selección, marcador `·` de fin, upsert, aviso ante eventos dentro de la selección. Ventana persistente: ver la tab del Helper (fila siguiente) |
-| Tab Lyrics del Helper (`MusicStateLyricsTab_common_logic.lua`) | Pasos 3a y 3b implementados y verificados (visor de solo lectura y cola de tap-to-sync). Paso 3c en curso: selección, edición de texto, borrado y posición (nudge, mover al cursor) hechos y verificados; falta agregar línea (§8.6, §8.7). Paso 3d pendiente (§8) |
+| Tab Lyrics del Helper (`MusicStateLyricsTab_common_logic.lua`) | Pasos 3a, 3b y 3c implementados y verificados (visor de solo lectura, cola de tap-to-sync y panel de edición: selección, texto, borrado, posición y agregar línea con confirmación, §8.6). Paso 3d pendiente (§8) |
 | Doc del puente | Actualizado (lyrics fuera de `Bridge.KEYS`) |
 | Capa cliente (setter, consultas, lead propio) | Implementada y verificada en dev (ver §4); detalle en `musicstate_client.md` §1.6 |
 | Cableado (`ms-dispatch.js`: pedidos, versión, reset, opt-in) | Implementado y verificado en dev |
@@ -211,20 +211,39 @@ prompter):
 8. A futuro, sin decidir: que "Guardar y Publicar" del Helper también
    guarde la letra (editar el track con el Helper abierto). Se define
    después de usar el flujo actual con `PublishLyrics`.
+9. **Probar el alta con un fin pendiente de la cola** (sin probar): subir el
+   gap de la cola (`lyrics_tap_gap_ms`), tapear con hold de al menos 250 ms,
+   soltar y apretar "Agregar" antes de que venza. Esperado: el `·` pendiente
+   se inserta antes del alta (el alta llama al mismo `flush` que las
+   ediciones, antes de `PlanLine`), el tap queda con su fin y la cola no
+   cambia. Verificado aparte: un "Reemplazar todo" que borra tres líneas con
+   la cola cargada no mueve la cola.
+10. **Ctrl+Z tras agregar con selección de tiempo activa:** el Ctrl+Z deshace
+    la línea pero la selección de tiempo queda en el arrange, porque la tab
+    solo limpia `S.sel` cuando deja de resolverse, no el rango. Idea: en
+    `refresh`, limpiar el rango solo si empieza en el tiempo de la línea
+    que desapareció, para no pisar una selección armada a mano.
+11. **Atajos de teclado globales del Helper** (ReaImGui, no el prompter web;
+    diseño aparte): con el modal cerrado, `W` y `Fin` (ir al inicio o al fin
+    del proyecto) y `Esc` (limpiar la selección de tiempo). Partir del guard
+    de popup abierto de `globalKeyPressed` y `readHeld` (patrones §6), que es 
+    lo que hoy impide que actúen con un modal abierto.
 
 ## 7. Archivos
 
 - `MusicState/Nik_MusicState_PublishLyrics.lua` — publicador one-shot.
 - `MusicState/Nik_MusicState_LyricsInput.lua` — ingreso de líneas (UI mínima sobre el módulo).
-- `MusicState/MusicStateLyrics_common_logic.lua` — descubrimiento del track y lógica de edición (`PlanLine`/`ApplyLine`, y para 3c `PairEvents`, `Resolve`, `SetText`, `DeleteLine`, `DeleteEnd`, `MoveEvent`, `AddEnd`), sin diálogos ni ImGui.
+- `MusicState/MusicStateLyrics_common_logic.lua` — descubrimiento del track y lógica de edición (`PlanLine`/`ApplyLine`/`DecideAdd`, y para 3c `PairEvents`, `Resolve`, `SetText`, `DeleteLine`, `DeleteEnd`, `MoveEvent`, `AddEnd`), sin diálogos ni ImGui.
 - `MusicState/MusicStateLyricsTab_common_logic.lua` — tab Lyrics del Helper (`M.draw(ctx, H, helpers)`).
 - `MusicState/MusicStateLyricsSync_common_logic.lua` — cola de tap-to-sync (`M.draw(ctx, S, H, helpers)`), consumida por la tab vía `helpers.LyricsSync`. Expone también `flush` y `onEdit`, el contrato con las ediciones de 3c (§8.6).
-- `MusicState/MusicStateLyricsEdit_common_logic.lua` — panel de edición de la fila seleccionada (`M.draw(ctx, S, H, helpers)`), consumido por la tab vía `helpers.LyricsEdit`.
-- `Tests-Debug/Nik_Tests_LyricsProbe.lua` — volcado de los eventos lyric
+- `MusicState/MusicStateLyricsEdit_common_logic.lua` — panel de edición de la fila seleccionada y alta de líneas (`M.draw(ctx, S, H, helpers)`; `M.drawAddOnly` dibuja solo la fila de alta cuando no hay track), consumido por la tab vía `helpers.LyricsEdit`.
+- `Tests-Debug/Nik_Test_LyricsProbe.lua` — volcado de los eventos lyric
   y de `GetTrackMIDILyrics` a consola.
-- `Tests-Debug/Nik_Tests_LyricsEditProbe.lua` — probe de la API MIDI para
+- `Tests-Debug/Nik_Test_LyricsEditProbe.lua` — probe de la API MIDI para
   3c (edición de texto en el lugar, PPQ fuera del item, `SetItemExtents`,
   casos de `EnsureTake`). Crea pistas `PROBE_*` en un solo bloque de undo.
+- `Tests-Debug/Nik_Test_LyricsDecideAdd.lua` — test de consola de
+  `DecideAdd` con eventos simulados (no toca el proyecto).
 - `core/music-state.js` — bloque de lyrics (setter, consultas, pedidos).
 - `musicstate-ui/shared/ms-dispatch.js` — handlers, reset y opt-in.
 - `config.js` — `musicStatePublishLyrics`.
@@ -243,7 +262,7 @@ prompter):
 | Refactor: `PlanLine`/`ApplyLine` al módulo, script como capa de UI | Hecho, verificado |
 | 3a. Tab Lyrics del Helper, solo lectura | Hecho, 7 pruebas verificadas |
 | 3b. Cola de tap-to-sync (hold con gap mínimo) | Hecho, verificado por etapas (cola, tap, fin por hold) |
-| 3c. Edición (panel de la fila seleccionada: texto, nudge, mover al cursor, borrar; agregar línea) | En curso: selección y pares, edición de texto, borrado y posición hechos y verificados; agregar línea (con modal) pendiente |
+| 3c. Edición (panel de la fila seleccionada: texto, nudge, mover al cursor, borrar; agregar línea) | Hecho, verificado (agregar línea con confirmación; falta probarlo con un fin pendiente de la cola, §6) |
 | 3d. `Lyrics.Publish`, botón Publicar y auto-publicar | Pendiente |
 
 ### 8.2 API del módulo
@@ -267,8 +286,16 @@ mínima entre eventos vecinos al mover).
   `inside` y `end_time`. No modifica nada.
 - `ApplyLine(track, ctx, text, opts)`: con `track = nil` lo crea.
   `opts.replace_inside` decide si se borran los eventos dentro de la
-  selección. Devuelve `false, "end_occupied"` si el texto es vacío y ya
-  hay un evento en la posición del marcador; si no, `true, track`.
+  selección; si hay eventos dentro y no se reemplazan, no se inserta el `·`
+  de `t2` (el par es posicional: quedaría huérfano después del fin de la
+  última línea conservada). Devuelve `false, "end_occupied"` si el texto es
+  vacío y ya hay un evento en la posición del marcador; si no, `true, track`.
+- `DecideAdd(ctx, text)`: decisión pura para el alta, a partir del `ctx` de
+  `PlanLine` y el texto ya limpio. Devuelve `{kind = "apply" |
+  "confirm_line" | "confirm_inside" | "reject"}` más `n` (eventos dentro de
+  la selección), `has_line` (hay una línea en `t1`) y `replaces_end` (hay un
+  `·` en `t1`, que `ApplyLine` reemplaza sin modal). En `reject` trae
+  `code`: `"reserved"` (el texto es `·`) o `"end_occupied"`.
 - `PairEvents(events)`: marca `is_end` y deriva el par línea/fin por
   posición (`end_idx` en la línea, `owner` en el fin). En un grupo de
   eventos a menos de `EPS_TIME` entre sí, los fines cierran la línea
@@ -392,10 +419,9 @@ mínima entre eventos vecinos al mover).
   reemplaza el texto, y "Deshacer" no lo restaura. (5) Ctrl+Z o Redo de
   REAPER sobre una edición de 3c: ver §8.6.
 
-### 8.6 Tab 3c: edición de la fila seleccionada (en construcción)
+### 8.6 Tab 3c: edición de la fila seleccionada y agregar línea
 
-Hecho: selección y pares, texto, borrado y posición. Falta agregar línea
-(§8.7).
+Hecho: selección y pares, texto, borrado, posición y agregar línea.
 
 - **Dónde vive.** Panel `MusicStateLyricsEdit_common_logic.lua`
   (`helpers.LyricsEdit`, `M.draw(ctx, S, H, helpers)`), dibujado por la tab
@@ -435,6 +461,41 @@ Hecho: selección y pares, texto, borrado y posición. Falta agregar línea
   fin lo crea (`AddEnd`). Mover = borrar + insertar por la ruta de los taps
   (`EnsureTake`), en un solo bloque de undo. Tras mover, la selección y el
   borrador siguen al evento y la lista hace scroll hasta la fila.
+- **Agregar línea.** Fila "Agregar" al final del panel (campo y botón),
+  siempre habilitada: no depende de la selección. Sin track de Lyrics la tab
+  dibuja solo esa fila (`drawAddOnly`) y el alta crea el track. Agrega en el
+  cursor o, con selección de tiempo, la línea en `t1` y el `·` en `t2`; con
+  el campo vacío inserta solo el `·`. Enter en el campo agrega (también
+  vacío); Tab o click afuera no. Orden: `LyricsSync.flush`,
+  `GetTimeContext`, `PlanLine`, `DecideAdd` (el flush va antes: un `·`
+  pendiente insertado después dejaría viejo el `ctx`). `apply` aplica
+  directo, `reject` avisa, y `confirm_*` abre el modal.
+- **Confirmación.** Se guarda en `Ed.add_pending` `(t1, t2, texto)` y una
+  vista previa congelada de lo que se pisa (hasta 5 líneas con su posición,
+  texto cortado a 50 caracteres, y la cantidad de `·` aparte); nunca el
+  `ctx`. Al confirmar se vuelve a planear y, si `kind`, `n` o `has_line`
+  cambiaron, se cancela con aviso. Un cambio de proyecto con el modal abierto
+  lo descarta. Línea existente: Reemplazar / Cancelar. Eventos dentro de la
+  selección: Reemplazar todo / Conservar / Cancelar (`opts.replace_inside`);
+  si además hay una línea en `t1`, es el mismo modal de tres botones.
+  Conservar no inserta el `·` de `t2` (§8.2). El título del modal es su ID:
+  se usa `'Agregar linea###lyrics_add_confirm'` para que no se vea el
+  identificador. Teclas: Esc cancela, leído a mano (el panel tiene `NoNav`
+  y ImGui cierra los popups con Esc por la navegación); Enter ejecuta
+  Reemplazar en el modal de un botón y Cancelar en el de tres (un Enter
+  reflejo no borra varias líneas), evaluado después de los botones: si uno
+  se activó con las flechas, manda ese. Ambas teclas se ignoran el primer
+  frame y sin auto-repeat, para que el Enter que abre el modal desde el
+  campo no lo confirme. Los atajos globales y la tecla de tap no actúan con
+  un popup abierto (§8.3, patrones §6).
+- **Después de agregar.** La selección pasa a la línea nueva (al `·` si el
+  texto era vacío) y la lista hace scroll hasta ella; `S.state_count = -1`
+  fuerza la recarga y, con el toggle activo, `S.reselect` hace que la
+  selección de tiempo la siga. Una línea agregada no entra en `hist`, así
+  que no hay `onEdit`. Relacionado: `applyTimeRange` ahora llega hasta el fin
+  del item de Lyrics cuando una línea no tiene evento siguiente (incluye el
+  margen de `PAD_TIME` que deja `EnsureTake`); vale también para el click en
+  la última línea.
 - **Contrato con la cola de tap.** Cada operación llama a
   `LyricsSync.flush` antes (inserta el fin pendiente) y a
   `LyricsSync.onEdit(S.sync, Lyrics, change)` después, con un descriptor
@@ -464,28 +525,11 @@ Hecho: selección y pares, texto, borrado y posición. Falta agregar línea
 
 ### 8.7 Plan restante
 
-- **3c, agregar línea** en el cursor o la selección de tiempo (reemplaza
-  al diálogo del script de ingreso): campo de texto y botón en el panel, y un
-  modal propio (como el de colisión de pegado de Armonía) solo si hay algo
-  que decidir. Decisiones tomadas:
-  - Se captura `(t1, t2, texto)` al hacer click, nunca el `ctx` de
-    `PlanLine`: al confirmar se vuelve a llamar `PlanLine`. Los `idx`
-    caducan, y un tap o un Ctrl+Z con el modal abierto haría borrar eventos
-    ajenos.
-  - Línea existente en esa posición: Reemplazar / Cancelar. Eventos dentro de
-    la selección: Reemplazar (N) / Conservar / Cancelar
-    (`opts.replace_inside`). Un `·` en el punto de inicio lo reemplaza
-    `ApplyLine`: aviso por mensaje, sin modal. Texto vacío con
-    `end_occupied`: aviso, sin modal.
-  - Con "Seleccionar duración al hacer click" activo, clickear una línea deja
-    una selección de tiempo igual a su rango, y agregar sobre ella
-    reemplazaría esa línea (upsert en `t1`): por eso el modal de reemplazo es
-    obligatorio.
-  - Tras agregar: la selección pasa a la línea nueva, `S.state_count = -1`,
-    y si hay cola de tap, `LyricsSync.flush` antes. No hace falta notificar:
-    una línea agregada no entra en `hist`.
-  - Al cerrar este paso: marcar 3c como hecho en §1 y §8.1, y revisar si la
-    agrupación de undo (§8.6) vale la pena.
+- **3c, agregar línea:** hecho, comportamiento final en §8.6. Motivo de que
+  el modal de reemplazo sea obligatorio: con "Seleccionar duración al hacer
+  click" activo, clickear una línea deja una selección de tiempo igual a su
+  rango, y agregar sobre ella reemplazaría esa línea (upsert en `t1`).
+  Pendiente menor: revisar si la agrupación de undo (§8.6) vale la pena.
 - **3d. Publicación.** Extraer `Lyrics.Publish(proj)` de
   `Nik_MusicState_PublishLyrics.lua` (el script queda como cáscara de pocas
   líneas), que devuelva versión, cantidad de líneas y tamaño en bytes. Botón
