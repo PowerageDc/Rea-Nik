@@ -1,0 +1,184 @@
+/* ms-base.css — estilos de componente compartidos por los perfiles de
+   MusicState (instrumentista, cantante).
+
+   Solo ESTILO de componente: sin posicionamiento de pantalla. Cada perfil
+   carga este archivo ANTES de su propio CSS y agrega el layout (posiciones,
+   alturas, orden de bloques) y los overrides de tamaño que necesite.
+
+   Contenido: paleta, html/body, .ms-divider, glifos de tonalidad, número de
+   tempo, componentes de la fila de sección (+ estilo base de .ms-section-row,
+   sin posición) y el estilo de datos viejos (.is-stale).
+
+   Contrato con el JS compartido: ms-header.js (glifos de tonalidad, tempo),
+   ms-section-row.js (ids y .is-jumping), ms-stale.js (.is-stale en la
+   pantalla).
+
+   Nota para overrides: el font-size de .ms-section-fill debe coincidir con
+   el de .ms-section-adj (el fill se superpone a #msSectionNext).
+*/
+
+
+:root {
+  --ms-bg: #0D0D0F;
+  --ms-fg: #F2F0EA;
+  --ms-fg-dim: #9A9AA2;
+  --ms-chord-color: #FFB627;
+  --ms-key-color: #F2F0EA;
+  --ms-tempo-number-color: #F2F0EA;
+  --ms-song-name-color: #C7C5BE;
+  --ms-divider-color: rgba(242, 240, 234, 0.15);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ms-bg);
+  color: var(--ms-fg);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  height: 100%;
+}
+
+.ms-divider {
+  border: none;
+  border-top: 1px solid var(--ms-divider-color);
+  width: 100%;
+  max-width: 480px;
+  margin: 18px 0;
+}
+
+.ms-key-tonic-block {
+  position: relative;
+  display: inline-block;
+  line-height: 1.8; /* strut fijo: aunque el accidental crezca, mientras no supere esto, la caja no cambia de alto */
+  color: var(--ms-key-color);
+}
+
+.ms-key-note {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  margin-right: 0.2em;
+  color: var(--ms-fg-dim);
+}
+
+.ms-key-tonic-block .ms-key-accidental-sharp {
+  display: inline-block;
+  font-size: 0.7em;
+  transform: scaleY(1.25);
+  transform-origin: bottom center;
+  position: relative;
+  top: -0.38em;
+  margin: 0 0 0 0.08em;
+}
+
+.ms-key-tonic-block .ms-key-accidental-flat {
+  display: inline-block;
+  font-size: 1.2em;
+  position: relative;
+  top: -0.12em;
+}
+
+.ms-key-tonic-block .ms-key-minor {
+  display: inline-block;
+  font-size: 0.75em;
+  transform: scaleX(0.7);
+  transform-origin: bottom center;
+  position: relative;
+  margin: 0 0 0 -0.1em;
+}
+
+.ms-tempo-number {
+  color: var(--ms-tempo-number-color);
+}
+
+.ms-section-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: clamp(20px, 6vw, 40px);
+  padding: 0 20px;
+  box-sizing: border-box;
+  transition: opacity 150ms ease;
+}
+
+.ms-section-row.is-jumping {
+  opacity: 0;
+}
+
+.ms-section-current {
+  font-size: clamp(1.3rem, 6vw, 1.8rem);
+  font-weight: 700;
+  flex: 0 0 auto;
+  max-width: 55vw;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  transform-origin: 50% 50%; /* FLIP por centro, escala uniforme (ver nikMsFlipTransform) */
+  transition: transform 300ms ease, color 300ms ease;
+}
+
+.ms-section-adj {
+  font-size: clamp(1.2rem, 4vw, 1.3rem);
+  font-weight: 500;
+  color: var(--ms-fg-dim);
+  opacity: 0.75;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transform-origin: 50% 50%;
+  transition: transform 300ms ease, color 300ms ease, opacity 150ms ease;
+}
+
+.ms-section-adj-wrap {
+  position: relative;
+  display: inline-block;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+#msSectionNext {
+  display: block;
+  width: 100%;
+}
+
+.ms-section-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  font-size: clamp(1.2rem, 4vw, 1.3rem);
+  font-weight: 500;
+  clip-path: inset(100% 0 0 0); /* oculto -- el JS lo anima a inset(0 0 0 0) */
+  pointer-events: none;
+}
+
+#msSectionPrev,
+#msSectionNext,
+#msSectionNextFill {
+  text-align: center;
+}
+
+.ms-divider[hidden] {
+  display: none;
+}
+
+.ms-screen.is-stale .ms-top-block,
+.ms-screen.is-stale .ms-section-row {
+    opacity: 0.35;
+    transition: opacity 0.3s;
+}
+
+.ms-screen.is-stale::before {
+    content: "SIN SEÑAL";
+    position: fixed;
+    top: 6px;
+    right: 10px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: #f5a623;
+    z-index: 10;
+}
