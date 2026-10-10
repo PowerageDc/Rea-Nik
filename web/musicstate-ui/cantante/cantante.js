@@ -24,6 +24,9 @@ var NIK_CANTANTE_ROLES = {
 // Orden de prioridad para agregar slots mientras entren en el escenario (§4.2).
 var NIK_CANTANTE_SLOT_ORDER = ["cur", "next1", "prev1", "next2", "prev2"];
 
+// Tope del gap proporcional (§4.2): múltiplo de --cn-lyric-gap.
+var NIK_CANTANTE_GAP_MAX = 4;
+
 function nikCantanteBuildSlowPoll() {
     // reapitch_semitone solo para la tonalidad de la cabecera (transpuesta);
     // la letra no se transpone. Sin publish_version (es de armonía).
@@ -168,6 +171,10 @@ function nikCantanteComputeLayout(anchorPos) {
     var n = nikMusicStateLyricsLines.length;
     var L = { slots: [], stageH: M.stageH, usedH: 0, focusY: null, clamped: false };
     if (M.oneLineH <= 0 || M.stageH <= 0 || n === 0) return L;
+    // Intro (sin línea vigente): "cur" fantasma en la posición -1 (no se dibuja,
+    // pero ocupa su lugar). Al empezar la línea 0 la pila sube igual que en
+    // cualquier cambio de línea.
+    var intro = (anchorPos < 0);
 
     // 1) Prioridad estricta; los inexistentes no ocupan lugar.
     var picked = [];
@@ -175,15 +182,24 @@ function nikCantanteComputeLayout(anchorPos) {
     for (var s = 0; s < NIK_CANTANTE_SLOT_ORDER.length; s++) {
         var role = NIK_CANTANTE_SLOT_ORDER[s];
         var pos = anchorPos + NIK_CANTANTE_ROLE_OFFSET[role];
-        if (pos < 0 || pos >= n) continue;
-        var rows = M.rowsPos[pos];
+        var phantom = (intro && role === "cur");
+        if (!phantom && (pos < 0 || pos >= n)) continue;
+        var rows = phantom ? 1 : M.rowsPos[pos];
         var h = rows * M.oneLineH * NIK_CANTANTE_ROLES[role].scale;
         var need = h + (picked.length ? M.gap : 0);
         if (used + need > M.stageH) break;
         used += need;
-        picked.push({ role: role, pos: pos, rows: rows, h: h });
+        picked.push({ role: role, pos: pos, rows: rows, h: h, phantom: phantom });
     }
     if (!picked.length) return L;
+
+    // 1b) Gap proporcional al espacio que sobra, entre M.gap y el tope.
+    var gap = M.gap;
+    if (picked.length > 1) {
+        var extra = M.stageH - used;
+        gap = Math.min(M.gap * NIK_CANTANTE_GAP_MAX, M.gap + extra / (picked.length - 1));
+        used += (picked.length - 1) * (gap - M.gap);
+    }
 
     // 2) De arriba hacia abajo, con y relativo al tope de la pila.
     picked.sort(function (a, b) { return a.pos - b.pos; });
@@ -192,7 +208,7 @@ function nikCantanteComputeLayout(anchorPos) {
     for (var i = 0; i < picked.length; i++) {
         picked[i].y = y;
         if (picked[i].role === "cur") refCenter = y + picked[i].h / 2;
-        y += picked[i].h + M.gap;
+        y += picked[i].h + gap;
     }
     if (refCenter === null) refCenter = used / 2; // intro: sin "cur", centra la pila
 
@@ -204,6 +220,7 @@ function nikCantanteComputeLayout(anchorPos) {
     L.clamped = (clampedTop !== top);
     L.usedH = used;
     for (var j = 0; j < picked.length; j++) {
+        if (picked[j].phantom) continue;
         var r = NIK_CANTANTE_ROLES[picked[j].role];
         L.slots.push({
             role: picked[j].role,
@@ -230,11 +247,74 @@ function nikCantanteGetLayout(anchorPos) {
     return nikCantanteLayoutCache.layout;
 }
 
+// --- Reel de letra: dibujo estático (musicstate_cantante.md §4.1-4.2) ---
+// Un nodo por POSICIÓN de línea; el rol solo cambia transform/opacity.
+// Se redibuja únicamente cuando cambia el layout cacheado, nunca por frame.
+
+var nikCantanteReel = { nodes: {}, layout: null, epoch: -1 };
+
+function nikCantanteReelRender() {
+    var stage = document.getElementById("cnStage");
+    if (!stage) return;
+    nikCantanteMeasureIfNeeded();
+    var R = nikCantanteReel;
+    var L = nikCantanteGetLayout(nikCantanteAnchorPos());
+    if (R.layout === L) return;
+
+    // Medición nueva: el texto o el ancho pudieron cambiar, se recrea todo.
+    if (R.epoch !== nikCantanteMeasure.epoch) {
+        for (var p in R.nodes) {
+            if (R.nodes[p].parentNode) R.nodes[p].parentNode.removeChild(R.nodes[p]);
+        }
+        R.nodes = {};
+        R.epoch = nikCantanteMeasure.epoch;
+    }
+
+    var keep = {};
+    for (var i = 0; i < L.slots.length; i++) {
+        var S = L.slots[i];
+        keep[S.pos] = true;
+        var node = R.nodes[S.pos];
+        if (!node) {
+            node = document.createElement("div");
+            node.className = "cn-lyric";
+            node.textContent = nikMusicStateLyricsLines[S.pos].text;
+            node.style.opacity = "0";
+            node.style.transform = "translateY(" + S.y + "px) scale(" + S.scale + ")";
+            stage.appendChild(node);
+            void node.offsetWidth; // flush: el opacity final transiciona desde 0
+            R.nodes[S.pos] = node;
+        }
+        node.style.transform = "translateY(" + S.y + "px) scale(" + S.scale + ")";
+        node.style.opacity = S.opacity;
+    }
+    for (var q in R.nodes) {
+        if (!keep[q]) {
+            nikCantanteReelFadeOut(R.nodes[q]);
+            delete R.nodes[q];
+        }
+    }
+    R.layout = L;
+}
+
+function nikCantanteReelFadeOut(node) {
+    node.style.opacity = "0";
+    window.setTimeout(function () {
+        if (node.parentNode) node.parentNode.removeChild(node);
+    }, 600);
+}
+
 // --- Panel de debug temporal (se reemplaza por la UI real) ---
+
+var NIK_CANTANTE_DEBUG_ON = /[?&]debug=1/.test(window.location.search);
 
 function nikCantanteDebugRender() {
     var el = document.getElementById("cantanteDebug");
     if (!el) return;
+    if (!NIK_CANTANTE_DEBUG_ON) {
+        el.style.display = "none";
+        return;
+    }
     nikCantanteMeasureIfNeeded();
     var next = nikMusicStateLyricsNextDistance();
     var win = nikMusicStateLyricsWindow(2, 2);
@@ -277,6 +357,7 @@ function nikCantanteRender() {
     nikMsUpdateStaleIndicator(nikCantanteScreenEl);
     nikMsHeaderRender();
     nikMsSectionRowRender(false); // sin reel todavía: ninguna otra capa hace jump
+    nikCantanteReelRender();
     nikCantanteDebugRender();
 }
 

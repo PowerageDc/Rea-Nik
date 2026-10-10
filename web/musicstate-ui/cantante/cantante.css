@@ -33,6 +33,7 @@
   --cn-lyric-lh: 1.25;
   --cn-lyric-weight: 500;
   --cn-lyric-gap: calc(var(--u) * 1.5);
+  --cn-lyric-anim: 450ms;
 }
 
 @supports (height: 1dvh) {
@@ -144,7 +145,33 @@
   margin-bottom: var(--cn-lyric-gap); /* solo para leer el gap en px con getComputedStyle */
 }
 
+/* Línea del reel: misma composición que el medidor (ancho del escenario,
+   fuente del rol "cur"). El rol se expresa solo con transform/opacity. */
+.cn-lyric {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  font-size: var(--cn-lyric-size);
+  font-weight: var(--cn-lyric-weight);
+  line-height: var(--cn-lyric-lh);
+  white-space: normal;
+  overflow-wrap: break-word;
+  transform-origin: 50% 0;
+  will-change: transform, opacity;
+  transition: transform var(--cn-lyric-anim) ease, opacity var(--cn-lyric-anim) ease;
+}
+
+/* TEMPORAL: overlay translúcido sobre el reel, para validar números sin
+   empujar ni tapar los slots. */
 #cantanteDebug {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.6;
   font-family: monospace;
   font-size: calc(var(--u) * 3);
   line-height: 1.3;
