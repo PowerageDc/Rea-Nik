@@ -29,6 +29,10 @@
   --cn-top-offset: 0px;   /* lo pisa nikCantanteApplyTopOffset() (?top=px, persistido) */
   --u: 1vmin;
   --cn-gap: calc(var(--u) * 2.5);
+  --cn-lyric-size: calc(var(--u) * 6.5);   /* font-size de TODA línea de letra (la de rol "actual") */
+  --cn-lyric-lh: 1.25;
+  --cn-lyric-weight: 500;
+  --cn-lyric-gap: calc(var(--u) * 1.5);
 }
 
 @supports (height: 1dvh) {
@@ -121,6 +125,23 @@
      layout en cada dispositivo. Se quita cuando entre el reel. */
   outline: 1px dashed var(--ms-divider-color);
   outline-offset: -1px;
+}
+
+/* Nodo de medición (creado por JS): mismo ancho y tipografía que tendrá toda
+   línea del reel. Oculto pero con layout, así offsetHeight es real. */
+.cn-measurer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  font-size: var(--cn-lyric-size);
+  font-weight: var(--cn-lyric-weight);
+  line-height: var(--cn-lyric-lh);
+  white-space: normal;
+  overflow-wrap: break-word;
+  margin-bottom: var(--cn-lyric-gap); /* solo para leer el gap en px con getComputedStyle */
 }
 
 #cantanteDebug {
