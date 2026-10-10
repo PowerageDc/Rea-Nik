@@ -14,7 +14,7 @@ el modelo de datos, en `musicstate_data_model.md` §4.7.
 | Shell estático y layout (`nsaudio_cantante.html`, `cantante.css`) | Hecho; validado en DevTools (modo dispositivo) y en Android (Fully Kiosk y Chrome con barra de direcciones) |
 | Cabecera (nombre, tonalidad transpuesta, tempo) y fila de sección | Funcionando en cantante |
 | Medición del escenario (renglones por línea, slots que entran, foco con tope) | Hecho en `cantante.js` (`nikCantanteMeasure`, `nikCantanteComputeLayout`); verificado en vertical y horizontal con letras reales (§4.2). El caso con tope en horizontal no se observó todavía |
-| Reel de letra (estados, FLIP, barrido de proximidad) | Pendiente (paso 4, §4) |
+| Reel de letra (nodos por posición, animación de ancla, estados, barrido de proximidad, crossfade en seek) | Funcionando y validado en dev. Pendientes: afinar (ver §6, punto 1), gap y distribución vertical (§6, punto 2) |
 | Banda de cues | Altura reservada (1 renglón), sin cablear (§6) |
 | Validación en iPhone (comportamiento de `100dvh` con la barra de Safari) | Pendiente, en sala |
 
@@ -22,7 +22,7 @@ el modelo de datos, en `musicstate_data_model.md` §4.7.
 
 - `nsaudio_cantante.html` — shell: columna de bloques y orden de carga.
 - `musicstate-ui/cantante/cantante.css` — layout propio del perfil.
-- `musicstate-ui/cantante/cantante.js` — bootstrap, polls, render loop, offset superior y panel de debug temporal.
+- `musicstate-ui/cantante/cantante.js` — bootstrap, polls, render loop, offset superior, medición, layout y render del reel, estados de línea, barrido de proximidad y panel de debug temporal (oculto salvo con `?debug=1`).
 
 Del código compartido consume:
 
@@ -91,7 +91,7 @@ Medidas verificadas del escenario (ancho × alto en px): 393×852 → 362×646
 (rotado 821×257); 375×667 → 345×469 (rotado 637×245). En landscape el escenario
 mide ~250 px de alto: ahí es donde la medición de §4.2 decide.
 
-## 4. Decisiones de diseño del reel (acordadas; §4.2 implementado, el resto sin implementar)
+## 4. Decisiones de diseño del reel (implementado salvo la ancla alternativa de §4.5 y la barra para pausas largas de §4.6)
 
 ### 4.1 Composición única y tope de 2 renglones
 
@@ -100,12 +100,19 @@ mide ~250 px de alto: ahí es donde la medición de §4.2 decide.
 - Todas las líneas se componen con **el mismo ancho y el mismo corte de
   renglones**; el rol (actual, siguiente, anterior) se expresa solo con `scale`
   y `opacity`. Una línea que sube de rol nunca se reacomoda: solo se agranda.
-- La escala del FLIP sale del **cociente de `font-size` entre roles**, no del alto
-  de los rects. Esto difiere de la regla de `01_CONVENCIONES.md` (escala por
-  alto de rects): con 1 o 2 renglones el alto ya no sigue solo al `font-size`.
-  Al implementar, ampliar esa convención.
+- La escala de cada rol es el **cociente de `font-size` respecto de `cur`**
+  (`NIK_CANTANTE_ROLES`). **No hay FLIP**: como las posiciones son absolutas,
+  calculadas por JS, y la composición es uniforme, alcanza con una
+  `transition` de CSS sobre `transform`, `opacity` y color. La convención FLIP
+  de `01_CONVENCIONES.md` (escala por alto de rects) no aplica a este reel.
 - `scale` no cambia la caja de layout, así que las posiciones son absolutas con
   `translateY` calculado por JS.
+- **Nodos:** uno `.cn-lyric` por **posición** de línea, reusado al cambiar de
+  rol (solo cambian `transform`, `opacity` y color, `--cn-lyric-anim`, 450 ms).
+  `transform-origin: 50% 0`, con `y` y `h` del layout como tope y alto
+  visuales. Nodo nuevo: fade-in en su lugar. Nodo que sale: fade-out y se quita
+  a los 600 ms. Cambio de medición: se recrea todo sin animar. Se redibuja solo
+  cuando cambia el layout cacheado, nunca por frame.
 - Red de seguridad: si una línea mide más de 2 renglones con el tamaño de su rol,
   se le baja el tamaño por pasos al asignarla al slot (no por frame).
 
@@ -133,17 +140,23 @@ asignada y en `resize` / `orientationchange`, nunca por frame.
   0.50/0.20). Valores iniciales, sin calibrar.
 - **Slots:** prioridad estricta (`NIK_CANTANTE_SLOT_ORDER`): se corta en el
   primero que no entra. Los inexistentes (antes de la primera línea o después
-  de la última) no ocupan lugar ni cortan la cuenta. Gap único entre slots
-  (`--cn-lyric-gap`, 1.5u; el medidor lo lee resuelto en px por
-  `getComputedStyle`).
+  de la última) no ocupan lugar ni cortan la cuenta. **Gap proporcional:** el
+  mínimo es `--cn-lyric-gap` (1.5u; el medidor lo lee resuelto en px por
+  `getComputedStyle`) y el espacio que sobra del escenario se reparte entre
+  los gaps hasta un tope de `NIK_CANTANTE_GAP_MAX` veces el mínimo (hoy 4).
+  Depende de cuántos slots entran, así que cambia un poco entre anclas.
 - **Ancla:** `cur0` (§4.3), convertida a **posición** en
   `nikMusicStateLyricsLines` con un mapa `index -> posición` armado al medir.
   `-1` en intro.
 - **Foco:** centro del viewport (`window.innerHeight / 2`) en coordenadas del
   escenario. Si el centro de `cur` no cabe, la pila se desplaza hasta el tope
-  del escenario. En intro (sin `cur`) se centra la pila entera: decisión
-  provisoria, a revisar en el paso 4. `y` y `h` de cada slot son tope y alto
-  **visuales** (ya escalados); el `transform-origin` se decide en el paso 4.
+  del escenario. **Intro** (sin `cur0`): la pila se arma con un `cur`
+  **fantasma** en la posición -1 (no se dibuja pero ocupa su lugar), así la
+  línea 0 es `next1` y al empezar la pila sube igual que en cualquier cambio de
+  línea. Las versiones anteriores (pila de siguientes centrada; misma
+  geometría que `cur` solo con opacidad) hacían que las líneas bajaran o
+  quedaran quietas al empezar. `y` y `h` de cada slot son tope y alto
+  **visuales** (ya escalados).
 - **Cache:** el layout se recalcula solo si cambia el ancla o la medición
   (`epoch`), nunca por frame.
 - **Verificado:** slots por prioridad, ausencia de `prev*` en la primera línea
@@ -169,12 +182,19 @@ posiciones, sin tocar la capa cliente:
 
 | Momento | Actual | Siguiente 1 |
 |---|---|---|
-| Intro (sin línea vigente) | — | primeras 2 o 3 como "próximas"; la primera pasa a armada cuando `curL` deja de ser `null` |
+| Intro (sin línea vigente) | — (`cur` fantasma, §4.2) | pila de "próximas"; la primera se anuncia con el barrido (§4.6) |
 | Cantando | 100%, color pleno | "próxima", ~70% |
-| Armada (`ended0` o ventana de lectura abierta) | se apaga hacia el nivel de "anterior" | acento + opacidad alta, sin llegar a 100% |
-| Carry-over (sin marcador de fin) | se mantiene | pasa a armada solo por la ventana de lectura |
+| Terminada (`ended0`) | se apaga hacia el nivel de "anterior" | sin cambio propio: el aviso es el barrido (§4.6) |
+| Carry-over (sin marcador de fin) | se mantiene (gold) hasta que la pila sube | el barrido (§4.6) |
 
-El cambio próxima → armada es solo `opacity` y color: no necesita FLIP.
+**Criterio implementado:** el color activo (`--cn-lyric-active-color`, hoy
+`--ms-chord-color`, gold) significa solo "se está cantando ahora". La actual
+se apaga únicamente con `ended0`. La ventana de lectura (`curL`) no la toca:
+la primera versión la apagaba y coloreaba `next1` al abrirse la ventana
+(~1,4 s antes), y eso se leía como "ya empezó la siguiente". Por eso el estado
+"armada" visual de `next1` se reemplazó por el barrido de §4.6 (color en
+`--cn-lyric-armed-color`, hoy blanco). `nikCantanteIsArmed()` sigue calculando
+el flag (fórmula de §4.3) pero ya no tiene efecto visual: candidato a limpiar.
 
 ### 4.5 Ancla de la columna
 
@@ -193,14 +213,33 @@ cantarse. Arranca solo en el tramo final (un `PRELUDE` propio de lyrics, a
 calibrar, del orden del lead) y es una única `transition` de CSS con duración
 igual a los segundos restantes.
 
-- El tiempo restante sale de `nikMusicStateLyricsNextDistance()` (QN),
-  convertido a segundos con el BPM vigente y el playrate; verificar si
-  `ms-tempo.js` ya tiene la conversión.
+- El tiempo restante sale de `nikMusicStateLyricsNextDistance(0)` (QN, con lead
+  0 para que termine justo cuando `cur0` cambia). `ms-tempo.js` no traía la
+  conversión: `nikCantanteSweepRemainingSec()` hace
+  `qn * 60 / bpm / playrate`, con `nikMsTempoAt(nikMsEffectivePosSeconds())` y
+  `nikTransportPlayRate`.
 - Se cancela al detener, en seek y al cambiar de línea; resetear también la
   clave de dedupe (gotcha de `musicstate_instrumentista.md` §8).
 - Pausas largas (instrumental de varios segundos): el barrido final no cubre
   toda la espera. Una barra fina de progreso como la de acordes queda fuera de
   la v1; se decide viendo cómo se siente en sala.
+
+**Implementación (`nikCantanteSweepTick`, en el render loop):**
+
+- Hijo `.cn-sweep` en cada nodo (copia del texto en el color de armada,
+  recortada con `clip-path`); hereda escala y posición del rol. Se anima solo
+  el de `next1`.
+- `NIK_CANTANTE_PRELUDE_S` (2.0 s, a calibrar): tramo final en que arranca.
+  `NIK_CANTANTE_SWEEP_DIR`: `"up"` (abajo hacia arriba) o `"right"` (default)
+  (gris contra blanco casi no se distingue en vertical).
+- Si arranca tarde (seek dentro de la ventana), parte de la fracción que
+  corresponde. En pausa queda congelado. Se resincroniza si el fin previsto se
+  desvía más de 400 ms; se cancela al cambiar la línea o salir de la ventana.
+- El overlay se quita de golpe cuando la línea pasa a `cur`, mientras el color
+  del nodo transiciona a gold.
+- Limitaciones: un cambio de tempo dentro de la ventana deja la duración
+  aproximada; el cambio de playrate **durante** la reproducción no se probó
+  (parado y luego play, sí). El efecto visual del barrido queda por mejorar.
 
 ### 4.7 Conexión inestable y "Sin señal"
 
@@ -208,8 +247,15 @@ Se reutiliza todo lo compartido: la posición interpolada y compensada de
 `ms-dispatch.js` / `nikMsEffectivePosSeconds()` y `ms-stale.js`. El reel
 sigue extrapolando (hasta 8 s) como los acordes; con `is-stale` se atenúan
 cabecera y sección. Un seek o cambio de proyecto hace fade (`is-jumping`); un
-avance de ±1 línea hace FLIP. Es la misma política de
-`musicstate_instrumentista.md` §4.6 y §7.
+avance de ±1 línea se anima (`transition`, sin FLIP: §4.1). Es la misma
+política de `musicstate_instrumentista.md` §4.6 y §7.
+
+**Implementación del salto:** es un cambio de ancla de más de 1 línea, en
+cualquier dirección. Los nodos viejos se desvanecen y los nuevos entran en su
+lugar (crossfade, sin deslizar la pila). El reel publica
+`nikCantanteReel.jumped` (verdadero solo en el tick del salto) y se lo pasa a
+`nikMsSectionRowRender`. Una remedición (rotación, letra nueva) no cuenta como
+salto: recrea todo sin animar.
 
 ## 5. Gotchas verificados
 
@@ -222,9 +268,9 @@ avance de ±1 línea hace FLIP. Es la misma política de
 - **Tempo por defecto:** un proyecto sin marcadores de tempo muestra 120 BPM
   (el default de REAPER); `nikMsTempoAt` no distingue ese caso. Preexistente,
   también en el prompter.
-- **Jump de otra capa:** hoy `cantante.js` llama
-  `nikMsSectionRowRender(false)`. Cuando exista el reel, pasarle su flag de
-  jump del tick, igual que instrumentista con la tira de acordes.
+- **Jump de otra capa:** `cantante.js` le pasa a `nikMsSectionRowRender` el
+  flag `nikCantanteReel.jumped`. El reel debe renderizarse **antes** que la
+  fila de sección para que el flag llegue en el mismo tick.
 - **Variable CSS cambiada a mano:** no dispara ningún evento, así que el
   medidor no se entera. En pruebas, después de tocar `--cn-lyric-size` desde
   DevTools hay que llamar `nikCantanteMarkMeasureDirty()` (o provocar un
@@ -234,19 +280,28 @@ avance de ±1 línea hace FLIP. Es la misma política de
   `curL = #69` y `ended0 = true` el ancla sigue en #68 y `next1` existe.
   `nikMusicStateLyricsNextDistance()` devuelve `null` sin línea siguiente
   (`proxima (QN)` queda en blanco en el panel de debug).
+- **Transiciones con nodos nuevos y barrido:** un nodo nuevo se crea con
+  `opacity: 0` y posición final y hace un `offsetWidth` (flush) antes de
+  fijar la opacidad destino; el barrido hace lo mismo con su `clip-path`. Sin
+  el flush no hay transición.
+- **Lead del panel de debug:** la letra del panel usa el lead por defecto
+  (`curL`) y los slots solo `cur0`; el panel cambia de línea antes que la
+  pila. Es esperado.
 
 ## 6. Pendientes, en orden
 
-1. **Paso 3c (hecho):** medición del escenario, slots y foco (§4.2). Queda por
-   ver el caso con tope en horizontal.
-2. **Paso 4:** reel de letra: estados (§4.4), FLIP (§4.1), ancla (§4.5) y barrido
-   (§4.6). Quitar el `outline` del escenario y el panel de debug.
-   Sub-pasos: (a) dibujo estático de los slots con `transform`/`opacity` por
-   rol; (b) estados con las dos posiciones de §4.3 y FLIP al cambiar de ancla;
-   (c) barrido de proximidad y ancla alternativa. Decisiones abiertas: aspecto
-   de la intro (hoy, pila de siguientes centrada), probar
-   `NIK_CANTANTE_ANCHOR_ON_END`, `transform-origin` del reel y ampliar la
-   convención FLIP de `01_CONVENCIONES.md` (escala por cociente de `font-size`).
+1. **Afinar el reel:** quitar el `outline` del escenario y el panel de debug
+   (hoy detrás de `?debug=1`); probar `NIK_CANTANTE_ANCHOR_ON_END` (§4.5);
+   implementar la red de seguridad de más de 2 renglones (§4.1, hoy solo se
+   cuenta en el debug); limpiar `nikCantanteIsArmed` y el `refCenter === null`
+   que quedó sin uso; probar el cambio de playrate durante la reproducción;
+   mejorar el efecto del barrido (§4.6); ver el caso con tope en horizontal
+   (§4.2).
+2. **Gap y distribución vertical:** con `NIK_CANTANTE_GAP_MAX = 4` en vertical
+   sobra espacio. Subirlo a 8 mejora vertical, pero en horizontal desplaza la
+   línea central y `prev2` queda pegado a la sección actual. A resolver
+   combinando más slots en vertical (`next3`/`prev3`), otro manejo del gap en
+   horizontal y un espacio mínimo en blanco arriba y abajo de `prev2`/`next2`.
 3. **Cues en cantante:** decidir si ve todos los cues o solo los dirigidos a su
    rol, y si el render de cues de `instrumentista.js` se extrae a un módulo
    compartido; definir qué pasa con cues largos o simultáneos.

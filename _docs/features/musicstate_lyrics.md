@@ -22,7 +22,7 @@ El contrato de datos (formato JSON, protocolo) vive en
 | Doc del puente | Actualizado (lyrics fuera de `Bridge.KEYS`) |
 | Capa cliente (setter, consultas, lead propio) | Implementada y verificada en dev (ver §4); detalle en `musicstate_client.md` §1.6 |
 | Cableado (`ms-dispatch.js`: pedidos, versión, reset, opt-in) | Implementado y verificado en dev |
-| UI de cantante (`musicstate-ui/cantante/`) | Shell, layout y cabecera hechos y validados en dev y Android; reel de letra pendiente. Detalle en `musicstate_cantante.md` |
+| UI de cantante (`musicstate-ui/cantante/`) | Shell, layout y cabecera validados en dev y Android. Reel de letra (slots, estados, barrido de proximidad y crossfade en seek) funcionando y validado en dev; pendientes de afinado, cues y rol en `musicstate_cantante.md` §6 |
 | Registro (`NIK_LUA_COMMANDS`, generador de `config.local.js`, `@provides` del metapaquete, manifiesto `.www`) | Hecho en el repo; **pendiente de validar en una PC de destino** (§6) |
 
 ## 2. Decisiones tomadas
@@ -155,12 +155,14 @@ prompter):
   recarga.
 - Instrumentista no dispara `PublishLyrics` y no cambia de comportamiento.
 
-## 5. Diseño de UI acordado (conceptual, sin implementar)
+## 5. Diseño de UI acordado (planteo original; implementado en `musicstate_cantante.md`)
 
 **Actualización:** el diseño detallado (composición única, slots según
 renglones, dos posiciones de lead, ancla, barrido de proximidad) pasó a
 `musicstate_cantante.md` §4. Lo que sigue es el planteo original; donde
-difiere, manda ese doc.
+difiere, manda ese doc. Diferencias ya conocidas: el reel no usa FLIP
+(`transition` de CSS sobre nodos reusados por posición) y la línea "armada"
+se reemplazó por un barrido de proximidad sobre la siguiente.
 
 - **Estados de la línea:** intro (antes de la primera línea: las primeras
   se muestran como "próximas", análogo al preludio de la fila de sección),
@@ -211,11 +213,12 @@ difiere, manda ese doc.
 5. **`cues_data` y el escape de barras:** revisar si el Helper y
    `nikMusicStateSetCuesData` lo manejan (`data_model` §6).
 6. **UI de cantante real** (`musicstate-ui/cantante/`; avance y pendientes
-   en `musicstate_cantante.md` §6): filtro por rol
-   (`cantantes`) o letra para todos, estados de §5, datos de boot (§5) y
-   calibrar el lead. El refresco por republicación ya llega por
-   `lyrics_version`, pero nada lo incrementa solo al editar en el editor
-   MIDI: hay que ejecutar la acción de `PublishLyrics`.
+   en `musicstate_cantante.md` §6): el reel (slots, estados, barrido y salto
+   en seek) está hecho. Quedan filtro por rol (`cantantes`) o letra para
+   todos, cues, pulso si hace falta y calibrar el lead y el `PRELUDE`. El
+   refresco por republicación ya llega por `lyrics_version`, pero nada lo 
+   incrementa solo al editar en el editor MIDI: hay que ejecutar la acción 
+   de `PublishLyrics`.
 7. Actualizar el SPEC original (`lyrics` figura fuera de alcance según
    `musicstate_instrumentista.md`).
 8. A futuro, sin decidir: que "Guardar y Publicar" del Helper también
