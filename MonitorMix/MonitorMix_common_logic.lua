@@ -182,4 +182,119 @@ function M.resolve_pair(override)
   end
 end
 
+function M.find_track_by_name(name)
+  for i = 0, reaper.CountTracks(0) - 1 do
+    local tr = reaper.GetTrack(0, i)
+    local _, n = reaper.GetSetMediaTrackInfo_String(tr, "P_NAME", "", false)
+    if n == name then return tr end
+  end
+end
+
+local function receive_sources(bus)
+  local set = {}
+  for i = 0, reaper.GetTrackNumSends(bus, -1) - 1 do
+    local src = reaper.BR_GetMediaTrackSendInfo_Track(bus, -1, i, 0)
+    if src then set[reaper.GetTrackGUID(src)] = true end
+  end
+  return set
+end
+
+-- Crea (si faltan) el bus, su hardware output y un send por cada track
+-- admitido por el filtro. Idempotente: nunca toca sends existentes.
+-- No imprime: devuelve res.log para que lo muestre el llamador.
+-- res = { status = "ok" | "no_bus_cfg" | "no_pair", bus = track|nil,
+--         bus_name, pair, created = {registros del filtro},
+--         created_bus, created_hw, log = {líneas} }
+function M.ensure_sends(cfg)
+  local res = {
+    status = "ok", created = {}, created_bus = false, created_hw = false,
+    log = {},
+  }
+  local function log(s) res.log[#res.log + 1] = s end
+
+  local bus_cfg = cfg.buses and cfg.buses[1]
+  if not bus_cfg then
+    res.status = "no_bus_cfg"
+    log("ABORTA: el config no define ningún bus.")
+    return res
+  end
+  res.bus_name = bus_cfg.name
+
+  local d = cfg.defaults or {}
+  local send_db = d.send_db or -12
+  local send_mode = d.send_mode or 3
+  local gain = 10 ^ (send_db / 20)
+
+  local bus = M.find_track_by_name(bus_cfg.name)
+  local pair = M.resolve_pair(bus_cfg.pair_override)
+  local need_hw = (not bus) or reaper.GetTrackNumSends(bus, 1) == 0
+  res.bus = bus
+
+  if need_hw and not pair then
+    res.status = "no_pair"
+    log("ABORTA: no hay par secundario disponible (revisar Preferences > Audio > Last output).")
+    return res
+  end
+  res.pair = pair
+  if not need_hw then
+    res.pair = math.floor(reaper.GetTrackSendInfo_Value(bus, 1, 0, "I_DSTCHAN"))
+  end
+
+  local have = bus and receive_sources(bus) or {}
+  local todo = {}
+  for _, r in ipairs(M.filter(cfg)) do
+    if not have[r.guid] then todo[#todo + 1] = r end
+  end
+
+  if bus then
+    local hw_txt = need_hw and "sin hardware output" or ("hardware I_DSTCHAN=" .. res.pair)
+    log("Bus existente: " .. bus_cfg.name .. " (" .. hw_txt .. ")")
+    if reaper.GetMediaTrackInfo_Value(bus, "B_MAINSEND") ~= 0 then
+      log("AVISO: el bus tiene B_MAINSEND activo, suena también por el master (no se modifica).")
+    end
+  end
+
+  if bus and not need_hw and #todo == 0 then
+    log("Nada que crear: todos los tracks admitidos ya tienen su send.")
+    return res
+  end
+
+  reaper.Undo_BeginBlock()
+  reaper.PreventUIRefresh(1)
+
+  if not bus then
+    local idx = reaper.CountTracks(0)
+    reaper.InsertTrackAtIndex(idx, true)
+    bus = reaper.GetTrack(0, idx)
+    reaper.GetSetMediaTrackInfo_String(bus, "P_NAME", bus_cfg.name, true)
+    reaper.SetMediaTrackInfo_Value(bus, "B_MAINSEND", 0)
+    res.bus, res.created_bus = bus, true
+    log("Bus creado: " .. bus_cfg.name)
+  end
+
+  if need_hw then
+    local hw = reaper.CreateTrackSend(bus, nil)
+    reaper.SetTrackSendInfo_Value(bus, 1, hw, "I_DSTCHAN", pair)
+    res.created_hw = true
+    log(string.format("Hardware output: I_DSTCHAN=%d (salidas %d/%d, base 1)", pair, pair + 1, pair + 2))
+  end
+
+  for _, r in ipairs(todo) do
+    local tr = reaper.GetTrack(0, r.idx)
+    local s = reaper.CreateTrackSend(tr, bus)
+    reaper.SetTrackSendInfo_Value(tr, 0, s, "D_VOL", gain)
+    reaper.SetTrackSendInfo_Value(tr, 0, s, "I_SENDMODE", send_mode)
+    reaper.SetTrackSendInfo_Value(tr, 0, s, "B_MUTE", 0)
+    log(string.format("  send creado: [%d] %s (%s, %g dB)", r.idx + 1, r.name, r.role or "-", send_db))
+  end
+
+  reaper.PreventUIRefresh(-1)
+  reaper.TrackList_AdjustWindows(false)
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock("Monitor Mix: crear bus y sends", -1)
+  res.created = todo
+  log(string.format("Listo: %d sends creados.", #todo))
+  return res
+end
+
 return M
