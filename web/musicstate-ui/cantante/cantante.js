@@ -27,6 +27,11 @@ var NIK_CANTANTE_SLOT_ORDER = ["cur", "next1", "prev1", "next2", "prev2"];
 // Tope del gap proporcional (§4.2): múltiplo de --cn-lyric-gap.
 var NIK_CANTANTE_GAP_MAX = 4;
 
+// Barrido de proximidad (§4.6): segundos antes del inicio de la línea en que
+// arranca (a calibrar con una letra real) y dirección: "up" o "right".
+var NIK_CANTANTE_PRELUDE_S = 2.0;
+var NIK_CANTANTE_SWEEP_DIR = "right";
+
 function nikCantanteBuildSlowPoll() {
     // reapitch_semitone solo para la tonalidad de la cabecera (transpuesta);
     // la letra no se transpone. Sin publish_version (es de armonía).
@@ -279,6 +284,10 @@ function nikCantanteReelRender() {
             node = document.createElement("div");
             node.className = "cn-lyric";
             node.textContent = nikMusicStateLyricsLines[S.pos].text;
+            var sweepEl = document.createElement("span");
+            sweepEl.className = "cn-sweep";
+            sweepEl.textContent = nikMusicStateLyricsLines[S.pos].text;
+            node.appendChild(sweepEl);
             node.style.opacity = "0";
             node.style.transform = "translateY(" + S.y + "px) scale(" + S.scale + ")";
             stage.appendChild(node);
@@ -302,6 +311,126 @@ function nikCantanteReelFadeOut(node) {
     window.setTimeout(function () {
         if (node.parentNode) node.parentNode.removeChild(node);
     }, 600);
+}
+
+// --- Estados de la línea (musicstate_cantante.md §4.3-4.4) ---
+// Solo color y opacity. Se reaplica cuando cambia el layout o el flag armada.
+
+var nikCantanteStates = { layout: null, armed: null };
+
+function nikCantanteIsArmed() {
+    var c0 = nikMusicStateCurrentLyric(0);
+    var cL = nikMusicStateCurrentLyric();
+    if (!c0) return !!cL; // intro: se arma cuando abre la ventana de lectura
+    return !!(nikMusicStateLyricEnded(0) || (cL && cL.index > c0.index));
+}
+
+function nikCantanteReelApplyStates() {
+    var R = nikCantanteReel;
+    var L = R.layout;
+    if (!L) return;
+    var armed = nikCantanteIsArmed();
+    var ended = !!nikMusicStateLyricEnded(0);
+    var T = nikCantanteStates;
+    if (T.layout === L && T.armed === armed && T.ended === ended) return;
+    for (var i = 0; i < L.slots.length; i++) {
+        var S = L.slots[i];
+        var node = R.nodes[S.pos];
+        if (!node) continue;
+        var op = S.opacity;
+        var sung = false;
+        var arm = false;
+        if (S.role === "cur") {
+            if (ended) op = NIK_CANTANTE_ROLES.prev1.opacity;
+            else sung = true;
+        }
+        node.classList.toggle("is-sung", sung);
+        node.classList.toggle("is-armed", arm);
+        node.style.opacity = op;
+    }
+    T.layout = L;
+    T.armed = armed;
+    T.ended = ended;
+}
+
+// --- Barrido de proximidad (musicstate_cantante.md §4.6) ---
+// Sobre el hijo .cn-sweep de la línea next1. Una transition de CSS cuya
+// duración es el tiempo restante; el tick solo decide cuándo (re)armarla.
+
+var nikCantanteSweep = { node: null, span: null, playing: null, endAt: 0, frac: -1 };
+
+function nikCantanteSweepClip(frac) {
+    var rest = Math.max(0, Math.min(1, 1 - frac)) * 100;
+    return (NIK_CANTANTE_SWEEP_DIR === "right")
+        ? "inset(0 " + rest + "% 0 0)"
+        : "inset(" + rest + "% 0 0 0)";
+}
+
+// durSec > 0: parte de frac y llena hasta 1 en durSec; 0: queda fijo en frac.
+function nikCantanteSweepSet(span, frac, durSec) {
+    span.style.transition = "none";
+    span.style.clipPath = nikCantanteSweepClip(frac);
+    if (durSec > 0) {
+        void span.offsetWidth; // flush: el estado inicial se aplica antes de animar
+        span.style.transition = "clip-path " + durSec + "s linear";
+        span.style.clipPath = nikCantanteSweepClip(1);
+    }
+}
+
+function nikCantanteSweepReset() {
+    var S = nikCantanteSweep;
+    if (S.span) nikCantanteSweepSet(S.span, 0, 0);
+    S.node = null;
+    S.span = null;
+    S.playing = null;
+    S.frac = -1;
+}
+
+// Segundos reales hasta que empieza la línea siguiente; null si no se sabe.
+// Usa el tempo del punto actual: un cambio de tempo dentro de la espera
+// queda aproximado.
+function nikCantanteSweepRemainingSec() {
+    var d = nikMusicStateLyricsNextDistance(0);
+    if (!d) return null;
+    var bpm = nikMsTempoAt(nikMsEffectivePosSeconds());
+    if (!bpm) return null;
+    var rate = parseFloat(nikTransportPlayRate);
+    if (!(rate > 0)) rate = 1;
+    return d.qn * 60 / bpm / rate;
+}
+
+function nikCantanteSweepTick() {
+    var R = nikCantanteReel;
+    var L = R.layout;
+    var S = nikCantanteSweep;
+    var node = null;
+    if (L) {
+        for (var i = 0; i < L.slots.length; i++) {
+            if (L.slots[i].role === "next1") node = R.nodes[L.slots[i].pos] || null;
+        }
+    }
+    var sec = node ? nikCantanteSweepRemainingSec() : null;
+    if (!node || sec === null || sec > NIK_CANTANTE_PRELUDE_S) {
+        if (S.node) nikCantanteSweepReset();
+        return;
+    }
+    var playing = !!nikMusicStateIsPlaying();
+    var frac = 1 - Math.max(0, sec) / NIK_CANTANTE_PRELUDE_S;
+    var now = window.performance.now();
+    if (S.node === node && S.playing === playing) {
+        if (playing) {
+            if (Math.abs(now + sec * 1000 - S.endAt) < 400) return;
+        } else if (Math.abs(frac - S.frac) < 0.01) {
+            return;
+        }
+    }
+    if (S.node && S.node !== node) nikCantanteSweepReset();
+    S.node = node;
+    S.span = node.querySelector(".cn-sweep");
+    S.playing = playing;
+    S.endAt = now + sec * 1000;
+    S.frac = frac;
+    if (S.span) nikCantanteSweepSet(S.span, frac, playing ? sec : 0);
 }
 
 // --- Panel de debug temporal (se reemplaza por la UI real) ---
@@ -358,6 +487,8 @@ function nikCantanteRender() {
     nikMsHeaderRender();
     nikMsSectionRowRender(false); // sin reel todavía: ninguna otra capa hace jump
     nikCantanteReelRender();
+    nikCantanteReelApplyStates();
+    nikCantanteSweepTick();
     nikCantanteDebugRender();
 }
 

@@ -34,6 +34,8 @@
   --cn-lyric-weight: 500;
   --cn-lyric-gap: calc(var(--u) * 1.5);
   --cn-lyric-anim: 450ms;
+  --cn-lyric-active-color: var(--ms-chord-color);   /* línea que se está cantando */
+  --cn-lyric-armed-color: #ffffff;                   /* siguiente armada (provisorio) */
 }
 
 @supports (height: 1dvh) {
@@ -159,7 +161,24 @@
   overflow-wrap: break-word;
   transform-origin: 50% 0;
   will-change: transform, opacity;
-  transition: transform var(--cn-lyric-anim) ease, opacity var(--cn-lyric-anim) ease;
+  transition: transform var(--cn-lyric-anim) ease, opacity var(--cn-lyric-anim) ease,
+    color var(--cn-lyric-anim) ease;
+}
+
+.cn-lyric.is-sung {
+  color: var(--cn-lyric-active-color);
+}
+
+/* Barrido de proximidad (§4.6): copia del texto en color de armada,
+   revelada con clip-path desde JS. Hereda escala y posición del nodo. */
+.cn-sweep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  color: var(--cn-lyric-armed-color);
+  clip-path: inset(100% 0 0 0);
+  pointer-events: none;
 }
 
 /* TEMPORAL: overlay translúcido sobre el reel, para validar números sin
