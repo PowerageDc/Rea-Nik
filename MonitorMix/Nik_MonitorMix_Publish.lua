@@ -1,3 +1,18 @@
+-- @description Nik MonitorMix - Suite completa (monitoreo por musico)
+-- @version 1.0
+-- @author Nik
+-- @metapackage
+-- @provides
+--   [main] .
+--   [main] Nik_MonitorMix_EnsureSends.lua
+--   MonitorMix_common_logic.lua
+--   MonitorMix_config.lua
+-- @about
+--   Mezcla de monitoreo por musico: asegura el bus y los sends de
+--   monitoreo y publica la lista de tracks a ExtState para la UI web
+--   de monitor. Requiere el paquete RemoteControl (StemBus) y la
+--   interfaz web instalados en la misma PC.
+
 -- Nik_MonitorMix_Publish.lua
 -- One-shot: asegura bus y sends (MM.ensure_sends), aplica el filtro y
 -- publica NikMonitorMix/list + list_version a ExtState.

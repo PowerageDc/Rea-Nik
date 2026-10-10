@@ -1,10 +1,11 @@
 -- @description Nik MusicState — Suite completa (metadata musical + publish)
--- @version 1.3
+-- @version 1.4
 -- @author Nik
 -- @metapackage
 -- @provides
 --   [main] Nik_MusicState_PublishAll.lua
 --   [main] Nik_MusicState_PublishLyrics.lua
+--   [main] Nik_MusicState_LyricsInput.lua
 --   ../_Shared/ImGuiInputCommit_common_logic.lua
 --   MusicStateBridge_common_logic.lua
 --   MusicStateRowInputs_common_logic.lua
