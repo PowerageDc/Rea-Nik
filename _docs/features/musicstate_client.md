@@ -51,7 +51,7 @@ de proyecto reutiliza los mismos setters, ver
 | `nikMusicStateProjectKey` | `nikMusicStateSetProjectKey` | `{tonic, mode}` o `null` |
 | `nikMusicStateProjectRoles` | `nikMusicStateSetProjectRoles` | array de strings, sin `"todos"` |
 | `nikMusicStateLyricsFlat` | `nikMusicStateSetLyricsData` | array ordenado `{bar, qn_offset, text, lastLine}`, **con** marcadores de fin de línea (`text: null`); el setter des-escapa las barras antes del `JSON.parse` (§1.6) |
-| `nikMusicStateLyricsLines` | `nikMusicStateSetLyricsData` | solo las líneas (eventos con texto), con `index` absoluto; sin marcadores |
+| `nikMusicStateLyricsLines` | `nikMusicStateSetLyricsData` | solo las líneas (eventos con texto), con `index` absoluto; sin marcadores. Observado: coincide con la posición en este array, pero la UI de cantante no lo asume (arma un mapa `index -> posición`) |
 
 `nikMusicStateFlattenBarKeyed` aplana `harmony_data`, `cues_data` y
 `lyrics_data` por igual (todos keyed por compás): anota `bar` en cada evento y ordena por la

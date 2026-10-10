@@ -13,7 +13,7 @@ el modelo de datos, en `musicstate_data_model.md` §4.7.
 | Módulos compartidos extraídos del prompter (`ms-stale.js`, `ms-section-row.js`, `ms-header.js`, `ms-base.css`) | Hecho; prompter verificado sin cambios de comportamiento |
 | Shell estático y layout (`nsaudio_cantante.html`, `cantante.css`) | Hecho; validado en DevTools (modo dispositivo) y en Android (Fully Kiosk y Chrome con barra de direcciones) |
 | Cabecera (nombre, tonalidad transpuesta, tempo) y fila de sección | Funcionando en cantante |
-| Medición del escenario (cuántos slots entran, foco) | Pendiente (paso 3c, §4.2) |
+| Medición del escenario (renglones por línea, slots que entran, foco con tope) | Hecho en `cantante.js` (`nikCantanteMeasure`, `nikCantanteComputeLayout`); verificado en vertical y horizontal con letras reales (§4.2). El caso con tope en horizontal no se observó todavía |
 | Reel de letra (estados, FLIP, barrido de proximidad) | Pendiente (paso 4, §4) |
 | Banda de cues | Altura reservada (1 renglón), sin cablear (§6) |
 | Validación en iPhone (comportamiento de `100dvh` con la barra de Safari) | Pendiente, en sala |
@@ -91,7 +91,7 @@ Medidas verificadas del escenario (ancho × alto en px): 393×852 → 362×646
 (rotado 821×257); 375×667 → 345×469 (rotado 637×245). En landscape el escenario
 mide ~250 px de alto: ahí es donde la medición de §4.2 decide.
 
-## 4. Decisiones de diseño del reel (acordadas, sin implementar)
+## 4. Decisiones de diseño del reel (acordadas; §4.2 implementado, el resto sin implementar)
 
 ### 4.1 Composición única y tope de 2 renglones
 
@@ -117,8 +117,39 @@ siguiente 1, anterior 1, siguiente 2, anterior 2) mientras la suma de alturas
 escenario; los que no entran no se dibujan. Se recalcula al cambiar la línea
 asignada y en `resize` / `orientationchange`, nunca por frame.
 
-**Foco:** el objetivo es el centro de la pantalla, limitado al rango que el
-escenario permite.
+**Foco:** el objetivo es el centro de la pantalla, limitado al rango que el escenario permite.
+
+**Implementación (paso 3c, `cantante.js` y `cantante.css`):**
+
+- **Medidor:** nodo oculto `.cn-measurer` dentro del escenario, con el ancho
+  del escenario y la fuente del rol "actual" (`--cn-lyric-size` 6.5u,
+  `--cn-lyric-weight` 500, `--cn-lyric-lh` 1.25). Mide **una sola vez** al
+  tamaño base (coherente con §4.1): renglones = `round(offsetHeight / alto
+  de "M")`. Se remide si cambia el array de líneas, su cantidad,
+  `lyrics_version`, `resize`, `orientationchange` o `document.fonts.ready`.
+  Con alto 0 (pestaña oculta) reintenta en el tick siguiente.
+- **Roles:** `NIK_CANTANTE_ROLES` guarda `scale` y `opacity` en reposo por rol
+  (cur 1.00/1.00, next1 0.78/0.70, prev1 0.62/0.35, next2 0.62/0.45, prev2
+  0.50/0.20). Valores iniciales, sin calibrar.
+- **Slots:** prioridad estricta (`NIK_CANTANTE_SLOT_ORDER`): se corta en el
+  primero que no entra. Los inexistentes (antes de la primera línea o después
+  de la última) no ocupan lugar ni cortan la cuenta. Gap único entre slots
+  (`--cn-lyric-gap`, 1.5u; el medidor lo lee resuelto en px por
+  `getComputedStyle`).
+- **Ancla:** `cur0` (§4.3), convertida a **posición** en
+  `nikMusicStateLyricsLines` con un mapa `index -> posición` armado al medir.
+  `-1` en intro.
+- **Foco:** centro del viewport (`window.innerHeight / 2`) en coordenadas del
+  escenario. Si el centro de `cur` no cabe, la pila se desplaza hasta el tope
+  del escenario. En intro (sin `cur`) se centra la pila entera: decisión
+  provisoria, a revisar en el paso 4. `y` y `h` de cada slot son tope y alto
+  **visuales** (ya escalados); el `transform-origin` se decide en el paso 4.
+- **Cache:** el layout se recalcula solo si cambia el ancla o la medición
+  (`epoch`), nunca por frame.
+- **Verificado:** slots por prioridad, ausencia de `prev*` en la primera línea
+  y de `next*` en la última, caída de slots al agrandar la fuente, y
+  actualización de los números al rotar. En los proyectos probados
+  `index` coincide con la posición (observado, no garantizado por el contrato).
 
 ### 4.3 Dos posiciones (problema del lead)
 
@@ -194,13 +225,28 @@ avance de ±1 línea hace FLIP. Es la misma política de
 - **Jump de otra capa:** hoy `cantante.js` llama
   `nikMsSectionRowRender(false)`. Cuando exista el reel, pasarle su flag de
   jump del tick, igual que instrumentista con la tira de acordes.
+- **Variable CSS cambiada a mano:** no dispara ningún evento, así que el
+  medidor no se entera. En pruebas, después de tocar `--cn-lyric-size` desde
+  DevTools hay que llamar `nikCantanteMarkMeasureDirty()` (o provocar un
+  `resize`).
+- **`next*` de la última línea:** desaparecen cuando `cur0` llega a ella, no
+  por el lead. Los slots usan solo `cur0` (lead 0); con `cur0 = #68`,
+  `curL = #69` y `ended0 = true` el ancla sigue en #68 y `next1` existe.
+  `nikMusicStateLyricsNextDistance()` devuelve `null` sin línea siguiente
+  (`proxima (QN)` queda en blanco en el panel de debug).
 
 ## 6. Pendientes, en orden
 
-1. **Paso 3c:** medición del escenario (§4.2): alto natural por línea, slots que
-   entran, foco con tope.
+1. **Paso 3c (hecho):** medición del escenario, slots y foco (§4.2). Queda por
+   ver el caso con tope en horizontal.
 2. **Paso 4:** reel de letra: estados (§4.4), FLIP (§4.1), ancla (§4.5) y barrido
    (§4.6). Quitar el `outline` del escenario y el panel de debug.
+   Sub-pasos: (a) dibujo estático de los slots con `transform`/`opacity` por
+   rol; (b) estados con las dos posiciones de §4.3 y FLIP al cambiar de ancla;
+   (c) barrido de proximidad y ancla alternativa. Decisiones abiertas: aspecto
+   de la intro (hoy, pila de siguientes centrada), probar
+   `NIK_CANTANTE_ANCHOR_ON_END`, `transform-origin` del reel y ampliar la
+   convención FLIP de `01_CONVENCIONES.md` (escala por cociente de `font-size`).
 3. **Cues en cantante:** decidir si ve todos los cues o solo los dirigidos a su
    rol, y si el render de cues de `instrumentista.js` se extrae a un módulo
    compartido; definir qué pasa con cues largos o simultáneos.
