@@ -89,6 +89,14 @@ var NIK_LUA_COMMANDS = {
         luaFile: "Nik_MusicState_PublishLyrics.lua",
         commandId: "_RSd54f79de554e285d622f22a5599d1497f4b788fa"
     },
+    // Asegura bus y sends de monitoreo y publica NikMonitorMix/list +
+    // list_version. Cada ejecución INCREMENTA list_version: solo se dispara
+    // al conectar, al cambiar de proyecto y desde el botón Actualizar,
+    // nunca en respuesta a un cambio de versión.
+    monitorMixPublish: {
+        luaFile: "Nik_MonitorMix_Publish.lua",
+        commandId: "_RSd336b02e41c2c4a81dcf5117d2ea70bf823fe957"
+    },
     // Botones ⏮/⏭ del nikTabBar — van encadenados con la acción nativa 40667
     // (no forman parte del objeto, van hardcodeados junto a este Command ID
     // en el propio onclick). 

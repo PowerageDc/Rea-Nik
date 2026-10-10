@@ -140,6 +140,9 @@ function wwr_onreply(results, sentAtMs) {
                         if (typeof nikMusicStateFetchLyrics === "function") nikMusicStateFetchLyrics();
                     }
                 }
+                if (tok[1] == "NikMonitorMix" && typeof nikMmOnExtState === "function") {
+                    nikMmOnExtState(tok[2], tok[3]);
+                }
                 if (tok[1] == "NikMusicState" && tok[2] == "publish_version") {
                     var pv = parseInt(tok[3], 10);
                     if (!isNaN(pv) && pv !== nikMsLastKnownPublishVersion) {
@@ -179,6 +182,10 @@ function wwr_onreply(results, sentAtMs) {
                 nikMsMarkersSig = markersSig;
                 if (markersChanged) nikMsHandleProjectSwitch("markers");
                 break;
+
+            default:
+                if (typeof nikMmOnLine === "function") nikMmOnLine(tok);
+                break;
         }
     }
 }
@@ -216,6 +223,7 @@ function nikMsHandleProjectSwitch(source) {
     // cliente, causado por Nik_RemoteState_Poll.lua ensuciando el dirty
     // flag al cerrar la última tab).
     nikMsResetProjectState();
+    if (typeof nikMmRequestList === "function") nikMmRequestList();
     if (typeof nikMusicStateRequestAll === "function") nikMusicStateRequestAll();
     if (NIK_MS_LYRICS_ENABLED && typeof nikMusicStateRequestLyrics === "function") nikMusicStateRequestLyrics();
     nikMsRequestTempoAndTimesig();
@@ -245,6 +253,7 @@ function nikMsResetProjectState() {
     if (typeof nikMusicStateSetLyricsData === "function") nikMusicStateSetLyricsData(null);
     nikMsLastKnownLyricsVersion = null;
     nikMsLastKnownPublishVersion = null;
+    if (typeof nikMmReset === "function") nikMmReset();
     nikMsLog("RESET");
     nikReaPitchLastSemitone = "none";
 }
