@@ -42,8 +42,18 @@ Tracks filtrados ──send──▶ Monitor Bus - Batería ──hardware out�
 - El mute del baterista es **mute del send**, nunca del track.
 - El volumen del bus es el control general y el lugar del limitador de
   seguridad. La salida "Hardware" del bus queda fija en 0 dB.
-- Los sends se crean por Lua, de forma idempotente, con nivel inicial bajo
-  (seis stems más clicks a 0 dB suman fuerte en auriculares).
+- Los sends se crean por Lua (`Nik_MonitorMix_EnsureSends.lua`), de forma
+  idempotente: solo crea los que faltan, con nivel inicial de -12 dB
+  (`defaults.send_db`) y `I_SENDMODE=3`, y nunca modifica un send
+  existente. Seis stems más clicks a 0 dB suman fuerte en auriculares.
+- Persistencia "por sesión de ensayo": la mezcla del baterista vive en
+  los sends del proyecto abierto, en memoria. Mientras la pestaña siga
+  abierta se conserva al cambiar de tab y volver; si el coordinador cierra
+  sin guardar, se pierde (deseado). Reglas que lo sostienen: el script
+  nunca toca sends existentes, y la UI solo lee al cambiar de proyecto
+  (los defaults se aplican únicamente al crear el send). El script actúa
+  sobre el proyecto activo: el cambio de tab debe dispararlo antes de
+  leer la lista.
 - El count-in que se graba en el render conserva su send al master y es
   independiente de los clicks de monitoreo (un mismo track no mezcla ambos
   usos).
@@ -177,7 +187,13 @@ se define, **reemplaza** a la base.
 ```lua
 return {
   buses = {
-    { name = "Monitor Bus - Bateria", pair_override = nil },
+    { name = "Monitor Bus - Batería", pair_override = nil },
+  },
+  -- pair_override: I_DSTCHAN de un par estéreo (par, ej. 2 = salidas 3/4);
+  -- nil = regla automática de 3.2.
+  defaults = {
+    send_db = -12,
+    send_mode = 3,
   },
   folders = {
     { role = "stems", aliases = nil, recursive = true },  -- nil = BUS_ALIASES
@@ -236,8 +252,8 @@ return {
 | 1 | Probe de salidas y par secundario | Cerrado |
 | 2 | Probe de bus, mute y modo de send | Cerrado |
 | 3 | Probe del feed nativo (`TRACK`/`SEND`) | Cerrado |
-| 4.1 | Config y módulo del filtro (Lua, testeable) | Verificado en dev (carpetas, exclude); sin probar: recursive, GUIDs, overrides, regla de bus |
-| 4.2 | Creación idempotente de sends (Lua) | Pendiente |
+| 4.1 | Config y módulo del filtro (Lua, testeable) | Verificado en dev (carpetas, exclude, bus excluido por nombre); sin probar: recursive con subcarpetas, GUIDs, overrides, regla recv+hw aislada |
+| 4.2 | Creación idempotente de sends (`Nik_MonitorMix_EnsureSends.lua`) | Verificado en dev (crea bus y sends, no pisa sends existentes, conserva valores al cambiar de pestaña) |
 | 4.3 | Canal de datos: lectura nativa filtrada vs. ExtState | Abierto |
 | 4.4 | Segunda interfaz web | Abierto |
 
@@ -276,5 +292,9 @@ pendiente.
 - Canal de datos para faders continuos: `_RS` por movimiento es pesado;
   evaluar el feed nativo o un script en background con `reaper.defer`.
 - Probar `dirty` y Undo con el proyecto limpio.
+- Probar el filtro con subcarpetas (`recursive`), `guid_include`,
+  `guid_exclude` y overrides por proyecto.
+- Definir el disparo de `EnsureSends` al cambiar de pestaña de proyecto
+  (desde la UI o un servicio en background).
 - Actualizar `00_CONTEXTO_GENERAL.md` (mapa y tabla de estado) al arrancar
   el código.
