@@ -1,6 +1,10 @@
 return {
   buses = {
-    { name = "Monitor Bus - Batería" },
+    { name = "Monitor Bus - Batería", pair_override = nil },
+  },
+  defaults = {
+    send_db = -12,
+    send_mode = 3,
   },
   folders = {
     { role = "stems", aliases = nil, recursive = true },

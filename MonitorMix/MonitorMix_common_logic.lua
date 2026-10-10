@@ -163,4 +163,23 @@ function M.filter(base)
   return out
 end
 
+function M.resolve_pair(override)
+  local n = reaper.GetNumAudioOutputs()
+  if override then
+    if override + 1 < n then return override end
+    return nil
+  end
+  local master = reaper.GetMasterTrack(0)
+  local used = {}
+  for i = 0, reaper.GetTrackNumSends(master, 1) - 1 do
+    local dst = math.floor(reaper.GetTrackSendInfo_Value(master, 1, i, "I_DSTCHAN"))
+    local ch = dst & 1023
+    used[ch] = true
+    if (dst & 1024) == 0 then used[ch + 1] = true end
+  end
+  for p = 0, n - 2, 2 do
+    if not used[p] and not used[p + 1] then return p end
+  end
+end
+
 return M
