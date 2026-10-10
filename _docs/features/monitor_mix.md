@@ -6,8 +6,9 @@ investigación, no está en el repo; la Línea M, metrónomo nativo global,
 queda aparte).
 
 **Estado:** investigación de ruteo cerrada (pasos 1–3). Canal de datos
-(Lua y capa cliente `monitor.js`) verificado en dev, paso 4.3. Falta la
-interfaz web (4.4) y la validación en sala.
+(Lua y capa cliente `monitor.js`) verificado en dev, paso 4.3. Interfaz
+web (4.4) verificada en dev, en navegador y celular, con el segundo Web
+Control (ver 6.1). Falta la validación en sala.
 
 ---
 
@@ -126,7 +127,7 @@ SEND  <track>  <idx>  <flags>  <vol lineal>  <pan>  <track destino>
 | Hardware output | destino `-1` (el cliente lo ignora en la lista) |
 | Mute del send | `flags & 8` (nunca `flags == 8`, es una máscara) |
 | Volumen, lectura | lineal |
-| Volumen, escritura | `SET/TRACK/x/SEND/y/VOL/<lineal>` (1.0 = 0 dB; dB → `10^(dB/20)`). Verificado: escribir `0.5` y releer devuelve `vol 0.5` |
+| Volumen, escritura | `SET/TRACK/x/SEND/y/VOL/<lineal>` (verificado: `VOL/0.5` y el `GET` devuelve `0.5`; el fader de sends del remoto también escribe lineal). Sin sufijo mientras se arrastra, con `e` al soltar |
 | Mute, escritura | `SET/TRACK/x/SEND/y/MUTE/-1` (alterna) |
 
 El índice de send es por origen: los receives no cuentan. El orden de
@@ -153,7 +154,7 @@ publica**, incluso sin bus o sin tracks: el `status` explica el motivo y
 evita datos viejos del proyecto anterior.
 
 ```json
-{"status":"ok","bus":"Monitor Bus - Batería","pair":2,"tracks":[{"track":3,"guid":"{...}","name":"Drums","role":"stems","send":0}]}
+{"status":"ok","bus":"Monitor Bus - Batería","pair":2,"default_db":-12,"tracks":[{"track":3,"guid":"{...}","name":"Drums","role":"stems","send":0}]}
 ```
 
 - `track`: número del web control, base 1 (`idx + 1`; `0` sería el
@@ -163,6 +164,10 @@ evita datos viejos del proyecto anterior.
 - `role`: `stems`, `click` o `null` (entró por `include`/GUID).
 - `pair`: `I_DSTCHAN` de la salida de hardware del bus (`2` = salidas
   3/4), o `null`.
+- `default_db`: `defaults.send_db` del config (número) o `null` si no está
+  definido. Se publica siempre, también en los estados sin bus. El cliente
+  lo usa como valor del doble tap; si falta usa `nikMmFader.DEFAULT_DB`
+  (-12).
 
 | `status` | Significado | `pair` | `tracks` |
 |---|---|---|---|
@@ -290,7 +295,7 @@ return {
 
 ---
 
-## 6. Interfaz web (borrador)
+## 6. Interfaz web
 
 - Segundo Web Control, con puerto y página por defecto propios.
 - Reutiliza de lyrics el header (título, tonalidad + tempo), la fila de
@@ -308,6 +313,77 @@ return {
   Cada track tiene su propio fader y mute de send.
 - A futuro: dos volúmenes maestros (música y click), ver 8.
 
+### 6.1 Implementación (pasos 2a–2d, verificada en dev)
+
+Archivos: `web/nsaudio_monitor.html` (shell) y, en
+`web/musicstate-ui/monitor/`, `monitor.js` (datos), `mm-fader.js` (curva),
+`monitor-app.js` (bootstrap, lista y faders) y `monitor.css`. Carga
+`cantante.css` y `monitor.css` solo pisa lo que difiere (stage scrolleable,
+toolbar, filas); reutiliza `core/vertical-fader.js` (`nikCreateVerticalFader`).
+
+- **Bootstrap:** `TRANSPORT` cada 100 ms, `MARKER` cada 500 ms y poll lento
+  de 1000 ms (`active_project_name`, `reapitch_semitone` y
+  `NikMonitorMix/list_version`). No activa `NIK_MS_LYRICS_ENABLED`. El
+  publish lo dispara `nikMsHandleProjectSwitch` al detectar el primer
+  `active_project_name` (arranca en `null`), así que `nikMonitorInit` no lo
+  pide.
+- **Dedupe:** `nikMmSetList` ignora un texto crudo idéntico al anterior;
+  `nikMmListRevision` solo sube con contenido nuevo (antes sumaba 3 o 4 por
+  cambio de tab, por lecturas redundantes de la misma lista).
+- **Render:** toolbar fija (par resuelto y bus, botón Actualizar
+  deshabilitado 1,5 s tras el toque) y stage con las secciones Música
+  (`role` distinto de `click`) y Click, más avisos por `status`. Se
+  redibuja solo si cambió `nikMmListRevision`.
+- **Lectura en vivo:** un `wwr_req_recur` de 200 ms con los
+  `GET/TRACK/x/SEND/y` encadenados de la lista. `nikMmRearmLive` cancela el
+  string viejo (por string exacto) y registra el nuevo al cambiar la lista,
+  y descarta `nikMmSendState`. Los pedidos no aparecen como entradas
+  propias en la pestaña de red del navegador (solo los `TRANSPORT`); REAPER
+  responde y los valores llegan.
+- **Curva** (tramos lineales en dB entre puntos, en `nikMmFader.POINTS`):
+
+| Slider | dB |
+|---|---|
+| 0 % | -60 |
+| 25 % | -40 |
+| 50 % | -24 |
+| 75 % | -12 |
+| 100 % | 0 |
+
+  Conversión de lectura: `dB = 20 × log10(vol)`; con `vol` 0 se toma el
+  piso. Una ganancia mayor a 0 dB (puesta a mano en REAPER) se muestra en el
+  tope.
+- **Escritura:** lineal a 4 decimales (`10^(dB/20)`), dB redondeado a pasos
+  de 0,5. Mientras se arrastra, `SET/.../VOL/<v>` sin sufijo con coalescing
+  (el primer valor inmediato y luego uno cada 60 ms como máximo, siempre el
+  último); al soltar (`change`) `.../VOL/<v>e`. El slider al 0 % escribe
+  0,001 (-60 dB): no es silencio, el silencio es el mute del send.
+- **Mute:** `SET/.../MUTE/-1` (alterna), sin actualización optimista; la M
+  roja la pinta el feed (`flags & 8`) en menos de ~300 ms.
+- **Doble tap:** vuelve a `default_db` (o -12 si falta).
+- **Guarda de arrastre:** tras cada escritura la fila ignora el feed
+  durante 400 ms, para que no pise el valor mientras se toca.
+- **Cues:** el footer reserva su altura (`msCueBand`) pero no está
+  cableado.
+
+### 6.2 Problemas conocidos
+
+- **Scroll vertical sobre un slider mueve el volumen (celular):** el
+  gesto primero mueve el fader y, sin soltar el dedo, después desliza.
+  `touch-action: pan-y` en `.mm-slider` no cambió nada (queda puesto, es
+  inofensivo). Alternativas si molesta en sala: slider propio con bloqueo
+  de dirección (unas 60 líneas) o una zona de scroll fuera del slider.
+- **Cambio de tab entre pestañas sin guardar:** de la tab 3 (sin guardar,
+  con track del Stem Bus, un hijo y bus de monitoreo) a una tab vacía, la
+  UI queda mostrando la lista de la tab 3 hasta tocar Actualizar. Pasar de
+  la tab 1 a la tab 2 no lo reproduce, de la tab 2 a la 3 sí. Hipótesis sin
+  confirmar: dos pestañas sin guardar no se distinguen para el cliente
+  (mismo `active_project_name` y firma de markers, ver
+  `nikMsHandleProjectSwitch`). Para confirmarlo, leer `nikCurrentProjectName`
+  y `nikMsMarkersSig` en la consola de cada tab. No bloqueante.
+- **Sin probar:** un tercero moviendo el mismo send mientras el baterista
+  no lo toca (el fader debería seguirlo).
+
 ---
 
 ## 7. Plan y estado
@@ -320,13 +396,15 @@ return {
 | 4.1 | Config y módulo del filtro (Lua, testeable) | Verificado en dev (carpetas, exclude, bus excluido por nombre); sin probar: recursive con subcarpetas, GUIDs, overrides, regla recv+hw aislada |
 | 4.2 | Creación idempotente de sends (`Nik_MonitorMix_EnsureSends.lua`) | Verificado en dev (crea bus y sends, no pisa sends existentes, conserva valores al cambiar de pestaña) |
 | 4.3 | Canal de datos: ExtState publicado por `Nik_MonitorMix_Publish.lua` (one-shot disparado por el cliente) y feed nativo para volumen y mute. Incluye `MM.ensure_sends` en el módulo común y los estados `no_tracks` y `no_pair` | Verificado en dev: lista, recarga por versión sin bucle, lectura de `SEND`, reset al cambiar de proyecto, tab vacía, master sin hardware output |
-| 4.4 | Segunda interfaz web | Abierto |
+| 4.4 | Segunda interfaz web | Verificado en dev, en navegador y celular, con el segundo Web Control (shell, lista, faders, mute, escritura, ver 6.1). Pendiente: validación en sala |
 
 Estructura: carpeta de dominio `MonitorMix/` en la raíz del repo
 (`Nik_MonitorMix_EnsureSends.lua` y `Nik_MonitorMix_Publish.lua`, módulos
 `MonitorMix_common_logic.lua` y `MonitorMix_config.lua`); ya figura en
 `01_CONVENCIONES.md`. La capa de datos del cliente vive en
-`web/musicstate-ui/monitor/monitor.js`.
+`web/musicstate-ui/monitor/monitor.js`; la UI (`mm-fader.js`,
+`monitor-app.js`, `monitor.css`) vive en la misma carpeta y el shell
+`nsaudio_monitor.html` en la raíz de `web/` (ver 6.1).
 
 ---
 
@@ -365,3 +443,14 @@ Estructura: carpeta de dominio `MonitorMix/` en la raíz del repo
   la UI.
 - Tope de `EXTSTATE`: sin documentar; la lista de 9 tracks mide 982
   bytes. Probar con una lista grande.
+- Validar la UI en sala (celular del baterista, par de salida real).
+- Cablear los cues en el footer de la UI (`msCueBand`, hoy solo reserva
+  altura).
+- Resolver o aceptar los problemas conocidos de 6.2 (scroll sobre slider,
+  cambio entre pestañas sin guardar) tras la prueba en sala.
+- `monitor.css` depende de `cantante.css` (clases `cn-*`): al cerrar la UI
+  de cantante, evaluar extraer el layout común a un archivo compartido.
+- Deploy: sumar `nsaudio_monitor.html` y los archivos de
+  `musicstate-ui/monitor/` (incluido `mm-fader.js`) al empaquetado de
+  `.www` (ver `05_REAPACK_DEPLOY.md`), junto con el registro de
+  `monitorMixPublish` ya listado arriba.
