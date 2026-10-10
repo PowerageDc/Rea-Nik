@@ -107,6 +107,12 @@ render, pero conviven en el mismo proyecto/entorno):
   `features/musicstate_instrumentista.md`. UI de cantante (letra, en
   construcción): ver `features/musicstate_cantante.md` (UI) y
   `features/musicstate_lyrics.md` (contrato de datos y estado).
+- **Monitor Mix (monitoreo por músico)**: mezcla personal del baterista
+  (a futuro, de otros músicos) por un bus con `B_MAINSEND=0` hacia el par
+  de salidas secundario de la placa, con volumen y mute a nivel de send.
+  Filtro de tracks configurable en código, y una interfaz web separada
+  (segundo Web Control) sin controles de transporte. Ver
+  `features/monitor_mix.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color + MusicState) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -124,6 +130,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
 | MusicState / Prompter     | Helper y prompter (vertical y landscape) funcionales y validados en dev y en sala con router propio. Indicador de pulso (dots + barra, ver `features/musicstate_instrumentista.md` §4.8), tira de acordes y fila de sección (preludio + cruce animado) animadas por `transform` (técnica FLIP), y cambio de proyecto sincronizado (secciones y acordes juntos, §6). Pendientes: selector de rol, desfase de los dots en proyectos con mapas de tempo extensos, datos parciales al cambiar de proyecto, y el resto de §11 de la feature. Lyrics para cantantes: publicador, capa cliente y cableado verificados en dev; UI de cantante con shell, layout y cabecera hechos y validados en dev y Android, reel de letra pendiente (ver `features/musicstate_cantante.md`; contrato en `features/musicstate_lyrics.md`) |
 | Deploy vía ReaPack        | Completo (AutoColor + RemoteControl + MusicState deployados vía metapaquete + .www). Lyrics (`PublishLyrics` + UI de cantante) registrado en el repo, pendiente de validar en una PC de destino |
+| Monitor Mix               | Filtro y creación idempotente de bus y sends verificados en dev. Pendientes: canal de datos, UI web del baterista y validación en sala (ver `features/monitor_mix.md`) |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma

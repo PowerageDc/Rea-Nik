@@ -99,6 +99,11 @@ ahí o desde un footswitch MIDI): `Nik_<Dominio>_<Acción>.lua`
 como acción): `<Dominio>_common_logic.lua`, **sin** prefijo `Nik_` — así
 quedan separados alfabéticamente de los ejecutables.
 
+**Config en código** (valores que el coordinador edita a mano, sin UI):
+`<Dominio>_config.lua`, también **sin** prefijo `Nik_`. Devuelve una
+tabla (`return { ... }`), se carga con `dofile` y no contiene lógica.
+Caso: `MonitorMix_config.lua`.
+
 ### Pendiente (no bloqueante)
 Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
 `NikRemote_TabNext/Prev`) no siguen esta convención todavía (usan
@@ -129,6 +134,7 @@ C:\dev\Rea-Nik\
 ├── ReaPitchBus/ panel nativo ReaImGui de ReaPitch
 ├── MvsepImporter/ importador de stems desde MVSEP
 ├── MusicState/ Helper ReaImGui (armonía, cues, roles) y publicación a ExtState
+├── MonitorMix/ mezcla de monitoreo por músico (filtro de tracks, bus y sends de monitoreo)
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
 ├── AutoColor/ auto-color de tracks
