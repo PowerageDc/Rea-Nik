@@ -8,14 +8,45 @@
 // (NIK_LUA_COMMANDS.monitorMixPublish) y musicstate-ui/shared/ms-dispatch.js.
 
 var nikMmList = null;                 // {status, bus, pair, tracks:[{track, guid, name, role, send}]} | null
-var nikMmListRevision = 0;            // +1 en cada nikMmSetList: la UI re-renderiza solo si cambió
+var nikMmListRevision = 0;            // +1 cuando cambia el contenido de la lista: la UI re-renderiza solo si cambió
+var nikMmListRaw = null;              // último texto crudo recibido (para no contar lecturas idénticas)
 var nikMmLastKnownListVersion = null; // último list_version visto EN EL PROYECTO ACTIVO
 var nikMmSendState = {};              // "track:send" -> {muted, vol (lineal), pan, dest}
+
+var nikMmLiveReq = null;              // string del GET recurrente de sends activo (para cancelarlo)
+var NIK_MM_LIVE_MS = 200;
+
+// GET/TRACK/<t>/SEND/<s> encadenado de toda la lista; null si no hay lista
+// usable (sin lista, status distinto de ok o sin tracks).
+function nikMmLiveRequestString() {
+    if (!nikMmList || nikMmList.status !== "ok" || !nikMmList.tracks.length) return null;
+    var parts = [];
+    for (var i = 0; i < nikMmList.tracks.length; i++) {
+        var t = nikMmList.tracks[i];
+        parts.push("GET/TRACK/" + t.track + "/SEND/" + t.send);
+    }
+    return parts.join(";");
+}
+
+// Cancela el recurrente viejo y registra el nuevo solo si el string cambió.
+// Al cambiar se descartan los valores: los índices nuevos pueden apuntar a
+// otros sends.
+function nikMmRearmLive() {
+    var next = nikMmLiveRequestString();
+    if (next === nikMmLiveReq) return;
+    if (nikMmLiveReq !== null) wwr_req_recur_cancel(nikMmLiveReq);
+    nikMmLiveReq = next;
+    nikMmSendState = {};
+    if (next !== null) wwr_req_recur(next, NIK_MM_LIVE_MS);
+}
 
 // Des-escapa las barras que duplica el web control (data_model §3) antes
 // del JSON.parse. Vacío, null, JSON inválido o sin tracks deja el estado en null.
 function nikMmSetList(val) {
     var raw = (typeof val === "string") ? val.replace(/\\\\/g, "\\") : val;
+    var key = raw || "";
+    if (key === nikMmListRaw) return;
+    nikMmListRaw = key;
     var parsed = null;
     if (raw) {
         try {
@@ -27,6 +58,7 @@ function nikMmSetList(val) {
     if (parsed && !Array.isArray(parsed.tracks)) parsed = null;
     nikMmList = parsed;
     nikMmListRevision++;
+    nikMmRearmLive();
 }
 
 // Llamado por ms-dispatch.js para cada EXTSTATE de NikMonitorMix. Un cambio
@@ -71,6 +103,19 @@ function nikMmRequestList() {
     wwr_req(cmd.commandId +
         ";GET/EXTSTATE/NikMonitorMix/list" +
         ";GET/EXTSTATE/NikMonitorMix/list_version");
+}
+
+// Escritura de volumen de send: LINEAL (verificado: VOL/0.5 y el GET devuelve
+// vol 0.5), 4 decimales. final=true agrega "e" (fin de captura, como
+// faders.js al soltar).
+function nikMmSetSendVol(track, send, db, final) {
+    var lin = Math.round(Math.pow(10, db / 20) * 10000) / 10000;
+    wwr_req("SET/TRACK/" + track + "/SEND/" + send + "/VOL/" + lin + (final ? "e" : ""));
+}
+
+// Alterna el mute del send (el feed informa el estado resultante).
+function nikMmToggleSendMute(track, send) {
+    wwr_req("SET/TRACK/" + track + "/SEND/" + send + "/MUTE/-1");
 }
 
 // Solo lectura, sin disparar el script.

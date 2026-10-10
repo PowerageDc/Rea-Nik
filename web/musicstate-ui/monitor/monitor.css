@@ -1,0 +1,130 @@
+/* monitor.css — pisa solo lo que difiere de cantante.css (se carga después).
+   El stage del mixer scrollea solo él; header y footer quedan fijos. */
+
+.mm-stage {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  text-align: left;
+  outline: none;
+}
+
+/* --- toolbar: par resuelto + Actualizar (fija, fuera del scroll) --- */
+
+.mm-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--u) * 3);
+  padding: calc(var(--u) * 1.5) 0;
+  border-bottom: 1px solid var(--ms-divider-color);
+}
+
+.mm-pair {
+  min-width: 0;
+  font-size: calc(var(--u) * 3.4);
+  color: var(--ms-fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.mm-refresh {
+  flex: none;
+  min-height: calc(var(--u) * 9);
+  padding: 0 calc(var(--u) * 4);
+  font: inherit;
+  font-size: calc(var(--u) * 3.4);
+  color: var(--ms-chord-color);
+  background: transparent;
+  border: 1px solid var(--ms-chord-color);
+  border-radius: calc(var(--u) * 1.5);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mm-refresh:disabled {
+  opacity: 0.5;
+}
+
+/* --- avisos y lista --- */
+
+.mm-notice {
+  padding: calc(var(--u) * 3) calc(var(--u) * 1.5);
+  font-size: calc(var(--u) * 3.6);
+  color: var(--ms-fg-dim);
+  text-align: center;
+}
+
+.mm-section-title {
+  padding: calc(var(--u) * 2) calc(var(--u) * 1.5) calc(var(--u) * 1);
+  font-size: calc(var(--u) * 3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ms-fg-dim);
+}
+
+.mm-row {
+  padding: calc(var(--u) * 1.5);
+  border-top: 1px solid var(--ms-divider-color);
+}
+
+.mm-row-name {
+  font-size: calc(var(--u) * 4.2);
+  font-weight: 500;
+  color: var(--ms-song-name-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mm-row-ctl {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 3);
+  min-height: calc(var(--u) * 9);
+}
+
+.mm-mute {
+  flex: none;
+  width: calc(var(--u) * 9);
+  height: calc(var(--u) * 9);
+  padding: 0;
+  font: inherit;
+  font-size: calc(var(--u) * 3.6);
+  font-weight: 700;
+  color: var(--ms-fg-dim);
+  background: transparent;
+  border: 1px solid var(--ms-divider-color);
+  border-radius: calc(var(--u) * 1.5);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mm-mute.is-muted {
+  color: #ffffff;
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+.mm-slider {
+  flex: 1 1 0;
+  min-width: 0;
+  height: calc(var(--u) * 9);
+  margin: 0;
+  touch-action: pan-y;
+}
+
+.mm-db {
+  flex: none;
+  width: calc(var(--u) * 17);
+  text-align: right;
+  font-size: calc(var(--u) * 3.4);
+  font-variant-numeric: tabular-nums;
+  color: var(--ms-fg-dim);
+}
+
+.mm-row.is-muted .mm-row-name {
+  opacity: 0.5;
+}

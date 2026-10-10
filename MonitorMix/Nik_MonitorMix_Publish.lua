@@ -35,7 +35,7 @@ local function sendIndexTo(track, bus_guid)
   end
 end
 
-local function buildJson(res, tracks)
+local function buildJson(res, tracks, default_db)
   local items = {}
   for _, t in ipairs(tracks) do
     items[#items + 1] = string.format(
@@ -43,9 +43,10 @@ local function buildJson(res, tracks)
       t.track, jsonString(t.guid), jsonString(t.name),
       t.role and jsonString(t.role) or "null", t.send)
   end
-  return string.format('{"status":%s,"bus":%s,"pair":%s,"tracks":[%s]}',
+  return string.format('{"status":%s,"bus":%s,"pair":%s,"default_db":%s,"tracks":[%s]}',
     jsonString(res.status), jsonString(res.bus_name or ""),
     res.pair and string.format("%d", res.pair) or "null",
+    default_db and string.format("%g", default_db) or "null",
     table.concat(items, ","))
 end
 
@@ -71,7 +72,8 @@ local function main()
     end
   end
 
-  local json = buildJson(res, tracks)
+  local default_db = cfg.defaults and tonumber(cfg.defaults.send_db) or nil
+  local json = buildJson(res, tracks, default_db)
   local version = (tonumber(reaper.GetExtState(NS, KEY_VERSION)) or 0) + 1
 
   -- Primero los datos, después la versión: un cliente que ve la versión

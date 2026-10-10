@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>NS Audio — Monitor</title>
+<link rel="stylesheet" href="musicstate-ui/shared/ms-base.css">
+<link rel="stylesheet" href="musicstate-ui/cantante/cantante.css">
+<link rel="stylesheet" href="musicstate-ui/monitor/monitor.css">
+</head>
+<body>
+
+<div class="ms-screen cn-screen">
+  <div class="ms-top-block cn-header">
+    <div class="ms-song-name cn-song-name" id="msSongName">—</div>
+
+    <hr class="ms-divider">
+
+    <div class="cn-meta-row">
+      <span class="ms-key-tonic-block cn-key">
+        <span class="ms-key-note">♪</span><span id="msKeyTonicText"></span>
+      </span>
+      <span class="cn-tempo" id="msTempo">—</span>
+    </div>
+  </div>
+
+  <hr class="ms-divider">
+
+  <div class="ms-section-row" id="msSectionRow">
+    <span class="ms-section-adj" id="msSectionPrev">—</span>
+    <span class="ms-section-current" id="msSection">—</span>
+    <span class="ms-section-adj-wrap">
+      <span class="ms-section-adj" id="msSectionNext">—</span>
+      <span class="ms-section-fill" id="msSectionNextFill" aria-hidden="true">—</span>
+    </span>
+  </div>
+
+  <div class="mm-toolbar">
+    <span class="mm-pair" id="mmPair">Salida —</span>
+    <button type="button" class="mm-refresh" id="mmRefresh">Actualizar</button>
+  </div>
+
+  <!-- Stage del mixer: ocupa todo lo que sobra y scrollea solo él. -->
+  <div class="cn-stage mm-stage" id="mmStage">
+    <div class="mm-notice" id="mmNotice"></div>
+    <div id="mmList"></div>
+  </div>
+
+  <hr class="ms-divider">
+
+  <!-- Banda de cues: altura reservada, sin cablear todavía. -->
+  <div class="cn-cue-band" id="msCueBand"></div>
+</div>
+
+<script src="main.js"></script>
+<script src="config.js"></script>
+<script>
+    (function () {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "config.local.js", false);
+        try {
+            xhr.send(null);
+            if (xhr.status === 200) { (0, eval)(xhr.responseText); }
+        } catch (e) {
+            // config.local.js no existe en esta PC — se ignora
+        }
+    })();
+</script>
+<script src="core/utils.js"></script>
+<script src="markers/markers.js"></script>
+<script src="core/music-transpose.js"></script>
+<script src="core/music-state.js"></script>
+<script src="musicstate-ui/shared/ms-tempo.js"></script>
+<script src="musicstate-ui/shared/ms-section.js"></script>
+<script src="musicstate-ui/shared/ms-section-row.js"></script>
+<script src="musicstate-ui/shared/ms-header.js"></script>
+<script src="musicstate-ui/shared/ms-stale.js"></script>
+<script src="musicstate-ui/shared/ms-dispatch.js"></script>
+<script src="musicstate-ui/monitor/monitor.js"></script>
+<script src="musicstate-ui/monitor/mm-fader.js"></script>
+<script src="core/vertical-fader.js"></script>
+<script src="musicstate-ui/monitor/monitor-app.js"></script>
+
+<script>
+nikMonitorInit();
+nikMonitorStartRenderLoop(50);
+</script>
+
+</body>
+</html>

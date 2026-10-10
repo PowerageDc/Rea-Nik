@@ -126,7 +126,7 @@ SEND  <track>  <idx>  <flags>  <vol lineal>  <pan>  <track destino>
 | Hardware output | destino `-1` (el cliente lo ignora en la lista) |
 | Mute del send | `flags & 8` (nunca `flags == 8`, es una máscara) |
 | Volumen, lectura | lineal |
-| Volumen, escritura | `SET/TRACK/x/SEND/y/VOL/<dB>` |
+| Volumen, escritura | `SET/TRACK/x/SEND/y/VOL/<lineal>` (1.0 = 0 dB; dB → `10^(dB/20)`). Verificado: escribir `0.5` y releer devuelve `vol 0.5` |
 | Mute, escritura | `SET/TRACK/x/SEND/y/MUTE/-1` (alterna) |
 
 El índice de send es por origen: los receives no cuentan. El orden de
