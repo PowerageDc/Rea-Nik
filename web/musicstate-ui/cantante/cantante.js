@@ -256,14 +256,16 @@ function nikCantanteGetLayout(anchorPos) {
 // Un nodo por POSICIÓN de línea; el rol solo cambia transform/opacity.
 // Se redibuja únicamente cuando cambia el layout cacheado, nunca por frame.
 
-var nikCantanteReel = { nodes: {}, layout: null, epoch: -1 };
+var nikCantanteReel = { nodes: {}, layout: null, epoch: -1, anchor: null, jumped: false };
 
 function nikCantanteReelRender() {
     var stage = document.getElementById("cnStage");
     if (!stage) return;
     nikCantanteMeasureIfNeeded();
     var R = nikCantanteReel;
-    var L = nikCantanteGetLayout(nikCantanteAnchorPos());
+    var ap = nikCantanteAnchorPos();
+    var L = nikCantanteGetLayout(ap);
+    R.jumped = false;
     if (R.layout === L) return;
 
     // Medición nueva: el texto o el ancho pudieron cambiar, se recrea todo.
@@ -273,7 +275,13 @@ function nikCantanteReelRender() {
         }
         R.nodes = {};
         R.epoch = nikCantanteMeasure.epoch;
+    } else if (R.anchor !== null && Math.abs(ap - R.anchor) > 1) {
+        // Salto (seek): crossfade en vez de deslizar la pila (§4.7).
+        R.jumped = true;
+        for (var o in R.nodes) nikCantanteReelFadeOut(R.nodes[o]);
+        R.nodes = {};
     }
+    R.anchor = ap;
 
     var keep = {};
     for (var i = 0; i < L.slots.length; i++) {
@@ -485,8 +493,8 @@ function nikCantanteRender() {
     if (!nikCantanteScreenEl) nikCantanteScreenEl = document.querySelector(".ms-screen");
     nikMsUpdateStaleIndicator(nikCantanteScreenEl);
     nikMsHeaderRender();
-    nikMsSectionRowRender(false); // sin reel todavía: ninguna otra capa hace jump
     nikCantanteReelRender();
+    nikMsSectionRowRender(nikCantanteReel.jumped);
     nikCantanteReelApplyStates();
     nikCantanteSweepTick();
     nikCantanteDebugRender();
