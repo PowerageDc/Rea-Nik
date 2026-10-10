@@ -78,8 +78,10 @@ reaper_www_root/
     ├── instrumentista/
     │   ├── instrumentista.js   bootstrap de polls + render
     │   └── instrumentista.css  estilos del perfil
-    └── cantante/
-        └── cantante.js         bootstrap de polls + panel de debug (ver musicstate_lyrics.md)
+    ├── cantante/
+    │   └── cantante.js         bootstrap de polls + panel de debug (ver musicstate_lyrics.md)
+    └── monitor/
+        └── monitor.js          capa de datos de Monitor Mix, sin DOM (ver monitor_mix.md 3.5)
 ```
 
 **Orden de carga del shell** (importa: cada archivo depende de los
@@ -100,6 +102,13 @@ compartido con la UI de cantante (`cantante.js`): lo que solo aplica a
 lyrics (pedido de letra en el cambio de proyecto) es opt-in por UI con
 `NIK_MS_LYRICS_ENABLED`, que en esta UI queda en `false`, así que acá no
 cambia nada (`musicstate_client.md` §1.6).
+
+También lo usa Monitor Mix (`monitor.js`), que no es una UI de MusicState.
+Para no acoplarlo expone cuatro ganchos opcionales con guard `typeof`:
+EXTSTATE del namespace `NikMonitorMix`, `default:` del switch (líneas
+`TRACK`/`SEND`), disparo en `nikMsHandleProjectSwitch` y reset en
+`nikMsResetProjectState`. Esta UI no carga `monitor.js`, así que son
+no-op. Detalle en `monitor_mix.md` 3.5.
 
 **Separación bootstrap/render:** `nikInstrumentistaInit()` (polls y
 pedidos on-demand) no asume IDs de DOM, así que puede correr sin la
@@ -338,6 +347,7 @@ wrapper de objeto: hay estado propio cacheado).
 | `NIK_MS_LYRICS_ENABLED` | ms-dispatch.js | opt-in a lyrics (default `false`); habilita el re-pedido de la letra en el cambio de proyecto. Lo activa `cantante.js`; esta UI no lo toca |
 | `nikMsLastKnownLyricsVersion` | ms-dispatch.js | último `lyrics_version` visto en el proyecto activo (`null` tras cada cambio de proyecto); esta UI no pollea esa key |
 | `nikMsLog(tag, extra)` / `NIK_MS_DEBUG` | ms-dispatch.js | logging de diagnóstico, apagado por defecto (§9) |
+| `nikMmOnExtState` / `nikMmOnLine` / `nikMmRequestList` / `nikMmReset` | llamados desde ms-dispatch.js, definidos en monitor.js | ganchos opcionales de Monitor Mix con guard `typeof`; no-op si la UI no carga `monitor.js` (§3, `monitor_mix.md` 3.5) |
 | `nikInstrumentistaSectionId(sec)` | instrumentista.js | identidad de sección para comparar triples prev/actual/next: `id\|displayName` (§7) |
 | `nikInstrumentistaChordLastRenderJumped` | instrumentista.js | `true` si en este tick la tira de acordes hizo jump (fade); la fila de sección lo consulta para no animar un cruce tras un seek (§7) |
 | `nikInstrumentistaResetSectionFill()` | instrumentista.js | resetea sin transición el fill de preludio de next |
@@ -380,6 +390,10 @@ wrapper de objeto: hay estado propio cacheado).
   limpia memoria), pero el re-pedido de `PublishLyrics` en el cambio de
   proyecto es opt-in y esta UI no lo activa. Qué hace la UI que sí lo
   activa: `musicstate_client.md` §1.6.
+- **Monitor Mix:** si la UI carga `monitor.js`, el cambio de proyecto
+  dispara además `nikMmRequestList()` (publish de la lista de monitoreo) y
+  el reset llama a `nikMmReset()`. Esta UI no lo carga, no cambia nada
+  (`monitor_mix.md` 3.5).
 - **Secciones:** `nikMsSectionOnMarkersUpdated()` reordena y resuelve la
   cadena de colores en cada `MARKER_LIST_END` (500 ms). Se resuelve toda
   la timeline de una vez para que una cadena `x2/x3...` herede el color

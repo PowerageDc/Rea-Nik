@@ -110,9 +110,10 @@ render, pero conviven en el mismo proyecto/entorno):
 - **Monitor Mix (monitoreo por músico)**: mezcla personal del baterista
   (a futuro, de otros músicos) por un bus con `B_MAINSEND=0` hacia el par
   de salidas secundario de la placa, con volumen y mute a nivel de send.
-  Filtro de tracks configurable en código, y una interfaz web separada
-  (segundo Web Control) sin controles de transporte. Ver
-  `features/monitor_mix.md`.
+  Filtro de tracks configurable en código, publicado por ExtState con un
+  script one-shot que dispara el cliente, y una interfaz web separada
+  (segundo Web Control) sin controles de transporte, con el mismo header,
+  secciones y cues que lyrics. Ver `features/monitor_mix.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color + MusicState) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -130,7 +131,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
 | MusicState / Prompter     | Helper y prompter (vertical y landscape) funcionales y validados en dev y en sala con router propio. Indicador de pulso (dots + barra, ver `features/musicstate_instrumentista.md` §4.8), tira de acordes y fila de sección (preludio + cruce animado) animadas por `transform` (técnica FLIP), y cambio de proyecto sincronizado (secciones y acordes juntos, §6). Pendientes: selector de rol, desfase de los dots en proyectos con mapas de tempo extensos, datos parciales al cambiar de proyecto, y el resto de §11 de la feature. Lyrics para cantantes: publicador, capa cliente y cableado verificados en dev; UI de cantante con shell, layout, cabecera y reel de letra (estados, barrido de proximidad y crossfade en seek) funcionando y validados en dev; pendientes: afinar el reel, cues y validar en iPhone (ver `features/musicstate_cantante.md`; contrato en `features/musicstate_lyrics.md`) |
 | Deploy vía ReaPack        | Completo (AutoColor + RemoteControl + MusicState deployados vía metapaquete + .www). Lyrics (`PublishLyrics` + UI de cantante) registrado en el repo, pendiente de validar en una PC de destino |
-| Monitor Mix               | Filtro y creación idempotente de bus y sends verificados en dev. Pendientes: canal de datos, UI web del baterista y validación en sala (ver `features/monitor_mix.md`) |
+| Monitor Mix               | Filtro, creación idempotente de bus y sends (con `no_tracks` y `no_pair` sin tocar el proyecto) y canal de datos (lista publicada por ExtState más feed nativo, capa cliente `monitor.js`) verificados en dev. Pendientes: UI web del baterista, validación en sala y registro de deploy (generador de `config.local.js` y ReaPack). Ver `features/monitor_mix.md` |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma

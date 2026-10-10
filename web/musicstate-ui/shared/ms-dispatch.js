@@ -1,9 +1,16 @@
 // musicstate-ui/shared/ms-dispatch.js
-// wwr_onreply() propio de la UI de Instrumentista (perfil MusicState) — NO
-// reusa core/wwr-dispatch.js del control remoto general (ver
+// wwr_onreply() propio de las UIs MusicState (instrumentista, cantante) y de
+// Monitor Mix — NO reusa core/wwr-dispatch.js del control remoto general (ver
 // musicstate_instrumentista.md, sección 3: ese dispatcher tiene casos sin
 // guard `if (elemento) {...}` que asumen DOM de tracks/faders/sends que acá
 // no existe).
+//
+// Ganchos opcionales de Monitor Mix (monitor.js; guard typeof, no-op si el
+// archivo no se carga — ver monitor_mix.md 3.5):
+//   nikMmOnExtState(key, val) → EXTSTATE de NikMonitorMix (list, list_version)
+//   nikMmOnLine(tok)          → líneas sin caso propio en el switch (SEND)
+//   nikMmRequestList()        → en nikMsHandleProjectSwitch: dispara el publish
+//   nikMmReset()              → en nikMsResetProjectState
 //
 // Depende de (deben cargarse antes en el HTML):
 //   config.js                → NIK_LUA_COMMANDS.playrateTempoMapRead
