@@ -145,15 +145,14 @@ devuelve, para cada track admitido, el `role` de la carpeta que lo aportó
 ### 4.2 Orden de decisión
 
 1. `exclude` (palabra clave o GUID) **gana siempre**.
-2. GUID incluido explícitamente.
-3. Palabra clave de `include` (aplica aunque el track esté fuera de una
+2. `guid_include`: admite el track aunque sea un folder o un bus de
+   monitoreo. Es la única forma de rescatarlos.
+3. Folders (`I_FOLDERDEPTH == 1`) y buses de monitoreo (`recvcnt > 0` con
+   `hwoutcnt > 0`; además se excluyen por nombre los de `buses`): afuera.
+4. Palabra clave de `include` (aplica aunque el track esté fuera de una
    carpeta válida).
-4. Pertenencia a una carpeta válida.
-5. Si nada aplica, queda afuera.
-
-Siempre afuera, salvo override explícito: los folders mismos
-(`I_FOLDERDEPTH == 1`) y los buses de monitoreo (por palabra clave y por
-`recvcnt > 0` con `hwoutcnt > 0`).
+5. Pertenencia a una carpeta válida.
+6. Si nada aplica, queda afuera.
 
 ### 4.3 Comparación de nombres
 
@@ -237,7 +236,7 @@ return {
 | 1 | Probe de salidas y par secundario | Cerrado |
 | 2 | Probe de bus, mute y modo de send | Cerrado |
 | 3 | Probe del feed nativo (`TRACK`/`SEND`) | Cerrado |
-| 4.1 | Config y módulo del filtro (Lua, testeable) | Siguiente |
+| 4.1 | Config y módulo del filtro (Lua, testeable) | Verificado en dev (carpetas, exclude); sin probar: recursive, GUIDs, overrides, regla de bus |
 | 4.2 | Creación idempotente de sends (Lua) | Pendiente |
 | 4.3 | Canal de datos: lectura nativa filtrada vs. ExtState | Abierto |
 | 4.4 | Segunda interfaz web | Abierto |
