@@ -202,7 +202,7 @@ end
 -- Crea (si faltan) el bus, su hardware output y un send por cada track
 -- admitido por el filtro. Idempotente: nunca toca sends existentes.
 -- No imprime: devuelve res.log para que lo muestre el llamador.
--- res = { status = "ok" | "no_bus_cfg" | "no_pair", bus = track|nil,
+-- res = { status = "ok" | "no_bus_cfg" | "no_pair" | "no_tracks", bus = track|nil,
 --         bus_name, pair, created = {registros del filtro},
 --         created_bus, created_hw, log = {líneas} }
 function M.ensure_sends(cfg)
@@ -226,9 +226,28 @@ function M.ensure_sends(cfg)
   local gain = 10 ^ (send_db / 20)
 
   local bus = M.find_track_by_name(bus_cfg.name)
-  local pair = M.resolve_pair(bus_cfg.pair_override)
   local need_hw = (not bus) or reaper.GetTrackNumSends(bus, 1) == 0
   res.bus = bus
+
+  local have = bus and receive_sources(bus) or {}
+  local todo = {}
+  for _, r in ipairs(M.filter(cfg)) do
+    if not have[r.guid] then todo[#todo + 1] = r end
+  end
+
+  if not bus and #todo == 0 then
+    res.status = "no_tracks"
+    log("Sin tracks admitidos por el filtro: no se crea el bus.")
+    return res
+  end
+
+  local pair = M.resolve_pair(bus_cfg.pair_override)
+  if need_hw and not bus_cfg.pair_override
+      and reaper.GetTrackNumSends(reaper.GetMasterTrack(0), 1) == 0 then
+    res.status = "no_pair"
+    log("ABORTA: el master no tiene hardware output, no se puede deducir el par secundario (definir pair_override en el config).")
+    return res
+  end
 
   if need_hw and not pair then
     res.status = "no_pair"
@@ -238,12 +257,6 @@ function M.ensure_sends(cfg)
   res.pair = pair
   if not need_hw then
     res.pair = math.floor(reaper.GetTrackSendInfo_Value(bus, 1, 0, "I_DSTCHAN"))
-  end
-
-  local have = bus and receive_sources(bus) or {}
-  local todo = {}
-  for _, r in ipairs(M.filter(cfg)) do
-    if not have[r.guid] then todo[#todo + 1] = r end
   end
 
   if bus then
