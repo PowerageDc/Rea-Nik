@@ -14,7 +14,7 @@ pendientes, para retomarlos sin repetir la discusión.
 
 | Archivo | Rol |
 |---|---|
-| `MusicState/MusicStateKeys_common_logic.lua` | Despacho: bindings, guards, repetición, colisiones, `Keys.held`, `Keys.modal`, `Keys.consume` |
+| `MusicState/MusicStateKeys_common_logic.lua` | Despacho: bindings, guards, repetición, colisiones, `Keys.held`, `Keys.modal`, `Keys.consume`, `Keys.input` |
 | `MusicState/MusicStateKeys_config.lua` | Bindings globales y por tab, en datos puros (convención de `<Dominio>_config.lua`, ver `01_CONVENCIONES.md`) |
 | `_Shared/ImGuiHostFocus_common_logic.lua` | Foco del teclado ventana ReaImGui ↔ REAPER y anti-rebote por auto-repeat |
 | `_Shared/ImGuiConfirmModal_common_logic.lua` | Ciclo de vida común de un modal de confirmación |
@@ -77,7 +77,7 @@ cerrarse un popup los atajos quedan cerrados un frame más.
 los usa los dos: una tecla de función no se tipea).
 
 `Keys.consume('Enter')` queda para los widgets que usan una tecla
-puntual (Roles lo usa donde antes estaba `H.consumed_enter`).
+puntual; `Keys.input` (§4.6) lo llama solo cuando Enter termina una edición.
 
 ## 4. Bindings
 
@@ -171,6 +171,21 @@ Una línea en `global` (o en `tab.<Tab>`) con `cmd`. Si lleva lógica propia:
 `action` con la función registrada en `Keys.init` (global) o `fn` pasada a
 `Keys.add_tab` (tab; el módulo de la tab expone `register_keys(Keys)` y el
 shell lo llama una vez después de `Keys.init`).
+
+### 4.6 Input con perfil
+
+`Keys.input(ctx, label, valor, perfil)` dibuja un `InputText` y aplica el
+perfil de teclas del widget (§9.4). Devuelve `changed, valor, commit`. Campos
+del perfil, todos opcionales:
+
+| Campo | Valores | Efecto |
+|---|---|---|
+| `on_enter` | `'commit'` (defecto) \| `'none'` | `commit` devuelve true si Enter (sin repeat) cierra una edición |
+| `keep_focus` | `false` (defecto) \| `'when_empty'` \| `'always'` | Devuelve el foco al input tras Enter: con el buffer vacío, o siempre |
+
+Llama a `Keys.consume('Enter')` cuando Enter termina la edición. Lo usa la
+tab Roles. Pendientes del perfil: `on_escape`, `on_tab`, `on_up`, `on_down`
+(§9.4).
 
 ## 5. Modales
 
@@ -334,6 +349,12 @@ gesto fue una letra. Un click selecciona; Enter no actúa sobre el hover.
 
 ### 9.4 Paso 6 — Anillo de foco y perfil de teclas por componente
 
+**Estado:** 6a (caso Roles) y 6b (wrapper `Keys.input`, §4.6) hechos, con
+`on_enter` y `keep_focus`. Pendiente el 6c: anillo de foco (`on_tab`,
+`on_up`, `on_down`). `on_escape` probablemente no haga falta: ImGui revierte
+el buffer con Esc y el guard de item activo evita que Esc llegue a
+`time.clear_selection`; se decide al probar el anillo.
+
 **Anillo de foco.** Hoy Tab no hace nada entre inputs (§7: la lectura anda, la
 navegación de ImGui está apagada por diseño). Propuesta:
 
@@ -364,19 +385,17 @@ devuelve cambio, valor y commit). Campos previstos:
   on_up = fn, on_down = fn }    -- ej. Armonía: ir a la fila de arriba o abajo
 ```
 
-**Caso Roles:** hoy Enter commitea y desactiva el input, y el cursor
-desaparece. Con un input vacío, Enter debería **dejar el cursor ahí**
-(`keep_focus = 'when_empty'`). Queda por decidir si tras agregar un rol con
-texto también conviene mantener el foco (`'always'`, útil para cargar varios
-seguidos). Mecánica: devolver el foco al input recién desactivado con
-`SetKeyboardFocusHere(ctx, -1)` justo después de dibujarlo (el `-1` apunta al
-widget anterior), o con un pedido que se consume antes de dibujarlo el frame
-siguiente. Con ese wrapper el mismo perfil sirve para cualquier input, y
-`Keys.consume('Enter')` queda dentro del wrapper.
+**Caso Roles (hecho, 6a y 6b):** Roles usa `Keys.input` con
+`{ on_enter = 'commit', keep_focus = 'always' }`: Enter con el input vacío
+deja el cursor ahí, y con texto agrega el rol y también lo deja (para cargar
+varios seguidos). Mecánica: `SetKeyboardFocusHere(ctx, -1)` justo después de
+dibujar el InputText (el `-1` apunta al widget anterior). Con Enter mantenido
+el sistema repite la tecla y ImGui desactiva el input en cada repetición: el
+refoco lee Enter **con repeat** y el commit **sin repeat**, así no se
+duplican roles. `Keys.consume('Enter')` quedó dentro del wrapper (§4.6).
 
-El glitch preexistente de Enter en Roles (`musicstate_helper.md` §7) hay que
-reprobarlo: con el despacho central el Enter que commitea ya no puede disparar
-Play/Pause.
+Reprobado en el 6a y 6b: Enter en Roles (tocado y mantenido) no dispara
+Play/Pause (`musicstate_helper.md` §7).
 
 ### 9.5 Otros pendientes
 

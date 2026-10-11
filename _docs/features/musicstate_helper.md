@@ -184,14 +184,12 @@ input, sin auto-normalización/rollover al compás siguiente.
   filas puntuales colisionadas (Enter) o cancelar todo el pegado (Esc); ver
   `musicstate_keys.md` §5.
 
-## 7. Glitch conocido, sin resolver
+## 7. Glitch de Enter en Roles (no reproducido)
 
-Hay un glitch preexistente de Enter en la tab Roles, confirmado que ya
-ocurría antes del refactor de modularización (no lo introdujo). Sin
-investigar todavía. Reprobar tras el despacho central de teclas
-(`musicstate_keys.md`): el Enter que commitea un input ya no puede disparar
-Play/Pause. Si persiste, mirar el perfil de teclas por componente
-(`musicstate_keys.md` §9.4).
+Había un glitch preexistente de Enter en la tab Roles (ya ocurría antes del
+refactor de modularización). Tras el despacho central de teclas y
+`Keys.input` (`musicstate_keys.md` §4.6) no se reprodujo: Enter, tocado o
+mantenido, no dispara Play/Pause. Si reaparece, reabrir desde acá.
 
 ## 8. Cómo testear
 
