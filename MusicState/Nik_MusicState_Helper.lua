@@ -364,6 +364,7 @@ Keys.init(keys_config, {
 })
 
 LyricsSync.register_keys(Keys)
+LyricsTab.register_keys(Keys, H)
 
 -- Arma los JSON compactos y los escribe en ProjExtState + puente a ExtState.
 local function nikMusicStateSaveAndPublish()

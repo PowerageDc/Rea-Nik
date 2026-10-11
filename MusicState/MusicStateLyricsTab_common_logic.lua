@@ -127,6 +127,32 @@ local function onRowClick(S, Lyrics, idx)
   applyTimeRange(S, Lyrics, idx)
 end
 
+-- Salida de la fila seleccionada (Esc): lo mismo que volver a clickearla,
+-- sin mover el cursor de edicion. Con el toggle activo limpia tambien el
+-- rango de tiempo.
+local function deselectRow(S)
+  S.sel = nil
+  if S.autoselect then
+    reaper.GetSet_LoopTimeRange(true, false, 0, 0, false)
+    reaper.UpdateArrange()
+  end
+end
+
+-- Primer caso de override por tab (musicstate_keys.md 9.2): con una fila
+-- seleccionada Esc la deselecciona; sin seleccion devuelve false y el
+-- despacho cae a la global (time.clear_selection, 40020). Llamar una vez
+-- despues de Keys.init.
+function M.register_keys(Keys, H)
+  Keys.add_tab('Lyrics', {
+    { id = 'lyrics.escape', key = 'Escape', override = true,
+      fn = function()
+        local S = H._lyrics
+        if not S or not S.sel then return false end
+        deselectRow(S)
+      end },
+  })
+end
+
 function M.draw(ctx, H, helpers)
   local Lyrics = helpers.Lyrics
   local S = getState(H)

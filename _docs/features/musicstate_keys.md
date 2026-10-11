@@ -147,6 +147,7 @@ Por tab (sección `tab` y `register_keys`):
 | `lyrics.tap` | Lyrics | B (hold) | tap-to-sync (`LyricsSync`) |
 | `lyrics.undo` | Lyrics | Ctrl+Z | 40029 |
 | `lyrics.redo` | Lyrics | Ctrl+Shift+Z | 40030 |
+| `lyrics.escape` | Lyrics | Esc (override) | deselecciona la fila; sin fila seleccionada cae a `time.clear_selection` |
 
 Undo y redo de REAPER solo en Lyrics: sus ediciones son puntos de undo del
 proyecto (`Undo_BeginBlock`) y la cola de tap ya se reconcilia si una línea
@@ -281,25 +282,15 @@ Regresión del módulo, todo debe pasar:
 El modal de pegado de Armonía usa `Modal.begin` (ver §5) y
 `InputCommit.globalKeyPressed` se eliminó. Cues consumirá el mismo helper.
 
-### 9.2 Paso 4c — Esc por tab en Lyrics (primer caso de override)
+### 9.2 Paso 4c — Hecho
 
-Hoy Esc global limpia la selección de tiempo (40020). En Lyrics hay dos
-niveles de "selección" y conviene salir de a uno:
-
-- **Primer Esc:** si hay una fila seleccionada (`S.sel`), deseleccionarla.
-- **Segundo Esc** (sin fila seleccionada): cae a la global y limpia la
-  selección de tiempo.
-
-Mecanismo propuesto: un binding de tab con `override = true` cuya `fn` puede
-**devolver `false`** para decir "no la usé": el despacho ejecuta entonces la
-global suprimida. Hay que guardar la referencia a la global en el binding de
-tab (hoy `overridden_by[tab] = true`). Es general: sirve para cualquier tab
-que quiera refinar un atajo sin reimplementar el global.
-
-Pregunta abierta: el primer Esc, ¿solo deselecciona la fila o hace lo mismo que
-volver a clickear la fila seleccionada (que, con "Seleccionar duración al hacer
-click" activo, también limpia el rango de tiempo y dejaría el segundo Esc sin
-efecto)? Se decide al implementarlo.
+Esc por tab en Lyrics (`lyrics.escape`, primer caso de `override` con
+fallback, ver §4.3). Primer Esc con una fila seleccionada (`S.sel`): lo mismo
+que volver a clickearla (deselecciona y, con "Seleccionar duración al hacer
+click" activo, limpia el rango de tiempo), **sin mover el cursor de edición**.
+Segundo Esc, sin fila seleccionada: la `fn` devuelve `false` y cae a la global
+(40020). El mecanismo sirve para cualquier tab que quiera refinar un atajo
+global sin reimplementarlo.
 
 ### 9.3 Paso 5 — Combo con teclado (Tonalidad)
 
