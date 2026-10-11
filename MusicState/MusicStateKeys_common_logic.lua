@@ -1,6 +1,7 @@
 -- MusicStateKeys_common_logic.lua
--- Despacho central de atajos de teclado del Helper (Paso 3: capa global con
--- press y autorepeat). Los bindings vienen de MusicStateKeys_config.lua.
+-- Despacho central de atajos de teclado del Helper. Los bindings globales
+-- vienen de MusicStateKeys_config.lua; cada tab suma los suyos con
+-- Keys.add_tab (press con fn, o hold consultado con Keys.held).
 --
 -- Ciclo del frame (todo dentro del `if visible` del Helper):
 --   Keys.begin_frame(ctx)   al inicio: foto de IsAnyItemActive
@@ -32,6 +33,10 @@ local MODS_ALL = MODS.ctrl | MODS.shift | MODS.alt | MODS.super
 
 local S = {
   bindings = {},
+  by_id = {},
+  sigs = {},      -- sigs[scope][tecla|mods] = binding; scope '' = capa global
+  defaults = { delay = 0.5, rate = 0.15 },
+  focused = false,
   actions = {},
   item_active_start = false,
   tab_cur = nil,
@@ -43,7 +48,7 @@ local function err(msg)
   reaper.ShowConsoleMsg('[MusicStateKeys] ' .. msg .. '\n')
 end
 
-local function buildBinding(def, defaults, actions)
+local function buildBinding(def, defaults, actions, tab)
   local id = def.id
   if type(id) ~= 'string' or id == '' then
     err('binding sin id (entrada ignorada)'); return nil
@@ -52,8 +57,18 @@ local function buildBinding(def, defaults, actions)
   if not key_fn then
     err(id .. ': tecla desconocida "' .. tostring(def.key) .. '"'); return nil
   end
-  if (def.cmd == nil) == (def.action == nil) then
-    err(id .. ': tiene que llevar cmd o action (uno solo)'); return nil
+  local kind = def.kind or 'press'
+  if kind ~= 'press' and kind ~= 'hold' then
+    err(id .. ': kind desconocido "' .. tostring(kind) .. '" (press o hold)'); return nil
+  end
+  local n_run = (def.cmd ~= nil and 1 or 0) + (def.action ~= nil and 1 or 0) + (def.fn ~= nil and 1 or 0)
+  if kind == 'press' and n_run ~= 1 then
+    err(id .. ': un press lleva cmd, action o fn (uno solo)'); return nil
+  elseif kind == 'hold' and (n_run ~= 0 or def.autorepeat) then
+    err(id .. ': un hold no lleva cmd, action, fn ni autorepeat (se consulta con Keys.held)'); return nil
+  end
+  if def.fn and not tab then
+    err(id .. ': fn solo en bindings de tab (en la capa global usar action)'); return nil
   end
   if def.action and not actions[def.action] then
     err(id .. ': la accion "' .. tostring(def.action) .. '" no esta registrada'); return nil
@@ -73,39 +88,77 @@ local function buildBinding(def, defaults, actions)
 
   return {
     id = id, key_name = def.key, key = key_fn(), mods = mods,
-    cmd = def.cmd, action = def.action, rep_cfg = rep,
+    kind = kind, tab = tab, override = def.override or false,
+    cmd = def.cmd, action = def.action, fn = def.fn, rep_cfg = rep,
     ignore_item_active = def.ignore_item_active or false,
     ignore_popup = def.ignore_popup or false,
     rep = nil,  -- estado de repeticion: nil o { next = tiempo }
   }
 end
 
+-- Alta de un binding ya validado: unicidad de id y colisiones por capa.
+-- Capa global o misma tab: tecla repetida = error. Una tecla de tab que pisa
+-- una global tambien es error, salvo override = true (la global queda
+-- suprimida mientras esa tab este activa).
+local function register(b)
+  if S.by_id[b.id] then
+    err('id repetido "' .. b.id .. '" (se ignora la segunda entrada)'); return false
+  end
+  local sig = b.key_name .. '|' .. b.mods
+  local scope = b.tab or ''
+  S.sigs[scope] = S.sigs[scope] or {}
+  local same = S.sigs[scope][sig]
+  if same then
+    err(string.format('colision: "%s" y "%s" usan la misma tecla en %s (se ignora la segunda)',
+      same.id, b.id, b.tab and ('la tab ' .. b.tab) or 'la capa global'))
+    return false
+  end
+  if b.tab then
+    local g = S.sigs[''] and S.sigs[''][sig]
+    if g then
+      if not b.override then
+        err(string.format('colision: "%s" (tab %s) pisa a la global "%s"; usar override = true si es a proposito (se ignora la de tab)',
+          b.id, b.tab, g.id))
+        return false
+      end
+      g.overridden_by = g.overridden_by or {}
+      g.overridden_by[b.tab] = true
+    end
+  end
+  S.sigs[scope][sig] = b
+  S.by_id[b.id] = b
+  S.bindings[#S.bindings + 1] = b
+  return true
+end
+
 -- cfg: la tabla de MusicStateKeys_config.lua. actions: { nombre = funcion }
 -- para los bindings con `action`. Devuelve la cantidad de bindings cargados.
 function M.init(cfg, actions)
   S.actions = actions or {}
-  S.bindings = {}
-  local defaults = cfg.autorepeat or { delay = 0.5, rate = 0.15 }
-  local ids, sigs = {}, {}
+  S.bindings, S.by_id, S.sigs = {}, {}, {}
+  S.defaults = cfg.autorepeat or S.defaults
   for _, def in ipairs(cfg.global or {}) do
-    local b = buildBinding(def, defaults, S.actions)
-    if b then
-      local sig = b.key_name .. '|' .. b.mods
-      if ids[b.id] then
-        err('id repetido "' .. b.id .. '" (se ignora la segunda entrada)')
-      elseif sigs[sig] then
-        err(string.format('colision: "%s" y "%s" usan la misma tecla en la capa global (se ignora la segunda)',
-          sigs[sig], b.id))
-      else
-        ids[b.id], sigs[sig] = true, b.id
-        S.bindings[#S.bindings + 1] = b
-      end
-    end
+    local b = buildBinding(def, S.defaults, S.actions, nil)
+    if b then register(b) end
   end
   return #S.bindings
 end
 
+-- Bindings propios de una tab (llamar despues de init). defs: los mismos
+-- campos que la config, mas fn (funcion) en los press, kind = 'hold' para los
+-- que se consultan con Keys.held y override = true para pisar una global.
+-- Devuelve la cantidad dada de alta.
+function M.add_tab(tab, defs)
+  local n = 0
+  for _, def in ipairs(defs) do
+    local b = buildBinding(def, S.defaults, S.actions, tab)
+    if b and register(b) then n = n + 1 end
+  end
+  return n
+end
+
 function M.begin_frame(ctx)
+  S.focused = reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows())
   S.item_active_start = reaper.ImGui_IsAnyItemActive(ctx)
   S.tab_prev = S.tab_cur
   S.tab_cur = nil
@@ -128,15 +181,38 @@ function M.consume(name)
 end
 
 local function fire(b)
-  if b.cmd then
+  if b.fn then
+    b.fn(b)
+  elseif b.cmd then
     reaper.Main_OnCommand(b.cmd, 0)
   else
     S.actions[b.action](b)
   end
 end
 
+-- Estado actual de un binding kind = 'hold': true mientras la tecla esta
+-- abajo y todos los guards estan abiertos. Se evalua en el momento de la
+-- llamada (durante el draw de la tab), sin esperar al dispatch del final del
+-- frame: el tap de Lyrics no puede perder un frame de latencia. El que lo
+-- consulta detecta los flancos (press/release) con su propio estado previo.
+function M.held(ctx, id)
+  local b = S.by_id[id]
+  if not b or b.kind ~= 'hold' then return false end
+  if b.tab and b.tab ~= S.tab_cur then return false end
+  if not S.focused or S.consumed[b.key_name] then return false end
+  if not b.ignore_popup
+    and reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId()) then
+    return false
+  end
+  if not b.ignore_item_active
+    and (S.item_active_start or reaper.ImGui_IsAnyItemActive(ctx)) then
+    return false
+  end
+  if (reaper.ImGui_GetKeyMods(ctx) & MODS_ALL) ~= b.mods then return false end
+  return reaper.ImGui_IsKeyDown(ctx, b.key)
+end
+
 function M.dispatch(ctx)
-  local focused = reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows())
   local popup = reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
   local item_active = S.item_active_start or reaper.ImGui_IsAnyItemActive(ctx)
   local mods = reaper.ImGui_GetKeyMods(ctx) & MODS_ALL
@@ -144,12 +220,20 @@ function M.dispatch(ctx)
   local tab_changed = S.tab_cur ~= S.tab_prev
 
   for _, b in ipairs(S.bindings) do
-    local open = focused and not tab_changed
+    -- Los hold no se despachan (se consultan con Keys.held). Los de tab
+    -- solo actuan con su tab dibujada; una global suprimida por override,
+    -- nunca en esa tab.
+    local open = b.kind ~= 'hold'
+      and S.focused and not tab_changed
+      and (not b.tab or b.tab == S.tab_cur)
+      and not (b.overridden_by and b.overridden_by[S.tab_cur])
       and not S.consumed[b.key_name]
       and (b.ignore_popup or not popup)
       and (b.ignore_item_active or not item_active)
 
-    if not open or mods ~= b.mods or not reaper.ImGui_IsKeyDown(ctx, b.key) then
+    if b.kind == 'hold' then
+      -- nada que despachar
+    elseif not open or mods ~= b.mods or not reaper.ImGui_IsKeyDown(ctx, b.key) then
       -- Guard cerrado, otra combinacion de modificadores o tecla suelta: la
       -- repeticion se apaga y solo un press nuevo con todo abierto la prende.
       b.rep = nil

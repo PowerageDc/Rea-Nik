@@ -5,8 +5,9 @@
 
 local M = {}
 
-local KEY_TAP = reaper.ImGui_Key_B()
-local KEY_TAP_LABEL = 'B'
+local TAP_KEY = 'B'  -- nombre de tecla de ReaImGui; tambien es la etiqueta del boton
+local TAP_ID = 'lyrics.tap'
+local Keys = nil  -- lo asigna register_keys (el Helper lo llama una vez al cargar)
 local EXT_SECTION = 'NikMusicStateHelper'
 local EXT_KEY_LATENCY = 'lyrics_tap_latency_ms'
 local DEFAULT_LATENCY_MS = -150
@@ -51,11 +52,9 @@ function M.Clear(Sy)
 end
 
 local function readHeld(ctx, btn_active)
-  local focused = reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows())
-  local key_down = focused
-    and not reaper.ImGui_IsAnyItemActive(ctx)
-    and not reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
-    and reaper.ImGui_IsKeyDown(ctx, KEY_TAP)
+  -- Los guards (ventana enfocada, sin campo activo, sin popup) viven en
+  -- Keys.held; el boton con el mouse sigue valiendo siempre.
+  local key_down = Keys ~= nil and Keys.held(ctx, TAP_ID)
   return key_down or btn_active
 end
 
@@ -240,7 +239,7 @@ local function drawQueue(ctx, Sy, Lyrics)
     reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), COLOR_TAP_HELD)
     reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), COLOR_TAP_HELD)
   end
-  local tap_label = done and 'Cola completa' or string.format('TAP (mantener)  [%s]', KEY_TAP_LABEL)
+  local tap_label = done and 'Cola completa' or string.format('TAP (mantener)  [%s]', TAP_KEY)
   reaper.ImGui_Button(ctx, tap_label .. '###tap', avail_w, 56)
   local btn_active = reaper.ImGui_IsItemActive(ctx)
   if Sy.held_prev then reaper.ImGui_PopStyleColor(ctx, 3) end
@@ -332,6 +331,15 @@ local function reconcile(Sy, S, Lyrics)
       Sy.pos = Sy.pos - 1
     end
   end
+end
+
+-- Lo llama el Helper una vez, despues de Keys.init. Registra la tecla de tap
+-- como hold de la tab Lyrics; el estado de la cola sigue siendo de este modulo.
+function M.register_keys(K)
+  Keys = K
+  K.add_tab('Lyrics', {
+    { id = TAP_ID, key = TAP_KEY, kind = 'hold' },
+  })
 end
 
 function M.draw(ctx, S, H, helpers)
