@@ -78,6 +78,22 @@ local function buildBinding(def, defaults, actions, tab)
     err(id .. ': la accion "' .. tostring(def.action) .. '" no esta registrada'); return nil
   end
 
+  -- cmd puede ser el numero de una accion nativa o el nombre de una accion
+  -- con ID estable ('_SWS_...', '_S&M_...'), que se resuelve en esta PC.
+  local cmd = def.cmd
+  if type(cmd) == 'string' then
+    local named = reaper.NamedCommandLookup(cmd)
+    if named == 0 then
+      err(id .. ': el comando "' .. cmd .. '" no existe en esta PC (se ignora)'); return nil
+    end
+    if cmd:sub(1, 3) == '_RS' then
+      err(id .. ': "' .. cmd .. '" es el ID de un script y cambia entre PCs; en un config que se despliega conviene una accion nativa o de SWS')
+    end
+    cmd = named
+  elseif cmd ~= nil and type(cmd) ~= 'number' then
+    err(id .. ': cmd tiene que ser un numero o un nombre de comando'); return nil
+  end
+
   local mods = 0
   for _, m in ipairs(def.mods or {}) do
     if not MODS[m] then err(id .. ': modificador desconocido "' .. tostring(m) .. '"'); return nil end
@@ -93,7 +109,7 @@ local function buildBinding(def, defaults, actions, tab)
   return {
     id = id, key_name = def.key, key = key_fn(), mods = mods,
     kind = kind, tab = tab, override = def.override or false,
-    cmd = def.cmd, action = def.action, fn = def.fn, rep_cfg = rep,
+    cmd = cmd, action = def.action, fn = def.fn, rep_cfg = rep,
     ignore_item_active = def.ignore_item_active or false,
     ignore_popup = def.ignore_popup or false,
     rep = nil,  -- estado de repeticion: nil o { next = tiempo }
@@ -164,6 +180,9 @@ function M.init(cfg, actions)
   for _, def in ipairs(cfg.global or {}) do
     local b = buildBinding(def, S.defaults, S.actions, nil)
     if b then register(b) end
+  end
+  for tab, defs in pairs(cfg.tab or {}) do
+    M.add_tab(tab, defs)
   end
   return #S.bindings
 end

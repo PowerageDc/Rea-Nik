@@ -68,6 +68,9 @@ local MODES_STR = 'major\0minor\0'
 -- Foco ImGui <-> REAPER: la tecla vive en MusicStateKeys_config.lua
 -- (host.focus); la accion que dispara se registra con Keys.init, mas abajo.
 local WINDOW_TITLE = 'MusicState Helper'
+local CLOSE_GUARD_S = 0.8
+local started_at = reaper.time_precise()
+local close_requested = false
 local EXT_SECTION_HOST = 'NikMusicStateHelper'
 local EXT_KEY_BLOCK_REAPER = 'host_focus_block_reaper'
 local EXT_KEY_BLOCK_HELPER = 'host_focus_block_helper'
@@ -354,6 +357,10 @@ Keys.init(keys_config, {
     HostFocus.arm(EXT_SECTION_HOST, EXT_KEY_BLOCK_REAPER, HOST_FOCUS_BLOCK_S)
     HostFocus.toReaper()
   end,
+  close_helper = function()
+    if reaper.time_precise() - started_at < CLOSE_GUARD_S then return end
+    close_requested = true
+  end,
 })
 
 LyricsSync.register_keys(Keys)
@@ -519,7 +526,7 @@ local function loop()
 
   reaper.ImGui_PopFont(ctx)
 
-  if open then
+  if open and not close_requested then
     reaper.defer(loop)
   end
 end

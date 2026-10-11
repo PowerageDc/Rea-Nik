@@ -9,7 +9,11 @@
 --                         'Escape', 'F4', 'LeftArrow', 'Space', 'Enter'...
 --   mods                  opcional: { 'ctrl', 'shift', 'alt', 'super' }.
 --                         Sin mods, solo actua con la tecla sola.
---   cmd                   ID de accion de REAPER (Main_OnCommand)...
+--   cmd                   ID numerico de accion de REAPER (Main_OnCommand), o
+--                         nombre de una accion con ID estable entre PCs
+--                         ('_SWS_...', '_S&M_...'; copiar con "Copy selected
+--                         action command ID"). Los '_RS...' de scripts
+--                         cambian entre PCs: avisa por consola...
 --   action                ...o nombre de una funcion Lua registrada por el
 --                         Helper en Keys.init (uno de los dos, no ambos)
 --   autorepeat            true (valores de abajo) o { delay=, rate= } propio
@@ -42,5 +46,21 @@ return {
     -- Nik_MusicState_FocusHelper.lua asignado a esta misma tecla.
     { id = 'host.focus',           key = 'F4',         action = 'host_focus',
       ignore_item_active = true, ignore_popup = true },
+
+    -- Cierra el Helper (la apertura es el propio script en el Action List,
+    -- asignado a esta misma tecla). Con guards normales: no actua con un
+    -- campo en edicion ni con un modal abierto.
+    { id = 'host.close',           key = 'F5',         action = 'close_helper' },
+  },
+
+  -- Bindings por tab: solo actuan con esa tab dibujada. Mismos campos que
+  -- los globales, mas override = true para pisar una global. Undo de REAPER
+  -- solo en Lyrics: sus ediciones son puntos de undo del proyecto; las de
+  -- Armonia/Cues viven en el Helper y no pasan por el undo de REAPER.
+  tab = {
+    Lyrics = {
+      { id = 'lyrics.undo', key = 'Z', mods = { 'ctrl' }, cmd = 40029 },
+      { id = 'lyrics.redo', key = 'Z', mods = { 'ctrl', 'shift' }, cmd = 40030 },
+    },
   },
 }
