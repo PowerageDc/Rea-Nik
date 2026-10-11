@@ -9,6 +9,7 @@
 --   [main] Nik_MusicState_FocusHelper.lua
 --   ../_Shared/ImGuiInputCommit_common_logic.lua
 --   ../_Shared/ImGuiHostFocus_common_logic.lua
+--   ../_Shared/ImGuiConfirmModal_common_logic.lua
 --   MusicStateBridge_common_logic.lua
 --   MusicStateRowInputs_common_logic.lua
 --   MusicStateTonalidad_common_logic.lua
@@ -32,6 +33,7 @@ local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
 local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_logic.lua")
 local HostFocus = dofile(script_dir .. "../_Shared/ImGuiHostFocus_common_logic.lua")
+local Modal = dofile(script_dir .. "../_Shared/ImGuiConfirmModal_common_logic.lua")
 local RowInputs = dofile(script_dir .. "MusicStateRowInputs_common_logic.lua")
 local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
@@ -328,6 +330,7 @@ local helpers = {
   RowInputs = RowInputs,
   InputCommit = InputCommit,
   Keys = Keys,
+  Modal = Modal,
   Lyrics = Lyrics,
   LyricsSync = LyricsSync,
   LyricsEdit = LyricsEdit,

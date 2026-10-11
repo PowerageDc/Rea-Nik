@@ -12,8 +12,10 @@
 -- que el Enter que commitea un input dispare tambien Play/Pause.
 --
 -- Un binding actua solo si: la ventana tiene el foco (con ChildWindows), no
--- habia un item activo al inicio ni lo hay ahora, no hay popup abierto y la
--- tecla no fue consumida este frame (Keys.consume). Dos campos del binding
+-- habia un item activo ni un popup abierto al inicio del frame ni los hay
+-- ahora, y la tecla no fue consumida este frame (Keys.consume). La foto del
+-- popup evita que el Enter o el Esc que cierra un modal dispare tambien el
+-- atajo global: CloseCurrentPopup lo cierra en ese mismo frame. Dos campos del binding
 -- relajan los guards (ignore_item_active, ignore_popup).
 
 local M = {}
@@ -37,6 +39,8 @@ local S = {
   sigs = {},      -- sigs[scope][tecla|mods] = binding; scope '' = capa global
   defaults = { delay = 0.5, rate = 0.15 },
   focused = false,
+  popup_start = false,
+  modal = { cancel = {}, confirm = {} },  -- codigos de tecla, ver resolveModalKeys
   actions = {},
   item_active_start = false,
   tab_cur = nil,
@@ -131,12 +135,32 @@ local function register(b)
   return true
 end
 
+local MODAL_DEFAULTS = { cancel = { 'Escape' }, confirm = { 'Enter', 'KeypadEnter' } }
+
+-- Teclas de los modales: nombres de la config -> codigos de ReaImGui.
+local function resolveModalKeys(cfg_modal)
+  local out = { cancel = {}, confirm = {} }
+  for role, defaults in pairs(MODAL_DEFAULTS) do
+    local names = (cfg_modal and cfg_modal[role]) or defaults
+    for _, name in ipairs(names) do
+      local fn = reaper['ImGui_Key_' .. tostring(name)]
+      if fn then
+        out[role][#out[role] + 1] = fn()
+      else
+        err('modal.' .. role .. ': tecla desconocida "' .. tostring(name) .. '"')
+      end
+    end
+  end
+  return out
+end
+
 -- cfg: la tabla de MusicStateKeys_config.lua. actions: { nombre = funcion }
 -- para los bindings con `action`. Devuelve la cantidad de bindings cargados.
 function M.init(cfg, actions)
   S.actions = actions or {}
   S.bindings, S.by_id, S.sigs = {}, {}, {}
   S.defaults = cfg.autorepeat or S.defaults
+  S.modal = resolveModalKeys(cfg.modal)
   for _, def in ipairs(cfg.global or {}) do
     local b = buildBinding(def, S.defaults, S.actions, nil)
     if b then register(b) end
@@ -160,6 +184,7 @@ end
 function M.begin_frame(ctx)
   S.focused = reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows())
   S.item_active_start = reaper.ImGui_IsAnyItemActive(ctx)
+  S.popup_start = reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
   S.tab_prev = S.tab_cur
   S.tab_cur = nil
   S.consumed = {}
@@ -178,6 +203,19 @@ end
 -- tecla actua en el despacho de este frame. name: nombre de la config.
 function M.consume(name)
   S.consumed[name] = true
+end
+
+-- Teclas de un modal (lector para ImGuiConfirmModal.begin): devuelve
+-- cancelar, confirmar. Press nuevo, sin repeticion. Los modales no pasan por
+-- dispatch: con un popup abierto los bindings globales estan cerrados.
+function M.modal(ctx)
+  local function any(list)
+    for _, k in ipairs(list) do
+      if reaper.ImGui_IsKeyPressed(ctx, k, false) then return true end
+    end
+    return false
+  end
+  return any(S.modal.cancel), any(S.modal.confirm)
 end
 
 local function fire(b)
@@ -201,7 +239,8 @@ function M.held(ctx, id)
   if b.tab and b.tab ~= S.tab_cur then return false end
   if not S.focused or S.consumed[b.key_name] then return false end
   if not b.ignore_popup
-    and reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId()) then
+    and (S.popup_start
+      or reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())) then
     return false
   end
   if not b.ignore_item_active
@@ -213,7 +252,8 @@ function M.held(ctx, id)
 end
 
 function M.dispatch(ctx)
-  local popup = reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
+  local popup = S.popup_start
+    or reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
   local item_active = S.item_active_start or reaper.ImGui_IsAnyItemActive(ctx)
   local mods = reaper.ImGui_GetKeyMods(ctx) & MODS_ALL
   local now = reaper.time_precise()

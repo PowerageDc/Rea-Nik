@@ -205,19 +205,12 @@ local function drawAddModal(ctx, S, Ed, helpers)
   if p and p.proj ~= S.proj then
     Ed.add_pending, p = nil, nil
   end
-  if p and p.open then
-    reaper.ImGui_OpenPopup(ctx, 'Agregar linea###lyrics_add_confirm')
-    p.open = false
-  end
-  if reaper.ImGui_BeginPopupModal(ctx, 'Agregar linea###lyrics_add_confirm', nil,
-      reaper.ImGui_WindowFlags_AlwaysAutoResize()) then
+  local visible, esc, enter, stale = helpers.Modal.begin(ctx,
+    'Agregar linea###lyrics_add_confirm', p, helpers.Keys.modal)
+  if visible then
     if not p then
       reaper.ImGui_CloseCurrentPopup(ctx)
     else
-      local esc = p.armed and reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Escape(), false)
-      local enter = p.armed and (reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter(), false)
-        or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter(), false))
-      p.armed = true
       local pv = p.preview
       local lines = #pv.rows + pv.more
       if p.kind == 'confirm_line' then
@@ -279,7 +272,7 @@ local function drawAddModal(ctx, S, Ed, helpers)
       end
     end
     reaper.ImGui_EndPopup(ctx)
-  elseif p and not p.open then
+  elseif stale then
     Ed.add_pending = nil
   end
 end

@@ -22,6 +22,9 @@ return {
   -- cada rate segundos. El piso real es el frame del defer (~30 ms).
   autorepeat = { delay = 0.5, rate = 0.15 },
 
+  -- Teclas de los modales (Keys.modal): cancelar y confirmar.
+  modal = { cancel = { 'Escape' }, confirm = { 'Enter', 'KeypadEnter' } },
+
   global = {
     { id = 'transport.playstop',   key = 'Space',      cmd = 40044 },
     { id = 'transport.playpause',  key = 'Enter',      cmd = 40073 },
