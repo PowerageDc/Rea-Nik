@@ -231,6 +231,39 @@ function M.consume(name)
   S.consumed[name] = true
 end
 
+local INPUT_DEFAULTS = { on_enter = 'commit', keep_focus = false }
+
+-- InputText con perfil de teclas (musicstate_keys.md 9.4). Devuelve
+-- changed, value, commit. profile (todo opcional):
+--   on_enter   = 'commit' | 'none'   commit: true si Enter cierra una edicion
+--   keep_focus = false | 'when_empty' | 'always'   devolver el foco al input
+--                tras Enter (vacio, o siempre)
+function M.input(ctx, label, value, profile)
+  local p = profile or {}
+  local on_enter = p.on_enter or INPUT_DEFAULTS.on_enter
+  local keep = p.keep_focus
+  if keep == nil then keep = INPUT_DEFAULTS.keep_focus end
+
+  local changed, new_value = reaper.ImGui_InputText(ctx, label, value)
+
+  -- Enter sin repeat para el commit; con repeat para el refoco: con la tecla
+  -- mantenida el sistema repite y ImGui desactiva el input en cada repeticion.
+  local enter_new = reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter(), false)
+    or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter(), false)
+  local enter_rep = enter_new
+    or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter(), true)
+    or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter(), true)
+  local ended = enter_rep and reaper.ImGui_IsItemDeactivated(ctx)
+  local commit = on_enter == 'commit' and enter_new
+    and reaper.ImGui_IsItemDeactivatedAfterEdit(ctx)
+
+  if commit or ended then M.consume('Enter') end
+  if ended and (keep == 'always' or (keep == 'when_empty' and new_value == '')) then
+    reaper.ImGui_SetKeyboardFocusHere(ctx, -1)
+  end
+  return changed, new_value, commit and true or false
+end
+
 -- Teclas de un modal (lector para ImGuiConfirmModal.begin): devuelve
 -- cancelar, confirmar. Press nuevo, sin repeticion. Los modales no pasan por
 -- dispatch: con un popup abierto los bindings globales estan cerrados.

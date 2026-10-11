@@ -4,8 +4,7 @@
 
 local M = {}
 
--- false | 'when_empty' | 'always' (perfil previsto en musicstate_keys.md 9.4)
-local KEEP_FOCUS = 'always'
+local ROLE_INPUT = { on_enter = 'commit', keep_focus = 'always' }
 
 function M.draw(ctx, H, helpers)
   reaper.ImGui_Text(ctx, 'Roles configurados para este proyecto:')
@@ -26,17 +25,8 @@ function M.draw(ctx, H, helpers)
 
   reaper.ImGui_Spacing(ctx)
   reaper.ImGui_Separator(ctx)
-  local changed
-  changed, H.new_role_buf = reaper.ImGui_InputText(ctx, 'Nuevo rol', H.new_role_buf)
-  local enter_commit, enter_key = helpers.InputCommit.resolveEnterCommit(ctx)
-  local enter_rep = reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter(), true)
-    or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter(), true)
-  local enter_ended = enter_rep and reaper.ImGui_IsItemDeactivated(ctx)
-  if enter_commit or enter_ended then helpers.Keys.consume('Enter') end
-  if enter_ended and (KEEP_FOCUS == 'always'
-      or (KEEP_FOCUS == 'when_empty' and H.new_role_buf == '')) then
-    reaper.ImGui_SetKeyboardFocusHere(ctx, -1)
-  end
+  local _, new_buf, enter_commit = helpers.Keys.input(ctx, 'Nuevo rol', H.new_role_buf, ROLE_INPUT)
+  H.new_role_buf = new_buf
 
   reaper.ImGui_SameLine(ctx)
   local add_clicked = reaper.ImGui_Button(ctx, 'Agregar', 80, 0)
