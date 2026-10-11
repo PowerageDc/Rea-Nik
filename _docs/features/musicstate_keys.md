@@ -115,6 +115,10 @@ Se validan al registrar y se reportan por consola (`[MusicStateKeys]`):
   **misma tab**: se ignora la segunda;
 - una tecla de tab que pisa una global: error y se ignora la de tab, salvo
   `override = true`, que suprime la global solo mientras esa tab está activa.
+  Si la `fn` de ese binding devuelve `false` ("no la usé"), el despacho
+  ejecuta la global suprimida (el binding de tab guarda la referencia en
+  `overrides`). Solo un `false` explícito, solo con `override`; una `fn` que no
+  devuelve nada cuenta como usada.
 
 Un `cmd` con nombre que empieza con `_RS` (ID de un script) avisa pero carga:
 cambia entre PCs (ver `00_CONTEXTO_GENERAL.md`, Command ID) y el config se

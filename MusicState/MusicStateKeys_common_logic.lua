@@ -143,6 +143,7 @@ local function register(b)
       end
       g.overridden_by = g.overridden_by or {}
       g.overridden_by[b.tab] = true
+      b.overrides = g
     end
   end
   S.sigs[scope][sig] = b
@@ -190,6 +191,7 @@ end
 -- Bindings propios de una tab (llamar despues de init). defs: los mismos
 -- campos que la config, mas fn (funcion) en los press, kind = 'hold' para los
 -- que se consultan con Keys.held y override = true para pisar una global.
+-- Con override, si fn devuelve false (no la use) corre la global pisada.
 -- Devuelve la cantidad dada de alta.
 function M.add_tab(tab, defs)
   local n = 0
@@ -237,13 +239,21 @@ function M.modal(ctx)
   return any(S.modal.cancel), any(S.modal.confirm)
 end
 
+-- Devuelve lo que devuelve fn. Un binding de tab con override cuya fn da
+-- false dice "no la use": el despacho cae a la global que suprimia.
 local function fire(b)
   if b.fn then
-    b.fn(b)
+    return b.fn(b)
   elseif b.cmd then
     reaper.Main_OnCommand(b.cmd, 0)
   else
     S.actions[b.action](b)
+  end
+end
+
+local function fireWithFallback(b)
+  if fire(b) == false and b.overrides then
+    fire(b.overrides)
   end
 end
 
@@ -297,10 +307,10 @@ function M.dispatch(ctx)
       -- repeticion se apaga y solo un press nuevo con todo abierto la prende.
       b.rep = nil
     elseif reaper.ImGui_IsKeyPressed(ctx, b.key, false) then
-      fire(b)
+      fireWithFallback(b)
       b.rep = b.rep_cfg and { next = now + b.rep_cfg.delay } or nil
     elseif b.rep and now >= b.rep.next then
-      fire(b)
+      fireWithFallback(b)
       local nxt = b.rep.next + b.rep_cfg.rate
       b.rep.next = (nxt > now) and nxt or (now + b.rep_cfg.rate)
     end
