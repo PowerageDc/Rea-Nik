@@ -10,6 +10,7 @@
 --   ../_Shared/ImGuiInputCommit_common_logic.lua
 --   ../_Shared/ImGuiHostFocus_common_logic.lua
 --   ../_Shared/ImGuiConfirmModal_common_logic.lua
+--   ../_Shared/ImGuiKeyCombo_common_logic.lua
 --   MusicStateBridge_common_logic.lua
 --   MusicStateRowInputs_common_logic.lua
 --   MusicStateTonalidad_common_logic.lua
@@ -34,6 +35,7 @@ local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
 local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_logic.lua")
 local HostFocus = dofile(script_dir .. "../_Shared/ImGuiHostFocus_common_logic.lua")
 local Modal = dofile(script_dir .. "../_Shared/ImGuiConfirmModal_common_logic.lua")
+local KeyCombo = dofile(script_dir .. "../_Shared/ImGuiKeyCombo_common_logic.lua")
 local RowInputs = dofile(script_dir .. "MusicStateRowInputs_common_logic.lua")
 local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
@@ -334,6 +336,7 @@ local helpers = {
   InputCommit = InputCommit,
   Keys = Keys,
   Modal = Modal,
+  KeyCombo = KeyCombo,
   Lyrics = Lyrics,
   LyricsSync = LyricsSync,
   LyricsEdit = LyricsEdit,

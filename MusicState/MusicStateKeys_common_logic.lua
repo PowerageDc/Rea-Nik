@@ -40,6 +40,7 @@ local S = {
   defaults = { delay = 0.5, rate = 0.15 },
   focused = false,
   popup_start = false,
+  popup_prev = false,  -- popup abierto al FINAL del frame anterior
   modal = { cancel = {}, confirm = {} },  -- codigos de tecla, ver resolveModalKeys
   actions = {},
   item_active_start = false,
@@ -205,7 +206,11 @@ end
 function M.begin_frame(ctx)
   S.focused = reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows())
   S.item_active_start = reaper.ImGui_IsAnyItemActive(ctx)
-  S.popup_start = reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
+  -- Un combo nativo se cierra con Esc/Enter dentro de NewFrame, antes de este
+  -- punto: IsPopupOpen ya da false. El estado del final del frame anterior
+  -- (S.popup_prev, lo guarda dispatch) cubre ese caso.
+  S.popup_start = S.popup_prev
+    or reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
   S.tab_prev = S.tab_cur
   S.tab_cur = nil
   S.consumed = {}
@@ -281,8 +286,11 @@ function M.held(ctx, id)
 end
 
 function M.dispatch(ctx)
-  local popup = S.popup_start
-    or reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
+  -- Estado VIVO (no `popup`, que incluye la foto del inicio y se
+  -- retroalimentaria): es lo que el proximo begin_frame necesita.
+  local popup_live = reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId())
+  S.popup_prev = popup_live
+  local popup = S.popup_start or popup_live
   local item_active = S.item_active_start or reaper.ImGui_IsAnyItemActive(ctx)
   local mods = reaper.ImGui_GetKeyMods(ctx) & MODS_ALL
   local now = reaper.time_precise()

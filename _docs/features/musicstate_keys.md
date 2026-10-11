@@ -63,6 +63,16 @@ confirma un modal (o el Esc que lo cancela) llegaba al `dispatch` con
 `IsPopupOpen` en `false` y reproducía o limpiaba la selección de tiempo.
 Bug real, confirmado en el modal de alta de Lyrics.
 
+**Popups que ImGui cierra solo.** Un combo nativo se cierra con Esc o Enter
+dentro de `NewFrame`, antes de `begin_frame`: la foto del inicio ya lo ve
+cerrado y el Esc o el Enter llegaba al `dispatch` con todos los guards
+abiertos (limpiaba la selección de tiempo o reproducía). `dispatch` guarda el
+estado **vivo** de los popups al final del frame (`popup_prev`) y
+`begin_frame` lo suma a `popup_start`: un popup abierto al terminar el frame
+anterior cuenta como abierto en este. Se guarda el estado vivo y no
+`popup`, que ya incluye la foto del inicio y nunca se apagaría. Costo: tras
+cerrarse un popup los atajos quedan cerrados un frame más.
+
 `ignore_item_active` e `ignore_popup` relajan estos guards por binding (F4
 los usa los dos: una tecla de función no se tipea).
 
@@ -238,6 +248,9 @@ Medidos con las mismas condiciones del Helper (`CreateContext(…, 0)` y
 - Combo nativo con el popup abierto: el contador de popups sube al apretar Esc
   mientras se mantiene el clic sobre un ítem. `ImGui_Combo` no permite saber
   qué ítem está resaltado ni interceptar teclas dentro del popup (§9, Paso 5).
+- **El combo nativo se cierra en `NewFrame`.** Con Esc (o Enter sobre un ítem)
+  el popup ya está cerrado cuando corre `begin_frame`: medido, Esc con el combo
+  abierto llegaba con `popup_start=false`. Se resolvió con `popup_prev` (§3).
 
 El probe vive en `Tests-Debug/Nik_Test_KeysFocusProbe.lua` y
 `Nik_Test_KeysFocusRequest.lua`.
@@ -298,7 +311,26 @@ Reemplazar `ImGui_Combo` por `BeginCombo` + `Selectable`, con la lista propia
 para saber el ítem resaltado: letras A–G saltan al ítem (repetir la letra
 cicla entre A, A#, Ab…), ↑/↓ mueven el resaltado, Enter confirma, Esc cierra
 sin seleccionar. Wrapper genérico en `_Shared/`, reutilizable por otros
-dropdowns. Con el popup abierto los atajos globales ya no actúan (§3).
+dropdowns. Con el popup abierto los atajos globales no actúan, ni siquiera en
+el frame en que el popup se cierra solo (`popup_prev`, §3).
+
+**Hecho:** `_Shared/ImGuiKeyCombo_common_logic.lua`, usado por Tonalidad
+(tónica y modo). ImGui sigue siendo dueño de flechas, Enter y Esc (el popup no
+hereda el `NoNav` de la raíz). El módulo suma las letras con ciclo
+(`SetKeyboardFocusHere` mueve el foco real; la letra inicial sale de los
+ítems) y, como el foco por teclado no se dibuja ni activa con Enter tras una
+letra, dibuja el resaltado propio y confirma con Enter solo si el último
+gesto fue una letra. Un click selecciona; Enter no actúa sobre el hover.
+
+**Bugs conocidos, sin corregir (todos en `updateMouseGesture`):**
+
+- Cualquier delta del mouse, incluso fuera del popup o un temblor, apaga el
+  recuadro de foco que acaba de prender una flecha.
+- Mouse y después ↑/↓: el recuadro parpadea (la flecha lo prende y el delta
+  residual del frame siguiente lo apaga).
+- Probados sin éxito: umbral de distancia a un ancla (re-anclando en cada
+  flecha o letra) y filtro con `IsWindowHovered`. Pendiente: otra señal para
+  "el mouse tomó el control".
 
 ### 9.4 Paso 6 — Anillo de foco y perfil de teclas por componente
 
