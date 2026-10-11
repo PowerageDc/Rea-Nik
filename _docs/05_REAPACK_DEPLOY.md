@@ -73,7 +73,11 @@ listando **todos** los archivos del grupo:
 - `[main]` en los ejecutables (se registran en Action List); sin tag en
   los módulos (solo se instalan como archivo, no como acción).
 - **Ningún otro script del grupo lleva header propio** — un archivo target
-  solo puede pertenecer a un paquete.
+  solo puede pertenecer a un paquete. Vale también para un script nuevo
+  creado dentro del dominio (un one-shot): alcanza con su línea `[main]` en
+  el `@provides` del ancla. Caso real: `Nik_MusicState_FocusHelper.lua` nació
+  con header propio y, listado a la vez en el `@provides` del Helper, habría
+  dado ese mismo conflicto.
 - **Dependencia de un módulo que ya es de otro paquete:** no se lista en
   el `@provides` (conflicto de target) y ReaPack no tiene declaración de
   dependencias entre paquetes. Se documenta en el `@about` y hay que
@@ -367,6 +371,25 @@ En destino se instalan los cuatro juntos y después se corre
   del filtro en una PC de destino se pierde. Decidir si el filtro pasa a
   un archivo local aparte (estilo `config.local.js`, gitignoreado y fuera
   del `@provides`) o si se acepta reeditar tras cada update.
+- `MusicStateKeys_config.lua` (atajos de teclado del Helper, ver
+  `features/musicstate_keys.md`) va en el `@provides` de MusicState y tiene
+  el mismo problema: ReaPack lo pisa en cada update. Si un atajo se ajusta a
+  mano en una PC de destino (la repetición de ←/→, por ejemplo), se pierde;
+  la decisión de arriba aplica a los dos configs.
+- Teclas de foco del Helper en destino: `Nik_MusicState_FocusHelper.lua` es
+  `[main]` y queda en el Action List al instalar, pero **sin tecla**:
+  asignarle F4 a mano en la sección Main (y F5 al propio Helper). El foco del
+  teclado entre el Helper y REAPER necesita SWS o `js_ReaScriptAPI` en la PC
+  de destino; sin ninguna de las dos, F4 avisa una vez por consola y el
+  resto de los atajos funciona igual.
+- Deploy de los atajos de teclado del Helper: bump de `@version` del Helper
+  (publicado: 1.4) y `@provides` con `../_Shared/ImGuiHostFocus_common_logic.lua`,
+  `../_Shared/ImGuiConfirmModal_common_logic.lua`,
+  `MusicStateKeys_common_logic.lua`, `MusicStateKeys_config.lua` y
+  `[main] Nik_MusicState_FocusHelper.lua`. Los dos módulos de `_Shared/` solo
+  los consume MusicState (comprobar con `git grep` antes de deployar, ver
+  "Auditar alcance"). Sin cambios en el `.www` ni en
+  `Nik_RemoteControl_GenerateConfig.lua`.
 - `Nik_MusicState_Helper.lua` no tiene `[main] .` en su propio
   `@provides` (RemoteControl sí): hoy funciona en destino, pero si el
   Helper no aparece en el Action List tras una instalación limpia,
