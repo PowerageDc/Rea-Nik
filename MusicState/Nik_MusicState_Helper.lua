@@ -6,7 +6,9 @@
 --   [main] Nik_MusicState_PublishAll.lua
 --   [main] Nik_MusicState_PublishLyrics.lua
 --   [main] Nik_MusicState_LyricsInput.lua
+--   [main] Nik_MusicState_FocusHelper.lua
 --   ../_Shared/ImGuiInputCommit_common_logic.lua
+--   ../_Shared/ImGuiHostFocus_common_logic.lua
 --   MusicStateBridge_common_logic.lua
 --   MusicStateRowInputs_common_logic.lua
 --   MusicStateTonalidad_common_logic.lua
@@ -27,6 +29,7 @@
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
 local InputCommit = dofile(script_dir .. "../_Shared/ImGuiInputCommit_common_logic.lua")
+local HostFocus = dofile(script_dir .. "../_Shared/ImGuiHostFocus_common_logic.lua")
 local RowInputs = dofile(script_dir .. "MusicStateRowInputs_common_logic.lua")
 local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
@@ -67,6 +70,17 @@ local KEY_MEASURE_PREV = reaper.ImGui_Key_LeftArrow()
 local KEY_MEASURE_NEXT = reaper.ImGui_Key_RightArrow()
 local KEY_MARKER_PREV  = reaper.ImGui_Key_DownArrow()
 local KEY_MARKER_NEXT  = reaper.ImGui_Key_UpArrow()
+
+-- Foco ImGui <-> REAPER: la misma tecla vuelve a REAPER desde aca y, con el
+-- one-shot Nik_MusicState_FocusHelper.lua asignado a ella, trae el foco
+-- de vuelta. Provisorio: pasa a MusicStateKeys_config.lua en el Paso 3.
+local WINDOW_TITLE = 'MusicState Helper'
+local KEY_HOST_FOCUS = reaper.ImGui_Key_F4()
+local EXT_SECTION_HOST = 'NikMusicStateHelper'
+local EXT_KEY_BLOCK_REAPER = 'host_focus_block_reaper'
+local EXT_KEY_BLOCK_HELPER = 'host_focus_block_helper'
+local HOST_FOCUS_BLOCK_S = 0.8
+local HOST_FOCUS_SLIDE_S = 0.15
 
 -- Duracion de un beat en QN para el compas dado (depende del denominador,
 -- ver IMPL_MusicState.md seccion 4.2/13.3). measure es 1-indexed;
@@ -442,9 +456,16 @@ local function loop()
 
   reaper.ImGui_SetNextWindowSize(ctx, 774, 894, reaper.ImGui_Cond_FirstUseEver())
   reaper.ImGui_PushFont(ctx, font, 16)
-  local visible, open = reaper.ImGui_Begin(ctx, 'MusicState Helper', true, reaper.ImGui_WindowFlags_NoNav())
+  local visible, open = reaper.ImGui_Begin(ctx, WINDOW_TITLE, true, reaper.ImGui_WindowFlags_NoNav())
 
   if visible then
+    if reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows())
+      and reaper.ImGui_IsKeyPressed(ctx, KEY_HOST_FOCUS, false)
+      and not HostFocus.blocked(EXT_SECTION_HOST, EXT_KEY_BLOCK_HELPER, HOST_FOCUS_SLIDE_S) then
+      HostFocus.arm(EXT_SECTION_HOST, EXT_KEY_BLOCK_REAPER, HOST_FOCUS_BLOCK_S)
+      HostFocus.toReaper()
+    end
+
     local pos = nikMusicStateCaptureCursorPosition()
 
     reaper.ImGui_Text(ctx, string.format(
