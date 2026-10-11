@@ -1,7 +1,7 @@
 -- ImGuiInputCommit_common_logic.lua
--- Commit real de InputText (Enter, no deactivation por click afuera) +
--- guards de teclado global sin colision con widgets activos.
--- Ver ARQ_captura_keys_reaimgui_ruteo_reaper.md (patrones A y B).
+-- Commit real de InputText (Enter, no deactivation por click afuera).
+-- Los atajos globales los despacha MusicStateKeys_common_logic.lua.
+-- Ver ARQ_captura_keys_reaimgui_ruteo_reaper.md (patron A).
 
 local M = {}
 
@@ -13,23 +13,6 @@ function M.resolveEnterCommit(ctx)
   local enter_key = reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Enter(), false)
     or reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_KeypadEnter(), false)
   return deact_edit and enter_key, enter_key
-end
-
--- Patron B.2 + B.3 + B.4 combinado, para atajos globales.
--- consumed: true si esta tecla ya fue usada por un commit puntual este
--- frame (pasar false para teclas sin colision posible, ej. flechas).
-function M.globalKeyPressed(ctx, key, consumed)
-  if consumed then return false end
-  if reaper.ImGui_IsAnyItemActive(ctx) then return false end
-  -- Con un popup o modal abierto los atajos globales no actuan: el popup
-  -- lee sus propias teclas.
-  if reaper.ImGui_IsPopupOpen(ctx, '', reaper.ImGui_PopupFlags_AnyPopupId()) then return false end
-  -- ChildWindows: una tabla con TableFlags_ScrollY crea una ventana hija
-  -- interna para su region de scroll -- sin este flag, IsWindowFocused()
-  -- en la ventana raiz da false apenas el foco cae ahi adentro, rompiendo
-  -- los atajos globales (ver sesion UX Armonia, sticky table).
-  if not reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows()) then return false end
-  return reaper.ImGui_IsKeyPressed(ctx, key, false)
 end
 
 return M

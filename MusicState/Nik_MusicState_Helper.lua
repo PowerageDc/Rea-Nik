@@ -461,6 +461,7 @@ local function loop()
   if current_proj ~= H.last_proj then
     nikMusicStateLoadFromProjExtState(current_proj)
     H.last_proj = current_proj
+    H._armonia_paste_pending = nil
     H.save_status = 'Proyecto activo cambio -- datos recargados.'
   end
 

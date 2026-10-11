@@ -176,8 +176,14 @@ shell lo llama una vez después de `Keys.init`).
   llamador cierra con `CloseCurrentPopup` y termina con `EndPopup` solo si
   `visible`.
 
-Hoy lo usa el modal de alta de la tab Lyrics. Con un popup abierto ningún
-atajo global ni hold actúa (guards de la §3).
+Lo usan el modal de alta de la tab Lyrics y el de colisión de pegado de
+Armonía. En este último **Enter sobrescribe** y Esc cancela (decisión del
+usuario: es lo que pidió al pegar); la acción se marca en los botones
+(`Sobrescribir [Enter]`, `Cancelar [Esc]`) y vale la regla del primer frame
+sin teclas. Un botón activado en el mismo frame (flechas + Enter) manda sobre
+la tecla, y con Esc y Enter juntos gana cancelar. Un cambio de proyecto
+descarta el pendiente. Con un popup abierto ningún atajo global ni hold actúa
+(guards de la §3).
 
 ## 6. Foco del teclado entre el Helper y REAPER
 
@@ -259,19 +265,17 @@ Regresión del módulo, todo debe pasar:
 10. Colisión (prueba temporal): una tecla de tab igual a una global avisa por
     consola; con `override = true` la tab gana y la global sigue en las demás.
 11. `cmd = '_SWS_NOEXISTE'` avisa que no existe; un `_RS…` avisa pero carga.
+12. Modal de pegado de Armonía (colisión): Enter sobrescribe y pega, Esc
+    cancela, ninguno reproduce ni limpia la selección de tiempo; con el foco
+    en Cancelar (flechas) Enter cancela; un cambio de proyecto con el modal
+    abierto lo cierra sin pegar; sin colisión pega directo.
 
 ## 9. Diseño acordado, sin implementar
 
-### 9.1 Paso 4b-2 — Armonía adopta el helper de modal
+### 9.1 Paso 4b-2 — Hecho
 
-El modal de colisión de pegado hoy no lee Esc ni Enter (con `NoNav` Esc no lo
-cierra) y abre el popup en el mismo clic, sin `p.open`. Pasa a usar
-`Modal.begin`: pendiente con `open`/`armed`, Esc cancela, **Enter sobrescribe**
-(decisión del usuario: es lo que pidió al pegar). Excepción deliberada a la
-regla de `08_REAIMGUI_PATTERNS.md` §6 ("la acción por defecto es la no
-destructiva"); se marca en el botón (`Sobrescribir [Enter]`) y vale la regla
-del primer frame sin teclas. Una vez migrado, `InputCommit.globalKeyPressed`
-queda sin uso y se puede borrar. Cues y otras tabs consumen el mismo helper.
+El modal de pegado de Armonía usa `Modal.begin` (ver §5) y
+`InputCommit.globalKeyPressed` se eliminó. Cues consumirá el mismo helper.
 
 ### 9.2 Paso 4c — Esc por tab en Lyrics (primer caso de override)
 
@@ -371,7 +375,7 @@ Play/Pause.
 | Pieza | Estado |
 |---|---|
 | Despacho central, repetición, validación de colisiones | Hecho, sin dependencia de Lyrics |
-| Helper de modal | Hecho; Lyrics lo usa, Armonía en 4b-2, Cues después |
+| Helper de modal | Hecho; Lyrics y Armonía lo usan, Cues después |
 | Cache con recarga por `GetProjectStateChangeCount` / cambio de proyecto | Candidato (cambia la fuente de datos) |
 | Lista con fila vigente (play vs. edit cursor), highlight y auto-scroll | Candidato; Cues probablemente cambie la regla de seguimiento |
 | Selección por clave `{time}` en vez de índice | Candidato, patrón general |

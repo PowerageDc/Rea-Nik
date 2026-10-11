@@ -421,36 +421,45 @@ function M.draw(ctx, H, helpers)
       end
       local collisions = findPositionCollisions(H, candidates)
       if #collisions > 0 then
-        H._armonia_paste_pending = { candidates = candidates, collisions = collisions }
-        reaper.ImGui_OpenPopup(ctx, 'armonia_paste_conflict')
+        H._armonia_paste_pending = { candidates = candidates, collisions = collisions, open = true }
       else
         applyPaste(H, helpers, candidates, {})
       end
     end
   end
 
-  -- Firma de BeginPopupModal (p_open opcional, flags) puede variar
-  -- levemente segun version de ReaImGui -- mismo gotcha ya anotado para
-  -- BeginChild en el WIP, confirmar contra la instalacion real. Igual que
-  -- BeginTable (no como BeginChild): EndPopup solo se llama si
-  -- BeginPopupModal devolvio true.
-  if reaper.ImGui_BeginPopupModal(ctx, 'armonia_paste_conflict', nil, reaper.ImGui_WindowFlags_AlwaysAutoResize()) then
-    local pending = H._armonia_paste_pending
-    local n = pending and #pending.collisions or 0
-    reaper.ImGui_Text(ctx, string.format('Hay %d fila(s) existentes en la posicion de destino.', n))
-    reaper.ImGui_Text(ctx, 'Sobrescribir las reemplaza puntualmente; Cancelar no pega nada.')
-    reaper.ImGui_Spacing(ctx)
-    if reaper.ImGui_Button(ctx, 'Sobrescribir y pegar', 160, 0) then
-      applyPaste(H, helpers, pending.candidates, pending.collisions)
-      H._armonia_paste_pending = nil
-      reaper.ImGui_CloseCurrentPopup(ctx)
-    end
-    reaper.ImGui_SameLine(ctx)
-    if reaper.ImGui_Button(ctx, 'Cancelar', 100, 0) then
-      H._armonia_paste_pending = nil
-      reaper.ImGui_CloseCurrentPopup(ctx)
+  -- Modal de colision de pegado: ciclo de vida en ImGuiConfirmModal (open,
+  -- armed, Esc/Enter via Keys.modal). Enter SOBRESCRIBE (decision del
+  -- usuario, excepcion a la regla de 08_REAIMGUI_PATTERNS.md seccion 6) y
+  -- se marca en el boton. EndPopup solo si visible.
+  local pending = H._armonia_paste_pending
+  local visible, cancel, confirm, stale = helpers.Modal.begin(
+    ctx, 'Conflicto al pegar###armonia_paste_conflict', pending, helpers.Keys.modal)
+  if visible then
+    if not pending then
+      reaper.ImGui_CloseCurrentPopup(ctx)  -- pendiente descartado (cambio de proyecto)
+    else
+      reaper.ImGui_Text(ctx, string.format('Hay %d fila(s) existentes en la posicion de destino.', #pending.collisions))
+      reaper.ImGui_Text(ctx, 'Sobrescribir las reemplaza puntualmente; Cancelar no pega nada.')
+      reaper.ImGui_Spacing(ctx)
+      local overwrite_clicked = reaper.ImGui_Button(ctx, 'Sobrescribir [Enter]', 160, 0)
+      reaper.ImGui_SameLine(ctx)
+      local cancel_clicked = reaper.ImGui_Button(ctx, 'Cancelar [Esc]', 100, 0)
+      -- Un boton activado este frame (tambien por flechas + Enter) manda
+      -- sobre la tecla.
+      local do_overwrite = overwrite_clicked or (not cancel_clicked and confirm)
+      local do_cancel = cancel_clicked or (not overwrite_clicked and cancel)
+      if do_overwrite and not do_cancel then
+        applyPaste(H, helpers, pending.candidates, pending.collisions)
+      end
+      if do_overwrite or do_cancel then
+        H._armonia_paste_pending = nil
+        reaper.ImGui_CloseCurrentPopup(ctx)
+      end
     end
     reaper.ImGui_EndPopup(ctx)
+  elseif stale then
+    H._armonia_paste_pending = nil
   end
 end
 

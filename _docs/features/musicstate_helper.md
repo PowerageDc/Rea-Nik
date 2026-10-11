@@ -181,7 +181,8 @@ input, sin auto-normalización/rollover al compás siguiente.
   delta_qn)` reconstruye cada fila candidata (cae en rango válido sin
   clamp, por ser derivación directa de un tiempo real). Con colisión
   exacta contra filas existentes, un modal ofrece sobrescribir solo las
-  filas puntuales colisionadas o cancelar todo el pegado.
+  filas puntuales colisionadas (Enter) o cancelar todo el pegado (Esc); ver
+  `musicstate_keys.md` §5.
 
 ## 7. Glitch conocido, sin resolver
 

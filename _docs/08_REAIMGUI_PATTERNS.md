@@ -219,9 +219,9 @@ uno inline por fila.
 ## 6. Modales de confirmación y teclas con un popup abierto
 
 Primer caso: el alta de línea de la tab Lyrics del MusicState Helper
-(`features/musicstate_lyrics.md` §8.6). Complementa al modal de colisión de
-pegado de Armonía, que ya tiene el esqueleto (`OpenPopup`,
-`BeginPopupModal`, `EndPopup` solo si devolvió `true`).
+(`features/musicstate_lyrics.md` §8.6). El modal de colisión de pegado de
+Armonía comparte el mismo ciclo de vida (`ImGuiConfirmModal`: `OpenPopup`
+una sola vez, `BeginPopupModal`, `EndPopup` solo si devolvió `true`).
 
 - **Estado pendiente, no contexto.** Al hacer click se guardan los datos de
   entrada (posición, texto) y una vista previa congelada de lo que se va a
@@ -247,12 +247,16 @@ pegado de Armonía, que ya tiene el esqueleto (`OpenPopup`,
   botones**, y solo actúa si el pendiente sigue siendo el mismo: si un
   botón se activó ese frame (flechas más Enter), manda ese. La acción por
   defecto es la no destructiva cuando hay varios botones (Cancelar), y el
-  modal muestra la ayuda de teclas.
+  modal muestra la ayuda de teclas. Excepción deliberada: el modal de pegado
+  de Armonía confirma con Enter la acción destructiva (sobrescribir), que es
+  lo que el usuario pidió al pegar; se marca en el botón (`[Enter]`).
 - **Primer frame y auto-repeat.** Esc y Enter se ignoran el primer frame
   del modal (flag `armed` en el pendiente) y se leen con `repeat = false`:
   el Enter que abre el modal desde un campo no tiene que confirmarlo.
-- **Con un popup abierto, ningún atajo global actúa.** Los guards de
-  `globalKeyPressed` (ningún item activo, ventana con foco incluyendo
+- **Con un popup abierto, ningún atajo global actúa.** Los guards del
+  despacho de teclas (antes `globalKeyPressed`, ya eliminada; hoy
+  `Keys.dispatch`, ver `musicstate_keys.md` §3: ningún item activo, ventana
+  con foco incluyendo
   `ChildWindows`) no detectan el modal: un popup cuenta como hijo de la
   raíz y sus botones no están activos, así que Espacio, Enter y las flechas
   seguían llegando a REAPER. Se agrega
