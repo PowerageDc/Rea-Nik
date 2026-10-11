@@ -17,6 +17,7 @@ local SCRIPTS = {
   { key = "preMarkerSeek",               file = "Nik_Markers_SeekRelative.lua" },
   { key = "musicStatePublishAll",        file = "Nik_MusicState_PublishAll.lua", dir = "../MusicState/" },
   { key = "musicStatePublishLyrics",     file = "Nik_MusicState_PublishLyrics.lua", dir = "../MusicState/" },
+  { key = "monitorMixPublish",           file = "Nik_MonitorMix_Publish.lua", dir = "../MonitorMix/" },
 }
 
 local lines = {
