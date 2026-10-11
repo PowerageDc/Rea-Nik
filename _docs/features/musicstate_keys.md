@@ -6,9 +6,9 @@ teclas de los modales y paso del foco del teclado entre el Helper y REAPER.
 Es solo del panel nativo ReaImGui; el prompter web tiene su propio manejo
 (ver `musicstate_instrumentista.md`).
 
-Las §1 a §8 describen **cómo está hecho hoy**. La §9 recoge el diseño ya
-acordado que todavía no está implementado, para retomarlo sin repetir la
-discusión.
+Las §1 a §8 describen **cómo está hecho hoy**. La §9 recoge los pasos del
+refactor: los hechos (con sus bugs conocidos) y el diseño ya acordado de los
+pendientes, para retomarlos sin repetir la discusión.
 
 ## 1. Archivos
 
@@ -288,7 +288,7 @@ Regresión del módulo, todo debe pasar:
     en Cancelar (flechas) Enter cancela; un cambio de proyecto con el modal
     abierto lo cierra sin pegar; sin colisión pega directo.
 
-## 9. Diseño acordado, sin implementar
+## 9. Pasos del refactor: hechos y pendientes
 
 ### 9.1 Paso 4b-2 — Hecho
 
@@ -305,7 +305,7 @@ Segundo Esc, sin fila seleccionada: la `fn` devuelve `false` y cae a la global
 (40020). El mecanismo sirve para cualquier tab que quiera refinar un atajo
 global sin reimplementarlo.
 
-### 9.3 Paso 5 — Combo con teclado (Tonalidad)
+### 9.3 Paso 5 — Combo con teclado (Tonalidad): hecho, con bugs conocidos
 
 Reemplazar `ImGui_Combo` por `BeginCombo` + `Selectable`, con la lista propia
 para saber el ítem resaltado: letras A–G saltan al ítem (repetir la letra
