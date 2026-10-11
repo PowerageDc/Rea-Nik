@@ -236,11 +236,12 @@ se reemplazó por un barrido de proximidad sobre la siguiente.
     solo limpia `S.sel` cuando deja de resolverse, no el rango. Idea: en
     `refresh`, limpiar el rango solo si empieza en el tiempo de la línea
     que desapareció, para no pisar una selección armada a mano.
-11. **Atajos de teclado globales del Helper** (ReaImGui, no el prompter web;
-    diseño aparte): con el modal cerrado, `W` y `Fin` (ir al inicio o al fin
-    del proyecto) y `Esc` (limpiar la selección de tiempo). Partir del guard
-    de popup abierto de `globalKeyPressed` y `readHeld` (patrones §6), que es 
-    lo que hoy impide que actúen con un modal abierto.
+11. **Atajos de teclado globales del Helper:** resuelto, ver
+    `features/musicstate_keys.md` (despacho central `Keys`: `W`, `Fin`,
+    `Esc`, foco ImGui ↔ REAPER, undo y redo en esta tab, `B` como hold).
+    Pendiente la capa por tab de `Esc` en Lyrics (primer `Esc` deselecciona
+    la fila, segundo limpia la selección de tiempo,
+    `musicstate_keys.md` §9.2).
 
 ## 7. Archivos
 
@@ -493,7 +494,8 @@ Hecho: selección y pares, texto, borrado, posición y agregar línea.
   si además hay una línea en `t1`, es el mismo modal de tres botones.
   Conservar no inserta el `·` de `t2` (§8.2). El título del modal es su ID:
   se usa `'Agregar linea###lyrics_add_confirm'` para que no se vea el
-  identificador. Teclas: Esc cancela, leído a mano (el panel tiene `NoNav`
+  identificador. Teclas: Esc cancela, leído por el helper de modal (`Modal.begin` 
+  con `Keys.modal`, ver `musicstate_keys.md` §5; el panel tiene `NoNav`
   y ImGui cierra los popups con Esc por la navegación); Enter ejecuta
   Reemplazar en el modal de un botón y Cancelar en el de tres (un Enter
   reflejo no borra varias líneas), evaluado después de los botones: si uno

@@ -106,7 +106,9 @@ render, pero conviven en el mismo proyecto/entorno):
   `features/musicstate_data_model.md`. UI de instrumentista: ver
   `features/musicstate_instrumentista.md`. UI de cantante (letra, en
   construcción): ver `features/musicstate_cantante.md` (UI) y
-  `features/musicstate_lyrics.md` (contrato de datos y estado).
+  `features/musicstate_lyrics.md` (contrato de datos y estado). Atajos de
+  teclado del Helper (despacho central, foco ImGui ↔ REAPER, modales): ver
+  `features/musicstate_keys.md`.
 - **Monitor Mix (monitoreo por músico)**: mezcla personal del baterista
   (a futuro, de otros músicos) por un bus con `B_MAINSEND=0` hacia el par
   de salidas secundario de la placa, con volumen y mute a nivel de send.

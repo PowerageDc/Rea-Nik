@@ -265,3 +265,39 @@ pegado de Armonía, que ya tiene el esqueleto (`OpenPopup`,
   editar un valor existente): tras cancelar un modal el texto sigue ahí sin
   editarse y el commit no dispararía. Tab y click afuera no agregan porque
   exigen Enter.
+
+## 7. Teclado entre ventanas: foco, despacho al final del frame y Tab con `NoNav`
+
+Hallazgos genéricos del despacho central del MusicState Helper
+(`features/musicstate_keys.md`), medidos con el contexto en `config_flags=0`
+y `WindowFlags_NoNav` en la raíz.
+
+- **`ImGui_SetNextWindowFocus` no lleva el teclado a una ventana flotante
+  desde REAPER.** `IsWindowFocused` da `true` y la ventana se ve enfocada,
+  pero el teclado no le llega hasta hacer clic. Sirve buscar la ventana por su
+  título exacto (el de `ImGui_Begin`) y darle el foco del sistema:
+  `BR_Win32_FindWindowEx` + `BR_Win32_SetFocus` (SWS) o `JS_Window_Find` +
+  `JS_Window_SetFocus`. En el otro sentido,
+  `BR_Win32_SetFocus(BR_Win32_GetMainHwnd())`.
+- **Auto-repeat de la tecla que mueve el foco.** Si la tecla sigue apretada
+  tras el cambio, Windows manda repeticiones a la ventana que recibe el foco y
+  ImGui las lee como un press nuevo: la devuelve de inmediato. Una ventana de
+  ~0,8 s armada por quien cambió el foco, consultada por el otro lado,
+  resuelve el rebote; medir la ventana desde "cuándo ganó el foco" no alcanza
+  (el delay de repetición ronda los 0,5 s).
+- **Tab se lee aunque la navegación esté apagada.** `NoNav` bloquea la
+  navegación de ImGui (Tab no mueve el foco entre inputs), no la lectura de
+  `IsKeyPressed(Tab)`, también con un input activo. Un anillo de foco propio
+  con `SetKeyboardFocusHere` (offset `-1` apunta al widget anterior) mueve el
+  foco entre inputs, incluso dentro de un `BeginChild` con scroll.
+- **Atajos globales al final del frame, con fotos del inicio.** Despachar
+  después de dibujar ve lo ocurrido en el frame, pero obliga a tomar al inicio
+  la foto de `IsAnyItemActive` **y de `IsPopupOpen`**: el Enter que commitea
+  un input desactiva el item en ese frame, y el Enter o el Esc que cierra un
+  modal lo cierra en ese mismo frame (`CloseCurrentPopup`), así que sin la
+  foto el atajo global dispara también (§5, §6).
+- **Modificadores exactos.** Comparar `GetKeyMods` con exactitud evita que
+  Shift+→ o Ctrl+W disparen el atajo de la tecla sola.
+- **Un hold se evalúa en el draw.** Una tecla de "mantener" (§4) leída en el
+  despacho del final del frame pierde un frame de latencia (~30 ms) respecto
+  de leerla durante el draw de la tab.

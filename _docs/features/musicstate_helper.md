@@ -17,8 +17,8 @@ El contenedor (`Nik_MusicState_Helper.lua`) quedó reducido a: contexto y
 fuente ImGui, detección de cambio de proyecto, carga/guardado
 `ProjExtState ↔ H` (`musicstate_bridge.md` §3-4), conversiones de
 coordenadas (§2),
-captura de cursor, atajos de teclado globales (Space, Enter, flechas para
-compás/marker anterior-siguiente) y el `TabBar` que delega a cada módulo.
+captura de cursor, el ciclo de despacho de teclas (`Keys`: atajos globales y
+por tab, ver `musicstate_keys.md`) y el `TabBar` que delega a cada módulo.
 Cada tab vive en su propio archivo, todos en `MusicState/` (un solo
 dominio consumidor, ver `01_CONVENCIONES.md`):
 
@@ -38,6 +38,17 @@ dominio consumidor, ver `01_CONVENCIONES.md`):
   Tampoco es una tab propia: la tab lo invoca vía
   `helpers.LyricsEdit.draw(ctx, S, H, helpers)`, con `S = H._lyrics`, y su
   estado vive en `S.edit`.
+- `MusicStateKeys_common_logic.lua` y `MusicStateKeys_config.lua` (despacho
+  central de teclas y su config en datos; no son tabs, ver
+  `musicstate_keys.md`). El contenedor los carga con `dofile`, expone
+  `helpers.Keys` y llama a `Keys.begin_frame`, `Keys.set_tab` y
+  `Keys.dispatch`.
+- `Nik_MusicState_FocusHelper.lua`: one-shot para REAPER que lleva el foco del
+  teclado al Helper (`musicstate_keys.md` §6).
+
+Los módulos genéricos de ReaImGui que consume el contenedor viven en
+`_Shared/` (ver `01_CONVENCIONES.md`): `ImGuiInputCommit`, `ImGuiHostFocus`
+(foco ventana ↔ REAPER) e `ImGuiConfirmModal` (ciclo de vida de un modal).
 
 Cada uno expone `M.draw(ctx, H, helpers)`. `H` es la tabla de estado
 global, mutada in-place. `helpers` es una tabla de dependencias armada
@@ -45,8 +56,9 @@ global, mutada in-place. `helpers` es una tabla de dependencias armada
 tab): funciones de conversión (`rowToTime`, `rowToQN`, `qnToRow`,
 `getMaxBeats`), acceso a `RowInputs`/`InputCommit` (módulos compartidos,
 uno en `MusicState/`, el otro en `_Shared/` por ser genérico de ReaImGui,
-ver `01_CONVENCIONES.md`), captura de cursor y
-`getSections()`.
+ver `01_CONVENCIONES.md`), `Keys` (`Keys.consume`, `Keys.held`,
+`Keys.modal`), `Modal` (modal de confirmación de `_Shared/`), captura de
+cursor y `getSections()`.
 
 ## 2. Estado (`H`) y conversión de coordenadas
 
@@ -175,8 +187,10 @@ input, sin auto-normalización/rollover al compás siguiente.
 
 Hay un glitch preexistente de Enter en la tab Roles, confirmado que ya
 ocurría antes del refactor de modularización (no lo introdujo). Sin
-investigar todavía.
-
+investigar todavía. Reprobar tras el despacho central de teclas
+(`musicstate_keys.md`): el Enter que commitea un input ya no puede disparar
+Play/Pause. Si persiste, mirar el perfil de teclas por componente
+(`musicstate_keys.md` §9.4).
 
 ## 8. Cómo testear
 
