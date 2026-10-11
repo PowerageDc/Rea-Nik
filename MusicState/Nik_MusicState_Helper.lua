@@ -19,6 +19,8 @@
 --   MusicStateLyricsTab_common_logic.lua
 --   MusicStateLyricsSync_common_logic.lua
 --   MusicStateLyricsEdit_common_logic.lua
+--   MusicStateKeys_common_logic.lua
+--   MusicStateKeys_config.lua
 -- @about
 --   Panel nativo ReaImGui para cargar y publicar metadata musical
 --   (tonalidad, roles, armonia, cues) en ProjExtState, mas el script
@@ -39,6 +41,8 @@ local Lyrics = dofile(script_dir .. "MusicStateLyrics_common_logic.lua")
 local LyricsTab = dofile(script_dir .. "MusicStateLyricsTab_common_logic.lua")
 local LyricsSync = dofile(script_dir .. "MusicStateLyricsSync_common_logic.lua")
 local LyricsEdit = dofile(script_dir .. "MusicStateLyricsEdit_common_logic.lua")
+local Keys = dofile(script_dir .. "MusicStateKeys_common_logic.lua")
+local keys_config = dofile(script_dir .. "MusicStateKeys_config.lua")
 
 local ctx = reaper.ImGui_CreateContext('MusicState Helper', 0)    -- Context creation, config_flags=0 para desactivar Nav
 local font = reaper.ImGui_CreateFont('sans-serif', 16)
@@ -59,23 +63,9 @@ local TONICS_STR = table.concat(TONICS, '\0') .. '\0'
 local MODES = { 'major', 'minor' }
 local MODES_STR = 'major\0minor\0'
 
-local CMD_MEASURE_PREV = 41041
-local CMD_MEASURE_NEXT = 41040
-local CMD_MARKER_PREV  = 40172
-local CMD_MARKER_NEXT  = 40173
-local CMD_PLAYSTOP     = 40044
-local CMD_PLAYPAUSE    = 40073
-
-local KEY_MEASURE_PREV = reaper.ImGui_Key_LeftArrow()
-local KEY_MEASURE_NEXT = reaper.ImGui_Key_RightArrow()
-local KEY_MARKER_PREV  = reaper.ImGui_Key_DownArrow()
-local KEY_MARKER_NEXT  = reaper.ImGui_Key_UpArrow()
-
--- Foco ImGui <-> REAPER: la misma tecla vuelve a REAPER desde aca y, con el
--- one-shot Nik_MusicState_FocusHelper.lua asignado a ella, trae el foco
--- de vuelta. Provisorio: pasa a MusicStateKeys_config.lua en el Paso 3.
+-- Foco ImGui <-> REAPER: la tecla vive en MusicStateKeys_config.lua
+-- (host.focus); la accion que dispara se registra con Keys.init, mas abajo.
 local WINDOW_TITLE = 'MusicState Helper'
-local KEY_HOST_FOCUS = reaper.ImGui_Key_F4()
 local EXT_SECTION_HOST = 'NikMusicStateHelper'
 local EXT_KEY_BLOCK_REAPER = 'host_focus_block_reaper'
 local EXT_KEY_BLOCK_HELPER = 'host_focus_block_helper'
@@ -337,6 +327,7 @@ local helpers = {
   captureCursorPosition = nikMusicStateCaptureCursorPosition,
   RowInputs = RowInputs,
   InputCommit = InputCommit,
+  Keys = Keys,
   Lyrics = Lyrics,
   LyricsSync = LyricsSync,
   LyricsEdit = LyricsEdit,
@@ -353,6 +344,14 @@ local helpers = {
   -- tabla se come ese espacio y aparece un scroll exterior no deseado.
   getListFooterReserveH = function() return reaper.ImGui_GetFrameHeightWithSpacing(ctx) * 2 end,
 }
+
+Keys.init(keys_config, {
+  host_focus = function()
+    if HostFocus.blocked(EXT_SECTION_HOST, EXT_KEY_BLOCK_HELPER, HOST_FOCUS_SLIDE_S) then return end
+    HostFocus.arm(EXT_SECTION_HOST, EXT_KEY_BLOCK_REAPER, HOST_FOCUS_BLOCK_S)
+    HostFocus.toReaper()
+  end,
+})
 
 -- Arma los JSON compactos y los escribe en ProjExtState + puente a ExtState.
 local function nikMusicStateSaveAndPublish()
@@ -445,7 +444,6 @@ local function nikMusicStateSaveAndPublish()
 end
 
 local function loop()
-  H.consumed_enter = false
 
   local current_proj = reaper.EnumProjects(-1)
   if current_proj ~= H.last_proj then
@@ -459,12 +457,7 @@ local function loop()
   local visible, open = reaper.ImGui_Begin(ctx, WINDOW_TITLE, true, reaper.ImGui_WindowFlags_NoNav())
 
   if visible then
-    if reaper.ImGui_IsWindowFocused(ctx, reaper.ImGui_FocusedFlags_ChildWindows())
-      and reaper.ImGui_IsKeyPressed(ctx, KEY_HOST_FOCUS, false)
-      and not HostFocus.blocked(EXT_SECTION_HOST, EXT_KEY_BLOCK_HELPER, HOST_FOCUS_SLIDE_S) then
-      HostFocus.arm(EXT_SECTION_HOST, EXT_KEY_BLOCK_REAPER, HOST_FOCUS_BLOCK_S)
-      HostFocus.toReaper()
-    end
+    Keys.begin_frame(ctx)
 
     local pos = nikMusicStateCaptureCursorPosition()
 
@@ -476,43 +469,29 @@ local function loop()
 
     reaper.ImGui_Separator(ctx)
 
-    if InputCommit.globalKeyPressed(ctx, reaper.ImGui_Key_Space(), false) then
-      reaper.Main_OnCommand(CMD_PLAYSTOP, 0)
-    end
-    if InputCommit.globalKeyPressed(ctx, reaper.ImGui_Key_Enter(), H.consumed_enter) then
-      reaper.Main_OnCommand(CMD_PLAYPAUSE, 0)
-    end
-    if InputCommit.globalKeyPressed(ctx, KEY_MEASURE_PREV, false) then
-      reaper.Main_OnCommand(CMD_MEASURE_PREV, 0)
-    end
-    if InputCommit.globalKeyPressed(ctx, KEY_MEASURE_NEXT, false) then
-      reaper.Main_OnCommand(CMD_MEASURE_NEXT, 0)
-    end
-    if InputCommit.globalKeyPressed(ctx, KEY_MARKER_PREV, false) then
-      reaper.Main_OnCommand(CMD_MARKER_PREV, 0)
-    end
-    if InputCommit.globalKeyPressed(ctx, KEY_MARKER_NEXT, false) then
-      reaper.Main_OnCommand(CMD_MARKER_NEXT, 0)
-    end
-
     if reaper.ImGui_BeginTabBar(ctx, 'MusicStateTabs') then
       if reaper.ImGui_BeginTabItem(ctx, 'Tonalidad') then
+        Keys.set_tab('Tonalidad')
         Tonalidad.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Roles') then
+        Keys.set_tab('Roles')
         Roles.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Armonia') then
+        Keys.set_tab('Armonia')
         Armonia.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Cues') then
+        Keys.set_tab('Cues')
         Cues.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, 'Lyrics') then
+        Keys.set_tab('Lyrics')
         LyricsTab.draw(ctx, H, helpers)
         reaper.ImGui_EndTabItem(ctx)
       end
@@ -527,6 +506,8 @@ local function loop()
       reaper.ImGui_SameLine(ctx)
       reaper.ImGui_Text(ctx, H.save_status)
     end
+
+    Keys.dispatch(ctx)
 
     reaper.ImGui_End(ctx)
   end

@@ -26,7 +26,7 @@ function M.draw(ctx, H, helpers)
   local changed
   changed, H.new_role_buf = reaper.ImGui_InputText(ctx, 'Nuevo rol', H.new_role_buf)
   local enter_commit, enter_key = helpers.InputCommit.resolveEnterCommit(ctx)
-  if enter_commit then H.consumed_enter = true end
+  if enter_commit then helpers.Keys.consume('Enter') end
 
   reaper.ImGui_SameLine(ctx)
   local add_clicked = reaper.ImGui_Button(ctx, 'Agregar', 80, 0)
