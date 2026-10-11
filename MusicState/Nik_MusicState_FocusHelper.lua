@@ -1,10 +1,9 @@
--- @description Nik MusicState - Enfocar el Helper desde REAPER
--- @version 1.0
--- @author Nik
--- @about
---   One-shot para asignar a una tecla (seccion Main). Lleva el foco del
---   teclado a la ventana del Helper. La vuelta a REAPER la resuelve el
---   propio Helper con la misma tecla (ver Nik_MusicState_Helper.lua).
+-- Nik_MusicState_FocusHelper.lua
+-- One-shot para asignar a una tecla (seccion Main). Lleva el foco del
+-- teclado a la ventana del Helper. La vuelta a REAPER la resuelve el
+-- propio Helper con la misma tecla (ver Nik_MusicState_Helper.lua).
+-- Sin header de ReaPack a proposito: lo provee el metapaquete del Helper
+-- (linea [main] en su provides); un header propio daria conflicto de target.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local HostFocus = dofile(script_dir .. "../_Shared/ImGuiHostFocus_common_logic.lua")
