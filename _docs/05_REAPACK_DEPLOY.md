@@ -8,10 +8,10 @@ setup de git (`04_GIT_TOOLING.md`).
 ## Alcance: qué se deploya y qué no
 
 Solo un subconjunto del repo: hoy, `AutoColor/` (script suelto),
-`RemoteControl/` (metapaquete + `.www`, ver abajo) y `MusicState/`
-(metapaquete de scripts; el `.www` de MusicState/prompter comparte
-manifiesto con el de RemoteControl, que también cubre la UI de
-cantante, ver abajo). El resto
+`RemoteControl/` (metapaquete + `.www`, ver abajo), `MusicState/` y
+`MonitorMix/` (metapaquetes de scripts; el `.www` de MusicState/prompter
+y el de MonitorMix comparten manifiesto con el de RemoteControl, que
+también cubre la UI de cantante y la de monitor, ver abajo). El resto
 (`RenderWorkflow/`, `TempoTools/`, `MvsepImporter/`, `StemFragment/`,
 `Tests-Debug/`) es uso local: no necesita exclusión explícita, porque
 `reapack-index` solo indexa lo que tiene header de metadata — sin header,
@@ -74,6 +74,14 @@ listando **todos** los archivos del grupo:
   los módulos (solo se instalan como archivo, no como acción).
 - **Ningún otro script del grupo lleva header propio** — un archivo target
   solo puede pertenecer a un paquete.
+- **Dependencia de un módulo que ya es de otro paquete:** no se lista en
+  el `@provides` (conflicto de target) y ReaPack no tiene declaración de
+  dependencias entre paquetes. Se documenta en el `@about` y hay que
+  instalar ambos juntos. Caso real: `MonitorMix/` consume
+  `../_Shared/StemBus_common_logic.lua`, que provee el metapaquete de
+  RemoteControl — en destino se instalan juntos, y las dos carpetas
+  quedan hermanas bajo `Scripts/Rea-Nik/`, por lo que el `dofile`
+  relativo funciona igual que en dev.
 
 **Cuidado — migrar un script existente a un metapaquete:** sacarle el
 header propio tiene que ir **en el mismo commit** en que se agrega al
@@ -124,12 +132,18 @@ dominio. El manifiesto necesita **extensión `.www`** (no `.html`):
   separarlas. Caso real: `Nik_RemoteControl_WebUI.www` provee tanto
   `nsaudio_remote_control.html` (control remoto) como
   `nsaudio_prompter.html` + `nsaudio_cantante.html` +
-  `musicstate-ui/*/*.{css,js}` (MusicState / prompter y cantante) — un
-  solo `@version`, un solo bump cubre cambios en
-  cualquiera de las dos. No confundir con el metapaquete de **scripts**
-  Lua de cada dominio, que sí son anclas separadas (`Nik_RemoteState_Poll.lua`
-  para RemoteControl, `Nik_MusicState_Helper.lua` para MusicState) aunque
-  compartan este mismo `.www`.
+  `nsaudio_monitor.html` + `musicstate-ui/*/*.{css,js}` (MusicState /
+  prompter, cantante y monitor) — un solo `@version`, un solo bump cubre
+  cambios en cualquiera de ellas. No confundir con el metapaquete de
+  **scripts** Lua de cada dominio, que sí son anclas separadas
+  (`Nik_RemoteState_Poll.lua` para RemoteControl,
+  `Nik_MusicState_Helper.lua` para MusicState,
+  `Nik_MonitorMix_Publish.lua` para MonitorMix) aunque compartan este
+  mismo `.www`.
+- **Cada `.html` de la raíz de `web/` se lista a mano en el `@provides`:**
+  los patrones `musicstate-ui/*/*.{css,js}` cubren las subcarpetas, pero
+  no una página nueva en la raíz. Caso real: `nsaudio_monitor.html` faltó
+  en la primera pasada y se detectó recién con el diff del deploy.
 
 ## Mecanismo de config por PC (`config.local.js` + generador)
 
@@ -148,7 +162,8 @@ como implementación de referencia).
   `RemoteControl/`, `dir` con la ruta relativa, ej. `../MusicState/`).
   Si falta, o si el generador no se volvió a correr tras actualizar, la
   UI usa el default de dev de `config.js` y el pedido falla en silencio
-  en destino. Caso real: `musicStatePublishLyrics` (UI de cantante). El
+  en destino. Casos reales: `musicStatePublishLyrics` (UI de cantante) y
+  `monitorMixPublish` (UI de monitor, `dir = "../MonitorMix/"`). El
   guard de `nikMusicStateRequestLyrics` solo avisa si la key falta del
   todo, no si trae un ID que no existe en esa PC.
 - El HTML/JS de la interfaz debe cargar `config.local.js` **después** de
@@ -250,7 +265,11 @@ Patrón: rama temporal para toda la iteración, squash merge a `main` al
 confirmar.
 
 1. Crear rama, deployar ahí, iterar (fix → bump → rebuild → push → probar
-   en destino) las veces que haga falta.
+   en destino) las veces que haga falta. La URL de import de la rama
+   es la misma que la de `main` cambiando el segmento de rama
+   (`.../raw/<rama>/index.xml`); como el índice referencia archivos por
+   hash de commit, se descargan bien. En destino, reemplazar el repo de
+   ReaPack por esa URL (no dejar los dos importados a la vez).
 2. Al confirmar que funciona: `git checkout main`, luego
    `git merge --squash <rama>`.
 3. Sacar el `index.xml` de la rama del stage — se regenera fresco después,
@@ -258,7 +277,11 @@ confirmar.
    index.xml`.
 4. Commit único en `main` describiendo el estado final (no el camino).
 5. `reapack-index --rebuild` parado en `main`.
-6. Push, luego borrar la rama (local y remoto).
+6. Push, luego borrar la rama (local y remoto). Local con
+   `git branch -D` (mayúscula): tras un squash git no reconoce la rama
+   como mergeada y `-d` se niega. Después, en destino, volver el repo de
+   ReaPack a la URL de `main`; si las versiones son las mismas que se
+   probaron en la rama, ReaPack no reinstala nada, es lo esperado.
 
 Por qué esto no genera inconsistencia entre el commit final y las
 versiones que terminan en el índice: el número de `@version` vive en el
@@ -310,9 +333,44 @@ campo `commit` de la versión más reciente de cada paquete afectado).
    distinta en el generador de config** si el script que lo consume no
    vive en la misma carpeta que el generador (`RemoteControl/`) — no
    asumir que `script_dir .. entry.file` alcanza para todo.
+6. **El commit de referencia es por paquete.** Cada paquete se publicó
+   en un commit distinto (el `commit` de su versión en `index.xml`):
+   correr el `--name-status` contra el hash de cada uno y guiarse por el
+   diff del propio paquete. Un solo diff contra el hash más viejo marca
+   como cambiado lo que otro paquete ya publicó.
+7. **Comparar el `@version` del header contra el del índice antes de
+   bumpear.** Un header puede traer un bump ya hecho que nunca se
+   indexó. Aun así, si el archivo cambió después del commit de ese
+   bump, hay que subir otro número: `reapack-index` ata cada versión al
+   commit donde apareció, y sin bump serviría el contenido viejo en
+   silencio. Con rama temporal + squash el número extra no deja rastro.
+
+## Versiones publicadas (último deploy)
+
+Validado en PC destino y en sala vía rama temporal, luego squash a
+`main`:
+
+| Paquete | Versión | Ancla |
+|---------|---------|-------|
+| RemoteControl (scripts) | 1.9 | `Nik_RemoteState_Poll.lua` |
+| MusicState (scripts) | 1.4 | `Nik_MusicState_Helper.lua` |
+| MonitorMix (scripts, nuevo) | 1.0 | `Nik_MonitorMix_Publish.lua` |
+| Interfaz web (`.www`) | 1.8 | `web/Nik_RemoteControl_WebUI.www` |
+
+En destino se instalan los cuatro juntos y después se corre
+`Nik_RemoteControl_GenerateConfig.lua` una vez.
 
 ## Pendientes
 
+- `MonitorMix_config.lua` va en el `@provides` de MonitorMix, así que
+  ReaPack lo sobrescribe en cada actualización: cualquier edición local
+  del filtro en una PC de destino se pierde. Decidir si el filtro pasa a
+  un archivo local aparte (estilo `config.local.js`, gitignoreado y fuera
+  del `@provides`) o si se acepta reeditar tras cada update.
+- `Nik_MusicState_Helper.lua` no tiene `[main] .` en su propio
+  `@provides` (RemoteControl sí): hoy funciona en destino, pero si el
+  Helper no aparece en el Action List tras una instalación limpia,
+  agregar esa línea.
 - Alternativa a correr el generador de `config.local.js` a mano por PC
   (ver sección de mecanismo arriba).
 - Decidir si los `commandId` hardcodeados como fallback en `config.js`
