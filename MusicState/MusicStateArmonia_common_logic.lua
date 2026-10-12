@@ -315,6 +315,7 @@ function M.draw(ctx, H, helpers)
             reaper.ImGui_SetNextItemWidth(ctx, 100)
             local changed_c
             changed_c, row.chord = reaper.ImGui_InputText(ctx, '##acorde', row.chord)
+            helpers.Keys.ring_item(ctx, row, 'chord')
 
             reaper.ImGui_TableNextColumn(ctx)
             if helpers.RowInputs.drawCursorButton(ctx) then
@@ -390,6 +391,7 @@ function M.draw(ctx, H, helpers)
     }
     table.insert(H.harmony, new_row)
     resortAndFocusRow(H, helpers, new_row)
+    helpers.Keys.ring_request(new_row, 'chord')
   end
 
   reaper.ImGui_SameLine(ctx)

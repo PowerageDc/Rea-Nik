@@ -47,6 +47,8 @@ local S = {
   tab_cur = nil,
   tab_prev = nil,
   consumed = {},
+  frame = 0,
+  rings = {},     -- rings[tab] = { cur, prev, drawn, pending, cfg }
 }
 
 local function err(msg)
@@ -214,6 +216,21 @@ function M.begin_frame(ctx)
   S.tab_prev = S.tab_cur
   S.tab_cur = nil
   S.consumed = {}
+
+  -- Anillo de foco: la lista del frame anterior pasa a ser la de consulta.
+  -- Una tab que no se dibujo el frame anterior se reinicia (con su pedido).
+  S.frame = S.frame + 1
+  local tab_down = reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Key_Tab())
+  for _, r in pairs(S.rings) do
+    if not tab_down then r.rep = nil end
+    if r.drawn then
+      r.prev, r.cur = r.cur, {}
+      r.drawn = false
+    else
+      r.prev, r.cur, r.pending, r.rep = {}, {}, nil, nil
+    end
+    if r.pending and S.frame > r.pending.frame + 2 then r.pending = nil end
+  end
 end
 
 function M.set_tab(name)
@@ -262,6 +279,101 @@ function M.input(ctx, label, value, profile)
     reaper.ImGui_SetKeyboardFocusHere(ctx, -1)
   end
   return changed, new_value, commit and true or false
+end
+
+-- Anillo de foco por tab (musicstate_keys.md 9.4): cada tab lleva su propia
+-- lista de items registrados, su orden y su pedido de foco pendiente.
+local function ringFor(tab)
+  local r = S.rings[tab]
+  if not r then
+    r = { cur = {}, prev = {}, drawn = false, pending = nil, cfg = {} }
+    S.rings[tab] = r
+  end
+  return r
+end
+
+-- Lista de consulta de un anillo, con el orden propio de la tab si lo declara
+-- (cfg.order recibe una copia: puede reordenarla o filtrarla).
+local function orderedList(r, items)
+  if not r.cfg.order then return items end
+  local copy = {}
+  for i, it in ipairs(items) do copy[i] = it end
+  return r.cfg.order(copy) or items
+end
+
+-- Tab -> 1, Shift+Tab -> -1, cualquier otra combinacion -> nil.
+local function tabStep(ctx)
+  local mods = reaper.ImGui_GetKeyMods(ctx) & MODS_ALL
+  if mods == 0 then return 1 elseif mods == MODS.shift then return -1 end
+  return nil
+end
+
+-- true cuando toca disparar: el press nuevo o la repeticion, con el timer
+-- propio (delay y rate de la config de autorepeat). r.rep se apaga en
+-- begin_frame al soltar Tab, no cuando no hay item activo: entre un salto y
+-- el siguiente hay un frame sin ninguno.
+local function tabFires(ctx, r)
+  local now = reaper.time_precise()
+  if reaper.ImGui_IsKeyPressed(ctx, reaper.ImGui_Key_Tab(), false) then
+    r.rep = { next = now + S.defaults.delay }
+    return true
+  end
+  if r.rep and now >= r.rep.next and reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Key_Tab()) then
+    local nxt = r.rep.next + S.defaults.rate
+    r.rep.next = (nxt > now) and nxt or (now + S.defaults.rate)
+    return true
+  end
+  return false
+end
+
+-- cfg = { order = function(items) -> items }: reordena la lista del frame
+-- anterior (items = { {owner=, col=, meta=}, ... }, en orden de dibujado).
+-- Sin order se recorre en orden de dibujado.
+function M.ring_config(tab, cfg)
+  ringFor(tab).cfg = cfg or {}
+end
+
+-- Llamar justo DESPUES de dibujar un widget enfocable de la tab activa.
+-- owner: tabla (ej. la fila) o string que identifica al widget entre frames;
+-- col: clave dentro del owner; meta: dato libre que ve cfg.order.
+-- Tab / Shift+Tab con el widget activo dejan un pedido hacia el siguiente o
+-- el anterior; se aplica el frame SIGUIENTE, identificando el destino por
+-- owner y col (nunca por indice).
+function M.ring_item(ctx, owner, col, meta)
+  local tab = S.tab_cur
+  if not tab then return end
+  local r = ringFor(tab)
+  r.drawn = true
+  r.cur[#r.cur + 1] = { owner = owner, col = col, meta = meta }
+
+  local p = r.pending
+  if p and p.owner == owner and p.col == col and S.frame > p.frame then
+    reaper.ImGui_SetKeyboardFocusHere(ctx, -1)
+    r.pending = nil
+    return
+  end
+
+  if p or not reaper.ImGui_IsItemActive(ctx) then return end
+  local step = tabStep(ctx)
+  if not step or not tabFires(ctx, r) then return end
+
+  local list = orderedList(r, r.prev)
+  for i, it in ipairs(list) do
+    if it.owner == owner and it.col == col then
+      local t = list[i + step]
+      if t then r.pending = { owner = t.owner, col = t.col, frame = S.frame } end
+      return
+    end
+  end
+end
+
+-- Pide el foco de un widget del anillo de la tab activa (ej. el input de una
+-- fila recien agregada). Se aplica el frame siguiente, si el widget se dibuja.
+function M.ring_request(owner, col)
+  if not S.tab_cur then return end
+  local r = ringFor(S.tab_cur)
+  r.drawn = true  -- evita que el relevo descarte el pedido si la tab estaba vacia
+  r.pending = { owner = owner, col = col, frame = S.frame }
 end
 
 -- Teclas de un modal (lector para ImGuiConfirmModal.begin): devuelve
@@ -354,6 +466,20 @@ function M.dispatch(ctx)
       fireWithFallback(b)
       local nxt = b.rep.next + b.rep_cfg.rate
       b.rep.next = (nxt > now) and nxt or (now + b.rep_cfg.rate)
+    end
+  end
+
+  -- Anillo de foco: Tab / Shift+Tab sin ningun item activo entran al anillo
+  -- de la tab (primer item / ultimo). Con un item del anillo activo lo
+  -- resuelve ring_item. Mantenida, sigue recorriendo tras el delay.
+  local r = S.tab_cur and S.rings[S.tab_cur]
+  if r and not r.pending and S.focused and not tab_changed and not popup
+    and not item_active and not S.consumed.Tab then
+    local step = tabStep(ctx)
+    local list = step and orderedList(r, r.cur)
+    if list and #list > 0 and tabFires(ctx, r) then
+      local t = list[step == 1 and 1 or #list]
+      r.pending = { owner = t.owner, col = t.col, frame = S.frame }
     end
   end
 end
