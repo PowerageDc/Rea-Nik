@@ -292,11 +292,14 @@ Consecuencias de comportamiento:
 | Sin `project_key` | tal como se cargaron, aunque el delta sea distinto de 0 | `null` |
 
 Nota: la grafía de la tónica cargada (`musicstate_data_model.md` §4.2)
-y la que devuelve
-`nikMusicStateCurrentProjectKey()` con delta 0 pueden diferir cuando la
-grafía elegida no es la que las tablas prefieren (por ejemplo, `C#`
-mayor sale como `Db`).
-
+y la que devuelve `nikMusicStateCurrentProjectKey()` con delta 0 pueden
+diferir cuando la grafía publicada no es la que las tablas prefieren (por
+ejemplo, `C#` mayor sale como `Db`). Es intencional: la tabla de §2.2 es la
+única autoridad de grafía, con o sin transposición, para que una misma
+tonalidad no se escriba distinto según el pitch. El Helper ya ofrece solo
+esas grafías (`musicstate_helper.md` §2.1), así que la diferencia solo
+aparece en proyectos publicados antes de ese cambio, hasta que se vuelvan a
+publicar.
 
 ### 2.4. Nota de consumo (`NextChord`)
 
@@ -313,8 +316,8 @@ usar esta función tal cual.
 
 - **Transposición:** con delta ≠ 0 y `project_key` cargado, comparar
   `nikMusicStateCurrentChord()` contra el acorde esperado a mano. Con
-  delta 0, verificar si la grafía devuelta coincide con la cargada (bug
-  conocido, ver §4).
+  delta 0, la grafía devuelta es la de §2.2 (puede diferir de la cargada si
+  el proyecto se publicó con otra, ver §2.3).
 - **Carry-over y silencio:** un compás sin evento propio debe heredar el
   acorde anterior; una fila cargada con acorde vacío debe cortar esa
   herencia (`nikMusicStateCurrentChord()` da `null` en ese compás, no el
@@ -339,13 +342,6 @@ de esta capa.
 
 ## 4. Pendientes
 
-- **Grafía con delta 0.** `nikMusicStateCurrentProjectKey()` siempre
-  re-escribe la tónica con la tabla del círculo de quintas (§2.2), incluso
-  sin transponer nada, así que una tonalidad cargada como `C#` mayor se
-  muestra como `Db`. Confirmado por lectura de código, no ejecutado
-  todavía (ver §2.3). Si se corrige para respetar la grafía cargada con
-  delta 0, actualizar §2.3 y avisar a `musicstate_helper.md` §9 (la
-  oferta de grafías del Helper depende de este comportamiento).
 - **`nikMsTempoAt` en el control remoto general.** Sin esa función,
   `nikMusicStateCurrentPos` no aplica ningún adelanto (ni el de acordes),
   y el lead de lyrics no funciona. Cuando lyrics llegue al remoto general

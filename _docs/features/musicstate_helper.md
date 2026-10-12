@@ -95,6 +95,30 @@ primer `]`. `cues_data` necesita balance de corchetes/llaves
 (`%b[]`/`%b{}`, nativo de Lua) porque el array `roles` anidado dentro de
 cada evento rompe el patrón simple de `harmony_data`.
 
+### 2.1 Tab Tonalidad
+
+- **Modo:** dos `RadioButtonEx` exclusivos (Mayor, Menor) sobre
+  `H.key.mode_idx` (0 = major, 1 = minor). Pierden el teclado hasta el
+  anillo de foco de Armonía y Cues (`musicstate_keys.md` §9, 6d).
+- **Tónica:** `KeyCombo` con las 12 tónicas del modo vigente
+  (`TONICS_BY_MODE`). `H.key.tonic_idx` es el pitch class (0-11, 0 = C) y
+  vale igual en las dos listas, así que cambiar de modo conserva la nota
+  (Db mayor pasa a C# menor).
+- **Grafías:** son las que fija el cliente (`MAJOR_USES_SHARPS` y
+  `MINOR_USES_SHARPS` de `web/core/music-transpose.js`, ver
+  `musicstate_client.md` §2.2): mayor C, Db, D, Eb, E, F, F#, G, Ab, A, Bb,
+  B; menor C, C#, D, Eb, E, F, F#, G, G#, A, Bb, B. La tabla está duplicada
+  en el Helper (Lua y JS son runtimes separados): si cambia en el cliente,
+  actualizar `TONICS_BY_MODE`.
+- **Carga:** `TONIC_NAME_TO_PC` acepta cualquier grafía publicada (también
+  las que ya no se ofrecen) y la convierte a pitch class; al volver a
+  publicar queda la canónica.
+- **`H.key_set`:** la carga reinicia la tonalidad a C mayor y pone
+  `key_set` en `true` solo si `project_key` existe con tónica y modo
+  reconocidos; así no se arrastra la del proyecto anterior. Guardar y
+  Publicar lo pone en `true`. Mientras es `false`, la tab avisa que no hay
+  tonalidad publicada.
+
 ## 3. Sticky header sin romper Nav
 
 Armonía tiene header fijo con scroll sin recuadros de foco fantasma ni
@@ -214,15 +238,14 @@ juntas.
 
 ## 9. Pendientes
 
-**Bugs confirmados, sin corregir:**
+**Tab Tonalidad:**
 
-- **Oferta de grafías del Helper.** El Helper ofrece 17 tónicas (incluidas
-  ambas grafías de los enarmónicos). Como el círculo de quintas siempre
-  fuerza una sola grafía por tonalidad resultante
-  (`musicstate_client.md` §2.2), tiene sentido que el selector ofrezca
-  solo las que el cliente va a respetar, para no mostrar una opción que
-  después se reescribe. Depende de que se resuelva primero el bug de
-  grafía con delta 0 (`musicstate_client.md` §4).
+- **"Sin definir" como valor real.** Guardar y Publicar siempre escribe
+  `project_key`: en un proyecto sin tonalidad publica C mayor aunque nadie
+  la haya elegido (la tab lo avisa, §2.1). Propuesta: un valor `-1`, con el
+  combo vacío, ningún radio marcado y sin escribir `project_key` mientras
+  siga así. Antes hay que ver cómo se comportan `Bridge.bridgeKey` y el
+  cliente con `project_key` ausente.
 
 **UX del Helper (de `WIP-MusicState_HelperUI.md`, archivado):**
 

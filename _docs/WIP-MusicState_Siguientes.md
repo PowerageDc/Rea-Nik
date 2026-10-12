@@ -34,7 +34,7 @@ Pasos 1 a 6c del refactor de atajos hechos y documentados
 (`musicstate_keys.md` §4.6, §4.7, §9). Sonda de teclas en
 `Tests-Debug/Nik_Test_KeyProbe.lua`.
 
-**Próximo:** etapas 1 y 2.
+**Próximo:** etapa 3.
 
 ## 3. Decisiones aún no absorbidas por los docs
 
@@ -45,52 +45,22 @@ fila se borra.
 
 | Tema | Decisión |
 |---|---|
-| Teclas ´ y ç | En ReaImGui: `Apostrophe` y `Slash` (medido con la sonda, este teclado) |
 | Undo por tab | Vive en `MusicState/` (no `_Shared/`: Armonía, Cues y Lyrics son el mismo dominio). Núcleo puro (pila: apilar, deshacer, rehacer, etiquetas, tope; sin ImGui ni `reaper.*`) separado del adaptador de cada tab. La pila se vacía al cambiar de proyecto (`H.last_proj`) |
 
 ## 4. Etapas
 
 | # | Etapa | Estado | Subir además | Tamaño | Conversaciones |
 |---|---|---|---|---|---|
-| 1 | Tonalidad: mayor/menor en un click | Pendiente | `MusicStateTonalidad_common_logic.lua`, `musicstate_helper.md` | ~10 líneas | Junto con la 2 |
-| 2 | Lyrics: ↑/↓ por ´ y ç | Pendiente | `MusicStateKeys_config.lua`, `MusicStateLyricsTab_common_logic.lua` | Config, ~10 a 20 líneas | Junto con la 1 |
 | 3 | Módulo de estilo de botones | Pendiente | `Nik_MusicState_Helper.lua`, Armonía | ~80 a 100 líneas, aplicación gradual | Una |
 | 4 | Undo por tab (piloto Lyrics) | Pendiente | Lyrics (tab, Sync, Edit), Helper, `musicstate_lyrics.md` | Medio a grande | 2 o 3 (4a, 4b, 4c) |
 | 5 | 6d y revamp de Cues | Pendiente | Cues, Armonía, `RowInputs`, Keys, `musicstate_helper.md` | Grande | 2 o 3 (5a, 5b, 5c) |
 
 Estimación a ojo: tope práctico de 5 o 6 sub-pasos por conversación cuando
 hay que leer archivos Lua grandes. Cada conversación termina en commit y docs
-actualizados, y no mezcla temas de prueba distintos. Orden sugerido: 1 y 2,
-3, 4, 5. La 4 sube primero si los bugs de undo molestan en sala.
+actualizados, y no mezcla temas de prueba distintos. Orden sugerido: 3, 4, 5. 
+La 4 sube primero si los bugs de undo molestan en sala.
 
 ## 5. Mini-specs de las etapas chicas
-
-### Etapa 1 — Tonalidad: mayor/menor en un click
-
-- **Alcance:** reemplazar el dropdown de modo (mayor/menor) por dos
-  `RadioButton`. Propuesta, a confirmar contra el código: exclusivo por
-  construcción; con dos checkboxes habría que evitar los estados "ambos" y
-  "ninguno". El selector de tónica no cambia.
-- **Riesgo a verificar primero:** si el combo de modo usa `KeyCombo` (Paso 5),
-  el radio pierde el teclado hasta el 6d. Opciones: un binding de tab que
-  alterne el modo, o aceptarlo hasta el 6d.
-- **Pruebas:** elegir cada modo con un click; Guardar y Publicar; recargar y
-  cambiar de proyecto (el modo se restaura); sin errores en consola.
-
-### Etapa 2 — Lyrics: ↑/↓ por ´ y ç
-
-- **Datos que faltan:** (a) qué acciones de REAPER tienen asignadas ´ y ç
-  (ID de comando; preferir nativo o de SWS, un `_RS` cambia entre PCs y
-  `Keys` lo avisa); (b) alcance: solo Lyrics (binding de tab con `override`)
-  o global.
-- **Alcance:** bindings en la config con `key = 'Apostrophe'` y
-  `key = 'Slash'`. Si el cambio es solo en Lyrics, ↑/↓ quedan libres en esa
-  tab para otro uso (por ejemplo, perfil de flechas entre líneas).
-- **Riesgos:** colisión de teclas (`register` la reporta en consola); el
-  mapeo físico depende del layout del teclado, así que verificar con la sonda
-  en la PC de sala; `MusicStateKeys_config.lua` se despliega por ReaPack.
-- **Pruebas:** ´ y ç en Lyrics hacen lo mismo que en REAPER; con un input
-  activo no disparan; ↑/↓ en Lyrics se comportan según la decisión (a).
 
 ### Etapa 3 — Módulo de estilo de botones
 
@@ -152,8 +122,11 @@ Spec propio, `SPEC-MusicState_Cues.md`, como salida de la 5a.
   (`musicstate_keys.md` §9.5).
 - Bugs conocidos del mouse en `updateMouseGesture` (`musicstate_keys.md`
   §9.3).
-- Oferta de grafías del Helper (depende de `musicstate_client.md` §4,
-  `musicstate_helper.md` §9).
+- Tonalidad "sin definir" como valor real, sin publicar `project_key`
+  (`musicstate_helper.md` §9).
+- Lyrics refresca datos cuando una tab vacía carga proyecto. Las demás
+  no lo hacen hasta reabrir helper, o cambiar de tab y volver.
+- Teclas globales ´ y ç: habilitar la repetición, como ←|→
 - Fuente centralizada del color de secciones (opciones A y B en
   `musicstate_helper.md` §9).
 

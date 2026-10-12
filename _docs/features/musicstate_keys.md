@@ -144,7 +144,7 @@ Globales (`MusicStateKeys_config.lua`, sección `global`):
 | `transport.playstop` | Space | 40044 |
 | `transport.playpause` | Enter | 40073 |
 | `nav.measure_prev` / `nav.measure_next` | ← / → (repiten) | 41041 / 41040 |
-| `nav.marker_prev` / `nav.marker_next` | ↓ / ↑ (provisorio) | 40172 / 40173 |
+| `nav.marker_prev` / `nav.marker_next` | ´ / ç (`Apostrophe` / `Slash`, medidas con la sonda en este teclado) | 40172 / 40173 |
 | `time.go_start` | W | 40042 |
 | `time.go_end` | Fin | 40043 |
 | `time.clear_selection` | Esc | 40020 (quita selección de tiempo y loop) |
@@ -220,8 +220,8 @@ Reglas:
   item activo, Tab entra al primer item y Shift+Tab al último (en `dispatch`,
   con los guards de §3).
 - Perfil `{ on_up, on_down }`, con `fn(owner, col, shift)`, sin modificadores o
-  con Shift. Sin perfil las flechas no hacen nada; los atajos globales ↑/↓
-  siguen cerrados por el guard de item activo.
+  con Shift. Sin perfil las flechas no hacen nada: ↑/↓ no tienen atajo
+  global.
 - `ring_focus` va antes del widget y con offset 0: con `-1` después de un
   `InputInt` el foco no llegaba al campo (causa probable, inferida: el
   último item es un botón del stepper). El `-1` posterior sirve
@@ -336,8 +336,9 @@ El probe vive en `Tests-Debug/Nik_Test_KeysFocusProbe.lua` y
 Regresión del módulo, todo debe pasar:
 
 1. Arranque sin errores en la consola de REAPER.
-2. Space, Enter, ↑/↓ y ←/→ (con repetición) como siempre. W va al inicio, Fin
-   al final, Esc limpia la selección de tiempo.
+2. Space, Enter, ´/ç (marker anterior y siguiente) y ←/→ (con repetición)
+   como siempre. W va al inicio, Fin al final, Esc limpia la selección de
+   tiempo.
 3. Con un input de Armonía en edición, W escribe una "w" y no mueve el cursor;
    Fin y Esc tampoco actúan.
 4. Repetición: soltar, cambiar de tab o abrir un modal con la tecla apretada
@@ -480,10 +481,11 @@ Play/Pause (`musicstate_helper.md` §7).
   recuadro propio, accionados con Space o Enter); entrar al anillo por la fila
   del cursor y no por la primera; Cues sobre el mismo anillo cuando se rehaga
   sobre Lyrics.
-- **↑/↓:** el mapeo provisorio (↓ = marker anterior, ↑ = siguiente) se
-  reemplaza por las acciones que ↑/↓ tienen en REAPER al terminar el
-  refactor. Mientras tanto se mantiene para probar contra foco de input y de
-  ventana.
+- **Teclas ´ y ç:** el nombre de tecla de ReaImGui depende del layout del
+  teclado (`Apostrophe` y `Slash` valen para este). En otra PC de sala,
+  verificar con `Tests-Debug/Nik_Test_KeyProbe.lua` antes de desplegar.
+  ↑/↓ quedaron libres, a disposición de un perfil de flechas entre líneas
+  de Lyrics.
 - **Repetición:** afinar `delay` y `rate` de ←/→ a mano (los valores por
   defecto parecieron rápidos a primera vista).
 - **Teclas a `Cues`:** Cues se rehace sobre Lyrics y consumirá el helper de
