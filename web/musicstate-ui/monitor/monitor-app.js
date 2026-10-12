@@ -73,8 +73,7 @@ function nikMonitorSectionBuild(title, tracks) {
         mute.type = "button";
         mute.className = "mm-mute";
         mute.textContent = "M";
-        var slider = document.createElement("input");
-        slider.type = "range";
+        var slider = document.createElement("div");
         slider.className = "mm-slider";
         slider.id = "mmSl_" + t.track + "_" + t.send;
         var db = document.createElement("span");
@@ -131,6 +130,7 @@ var nikMonitorFaders = {};   // "track:send" -> {handle, muteEl, rowEl, sig}
 
 var NIK_MM_WRITE_MS = 60;   // separación mínima entre escrituras de un mismo send
 var NIK_MM_LOCK_MS = 400;   // tras tocar un fader, el feed no pisa esa fila
+var NIK_MM_MUTE_LOCK_MS = 500;   // tras tocar mute, el feed no pisa la M optimista
 
 // Primer valor inmediato; mientras haya pendiente, uno cada NIK_MM_WRITE_MS
 // (siempre el último). Sin pendiente el temporizador se libera solo.
@@ -178,7 +178,7 @@ function nikMonitorFaderCreate(t, defDb) {
         timer: null,
         lockUntil: 0
     };
-    F.handle = nikCreateVerticalFader({
+    F.handle = nikMmCreateSlider({
         key: "mm:" + id,
         sliderId: "mmSl_" + id,
         displayId: "mmDb_" + id,
@@ -198,6 +198,11 @@ function nikMonitorFaderCreate(t, defDb) {
     });
     if (F.muteEl) {
         F.muteEl.addEventListener("click", function () {
+            var muted = !F.rowEl.classList.contains("is-muted");
+            F.muteEl.classList.toggle("is-muted", muted);
+            F.rowEl.classList.toggle("is-muted", muted);
+            F.lockUntil = performance.now() + NIK_MM_MUTE_LOCK_MS;
+            F.sig = null; // al vencer la guarda, la fila se resincroniza con el feed
             nikMmToggleSendMute(t.track, t.send);
         }, false);
     }
@@ -223,6 +228,7 @@ function nikMonitorLiveRender() {
         var F = nikMonitorFaders[k];
         var s = nikMmSendState[k];
         if (!s) continue;
+        if (F.handle.isActive()) continue;
         if (performance.now() < F.lockUntil) continue;
         var sig = s.vol + ":" + s.muted;
         if (F.sig === sig) continue;

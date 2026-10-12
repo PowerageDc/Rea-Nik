@@ -102,6 +102,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.mm-mute {
+  touch-action: manipulation;
+}
+
 .mm-mute.is-muted {
   color: #ffffff;
   background: #c0392b;
@@ -109,11 +113,56 @@
 }
 
 .mm-slider {
+  position: relative;
   flex: 1 1 0;
   min-width: 0;
   height: calc(var(--u) * 9);
   margin: 0;
   touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Los hijos no reciben eventos: todo el gesto lo maneja el contenedor. */
+.mm-sl-line,
+.mm-sl-fill,
+.mm-sl-thumb {
+  position: absolute;
+  pointer-events: none;
+}
+
+.mm-sl-line,
+.mm-sl-fill {
+  top: 50%;
+  height: calc(var(--u) * 1);
+  margin-top: calc(var(--u) * -0.5);
+  border-radius: calc(var(--u) * 0.5);
+}
+
+.mm-sl-line {
+  left: 0;
+  right: 0;
+  background: var(--ms-divider-color);
+}
+
+/* El ancho lo fija mm-slider.js (llega hasta el centro del thumb). */
+.mm-sl-fill {
+  left: 0;
+  background: var(--ms-chord-color);
+}
+
+/* Ancho y alto los fija mm-slider.js (NIK_MM_SLIDER.THUMB_PX). */
+.mm-sl-thumb {
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--ms-chord-color);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+.mm-row.is-muted .mm-slider {
+  opacity: 0.5;
 }
 
 .mm-db {
