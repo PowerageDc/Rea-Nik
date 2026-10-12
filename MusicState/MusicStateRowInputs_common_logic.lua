@@ -39,26 +39,34 @@ end
 -- tecleo o de los steppers +/- del propio widget -- ImGui no distingue
 -- el origen en el valor de retorno, asi que no hace falta codigo aparte
 -- por caso.
-function M.drawPositionInputs(ctx, row, widths, get_max_beats)
+-- ring: opcional (la tabla Keys); registra los 3 campos en el anillo de foco
+-- de la tab con (fila, 'measure' | 'beat' | 'hundredths'). nil = sin anillo.
+function M.drawPositionInputs(ctx, row, widths, get_max_beats, ring)
   widths = widths or M.DEFAULT_WIDTHS
   local active = false
 
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.measure or M.DEFAULT_WIDTHS.measure)
+  if ring then ring.ring_focus(ctx, row, 'measure') end
   local _, measure = reaper.ImGui_InputInt(ctx, '##compas', row.measure, 1, 10)
+  if ring then ring.ring_item(ctx, row, 'measure') end
   row.measure = measure
   active = active or reaper.ImGui_IsItemActive(ctx)
 
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.beat or M.DEFAULT_WIDTHS.beat)
+  if ring then ring.ring_focus(ctx, row, 'beat') end
   local _, beat = reaper.ImGui_InputInt(ctx, '##beat', row.beat, 1, 4)
+  if ring then ring.ring_item(ctx, row, 'beat') end
   local max_beats = get_max_beats and get_max_beats(row.measure)
   row.beat = clamp(beat, 1, max_beats or beat)
   active = active or reaper.ImGui_IsItemActive(ctx)
 
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.hundredths or M.DEFAULT_WIDTHS.hundredths)
+  if ring then ring.ring_focus(ctx, row, 'hundredths') end
   local _, hundredths = reaper.ImGui_InputInt(ctx, '##centesimas', row.hundredths, 5, 25)
+  if ring then ring.ring_item(ctx, row, 'hundredths') end
   row.hundredths = clamp(hundredths, 0, 99)
   active = active or reaper.ImGui_IsItemActive(ctx)
 

@@ -333,6 +333,21 @@ function M.ring_config(tab, cfg)
   ringFor(tab).cfg = cfg or {}
 end
 
+-- Llamar justo ANTES de dibujar un widget enfocable (par de ring_item, que va
+-- despues). Si hay un pedido pendiente para (owner, col) y ya paso el frame
+-- del pedido, enfoca el widget que sigue. Va antes y con offset 0 porque con
+-- -1 despues de un InputInt el foco no llegaba al campo (medido en el 6c.3).
+function M.ring_focus(ctx, owner, col)
+  local tab = S.tab_cur
+  local r = tab and S.rings[tab]
+  local p = r and r.pending
+  if p and p.owner == owner and p.col == col and S.frame > p.frame then
+    reaper.ImGui_SetKeyboardFocusHere(ctx, 0)
+    r.pending = nil
+    r.applied = S.frame
+  end
+end
+
 -- Llamar justo DESPUES de dibujar un widget enfocable de la tab activa.
 -- owner: tabla (ej. la fila) o string que identifica al widget entre frames;
 -- col: clave dentro del owner; meta: dato libre que ve cfg.order.
@@ -346,14 +361,7 @@ function M.ring_item(ctx, owner, col, meta)
   r.drawn = true
   r.cur[#r.cur + 1] = { owner = owner, col = col, meta = meta }
 
-  local p = r.pending
-  if p and p.owner == owner and p.col == col and S.frame > p.frame then
-    reaper.ImGui_SetKeyboardFocusHere(ctx, -1)
-    r.pending = nil
-    return
-  end
-
-  if p or not reaper.ImGui_IsItemActive(ctx) then return end
+  if r.pending or r.applied == S.frame or not reaper.ImGui_IsItemActive(ctx) then return end
   local step = tabStep(ctx)
   if not step or not tabFires(ctx, r) then return end
 

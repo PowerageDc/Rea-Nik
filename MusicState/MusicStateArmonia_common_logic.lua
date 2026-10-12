@@ -307,13 +307,14 @@ function M.draw(ctx, H, helpers)
               toggleSelection(H, row)
             end
 
-            if helpers.RowInputs.drawPositionInputs(ctx, row, nil, helpers.getMaxBeats) then
+            if helpers.RowInputs.drawPositionInputs(ctx, row, nil, helpers.getMaxBeats, helpers.Keys) then
               active_row_this_frame = row
             end
 
             reaper.ImGui_TableNextColumn(ctx)
             reaper.ImGui_SetNextItemWidth(ctx, 100)
             local changed_c
+            helpers.Keys.ring_focus(ctx, row, 'chord')
             changed_c, row.chord = reaper.ImGui_InputText(ctx, '##acorde', row.chord)
             helpers.Keys.ring_item(ctx, row, 'chord')
 
