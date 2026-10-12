@@ -6,9 +6,10 @@ investigación, no está en el repo; la Línea M, metrónomo nativo global,
 queda aparte).
 
 **Estado:** investigación de ruteo cerrada (pasos 1–3). Canal de datos
-(Lua y capa cliente `monitor.js`) verificado en dev, paso 4.3. Interfaz
-web (4.4) verificada en dev, en navegador y celular, con el segundo Web
-Control (ver 6.1). Falta la validación en sala.
+(Lua y capa cliente `monitor.js`) verificado, paso 4.3. Interfaz
+web (4.4) en navegador y celular, con el segundo Web Control (ver 6.1). 
+El slider propio (`mm-slider.js`), que evita que el scroll mueva el volumen
+Verificado en dev/sala/celulares.
 
 ---
 
@@ -317,9 +318,12 @@ return {
 
 Archivos: `web/nsaudio_monitor.html` (shell) y, en
 `web/musicstate-ui/monitor/`, `monitor.js` (datos), `mm-fader.js` (curva),
-`monitor-app.js` (bootstrap, lista y faders) y `monitor.css`. Carga
-`cantante.css` y `monitor.css` solo pisa lo que difiere (stage scrolleable,
-toolbar, filas); reutiliza `core/vertical-fader.js` (`nikCreateVerticalFader`).
+`monitor-app.js` (bootstrap, lista y faders), `mm-slider.js` (slider
+propio) y `monitor.css`. Carga `cantante.css` y `monitor.css` solo pisa lo
+que difiere (stage scrolleable, toolbar, filas). De `core/vertical-fader.js`
+reutiliza solo `nikVFaderCheckDoubleTap` (doble tap); el slider ya no es el
+`<input type="range">` de `nikCreateVerticalFader`. El nombre "vertical" es
+histórico: el slider de Monitor Mix es horizontal.
 
 - **Bootstrap:** `TRANSPORT` cada 100 ms, `MARKER` cada 500 ms y poll lento
   de 1000 ms (`active_project_name`, `reapitch_semitone` y
@@ -358,21 +362,45 @@ toolbar, filas); reutiliza `core/vertical-fader.js` (`nikCreateVerticalFader`).
   (el primer valor inmediato y luego uno cada 60 ms como máximo, siempre el
   último); al soltar (`change`) `.../VOL/<v>e`. El slider al 0 % escribe
   0,001 (-60 dB): no es silencio, el silencio es el mute del send.
-- **Mute:** `SET/.../MUTE/-1` (alterna), sin actualización optimista; la M
-  roja la pinta el feed (`flags & 8`) en menos de ~300 ms.
-- **Doble tap:** vuelve a `default_db` (o -12 si falta).
+- **Mute:** `SET/.../MUTE/-1` (alterna) con actualización optimista: al
+  tocar, la M y la fila se pintan al instante y la fila ignora el feed
+  500 ms (`NIK_MM_MUTE_LOCK_MS`); después el feed (`flags & 8`) confirma o
+  corrige. El evento es `click`, no `pointerdown`, para que un scroll que
+  arranca sobre el botón no mutee sin querer.
+- **Slider propio (`mm-slider.js`):** `div` con `touch-action: pan-y` y
+  `pointer events`; mismo contrato que `nikCreateVerticalFader` más
+  `isActive()`. El valor nunca se escribe en el down: solo al soltar un tap
+  o al confirmarse el eje horizontal.
+  - Sobre la línea: tap (hasta 350 ms, sin superar 8 px) salta al valor y
+    hace commit; un hold más largo sin mover no hace nada; movimiento
+    horizontal arrastra, y el thumb sigue al dedo.
+  - Sobre el thumb (zona táctil de ±22 px): arrastra desde el valor actual,
+    sin salto (umbral de eje de 4 px). Solo aquí aplica el doble tap.
+  - Movimiento vertical: se cede el gesto al scroll del stage y no se
+    escribe nada. Con el eje horizontal confirmado, un `touchmove` no
+    pasivo evita que una deriva vertical del dedo lo convierta en scroll.
+    Un `pointercancel` en pleno arrastre cierra con commit del valor
+    actual.
+  - Las constantes están arriba del archivo (`NIK_MM_SLIDER`) para
+    ajustarlas en sala.
+- **Doble tap:** sobre el thumb, vuelve a `default_db` (o -12 si falta).
 - **Guarda de arrastre:** tras cada escritura la fila ignora el feed
-  durante 400 ms, para que no pise el valor mientras se toca.
+  durante 400 ms, y mientras haya arrastre horizontal confirmado
+  (`isActive()`) no lo sigue, para que no pise el valor mientras se toca.
+- **Aspecto:** línea, relleno y thumb propios con las variables de
+  `monitor.css`. La sección Click usa otro color de acento
+  (`--mm-accent`, `#3fb37f`) para distinguirla de un vistazo. La fila
+  muteada se atenúa aplicando `opacity` al slider completo (aplicarla a
+  cada pieza dejaba ver el relleno a través del thumb).
 - **Cues:** el footer reserva su altura (`msCueBand`) pero no está
   cableado.
 
 ### 6.2 Problemas conocidos
 
-- **Scroll vertical sobre un slider mueve el volumen (celular):** el
-  gesto primero mueve el fader y, sin soltar el dedo, después desliza.
-  `touch-action: pan-y` en `.mm-slider` no cambió nada (queda puesto, es
-  inofensivo). Alternativas si molesta en sala: slider propio con bloqueo
-  de dirección (unas 60 líneas) o una zona de scroll fuera del slider.
+- **Resuelto — scroll vertical sobre un slider mueve el volumen (celular):** 
+  Con el `<input type="range">` nativo el gesto movía el fader antes de saber 
+  si era un scroll, y `touch-action: pan-y` no alcanzaba. Se reemplazó por un 
+  slider propio que decide la intención antes de escribir (ver 6.1).
 - **Cambio de tab entre pestañas sin guardar:** de la tab 3 (sin guardar,
   con track del Stem Bus, un hijo y bus de monitoreo) a una tab vacía, la
   UI queda mostrando la lista de la tab 3 hasta tocar Actualizar. Pasar de
@@ -393,17 +421,17 @@ toolbar, filas); reutiliza `core/vertical-fader.js` (`nikCreateVerticalFader`).
 | 1 | Probe de salidas y par secundario | Cerrado |
 | 2 | Probe de bus, mute y modo de send | Cerrado |
 | 3 | Probe del feed nativo (`TRACK`/`SEND`) | Cerrado |
-| 4.1 | Config y módulo del filtro (Lua, testeable) | Verificado en dev (carpetas, exclude, bus excluido por nombre); sin probar: recursive con subcarpetas, GUIDs, overrides, regla recv+hw aislada |
-| 4.2 | Creación idempotente de sends (`Nik_MonitorMix_EnsureSends.lua`) | Verificado en dev (crea bus y sends, no pisa sends existentes, conserva valores al cambiar de pestaña) |
-| 4.3 | Canal de datos: ExtState publicado por `Nik_MonitorMix_Publish.lua` (one-shot disparado por el cliente) y feed nativo para volumen y mute. Incluye `MM.ensure_sends` en el módulo común y los estados `no_tracks` y `no_pair` | Verificado en dev: lista, recarga por versión sin bucle, lectura de `SEND`, reset al cambiar de proyecto, tab vacía, master sin hardware output |
-| 4.4 | Segunda interfaz web | Verificado en dev, en navegador y celular, con el segundo Web Control (shell, lista, faders, mute, escritura, ver 6.1). Pendiente: validación en sala |
+| 4.1 | Config y módulo del filtro (Lua, testeable) | Verificado: carpetas, exclude, bus excluido por nombre; sin probar: recursive con subcarpetas, GUIDs, overrides, regla recv+hw aislada |
+| 4.2 | Creación idempotente de sends (`Nik_MonitorMix_EnsureSends.lua`) | Verificado (crea bus y sends, no pisa sends existentes, conserva valores al cambiar de pestaña) |
+| 4.3 | Canal de datos: ExtState publicado por `Nik_MonitorMix_Publish.lua` (one-shot disparado por el cliente) y feed nativo para volumen y mute. Incluye `MM.ensure_sends` en el módulo común y los estados `no_tracks` y `no_pair` | Verificado: lista, recarga por versión sin bucle, lectura de `SEND`, reset al cambiar de proyecto, tab vacía, master sin hardware output |
+| 4.4 | Segunda interfaz web | Verificado con el segundo Web Control (shell, lista, faders con slider propio, mute, escritura, ver 6.1). |
 
 Estructura: carpeta de dominio `MonitorMix/` en la raíz del repo
 (`Nik_MonitorMix_EnsureSends.lua` y `Nik_MonitorMix_Publish.lua`, módulos
 `MonitorMix_common_logic.lua` y `MonitorMix_config.lua`); ya figura en
 `01_CONVENCIONES.md`. La capa de datos del cliente vive en
 `web/musicstate-ui/monitor/monitor.js`; la UI (`mm-fader.js`,
-`monitor-app.js`, `monitor.css`) vive en la misma carpeta y el shell
+`mm-slider.js`, `monitor-app.js`, `monitor.css`) vive en la misma carpeta y el shell
 `nsaudio_monitor.html` en la raíz de `web/` (ver 6.1).
 
 ---
@@ -446,11 +474,9 @@ Estructura: carpeta de dominio `MonitorMix/` en la raíz del repo
 - Validar la UI en sala (celular del baterista, par de salida real).
 - Cablear los cues en el footer de la UI (`msCueBand`, hoy solo reserva
   altura).
-- Resolver o aceptar los problemas conocidos de 6.2 (scroll sobre slider,
-  cambio entre pestañas sin guardar) tras la prueba en sala.
+- Resolver o aceptar el problema conocido de 6.2 (cambio entre pestañas
+  sin guardar) tras la prueba en sala.
+- Probar el slider propio en sala y ajustar las constantes de
+  `NIK_MM_SLIDER` (umbrales de eje, tiempo de tap, zona del thumb).
 - `monitor.css` depende de `cantante.css` (clases `cn-*`): al cerrar la UI
   de cantante, evaluar extraer el layout común a un archivo compartido.
-- Deploy: sumar `nsaudio_monitor.html` y los archivos de
-  `musicstate-ui/monitor/` (incluido `mm-fader.js`) al empaquetado de
-  `.www` (ver `05_REAPACK_DEPLOY.md`), junto con el registro de
-  `monitorMixPublish` ya listado arriba.
