@@ -7,7 +7,8 @@ local M = {}
 
 function M.draw(ctx, H, helpers)
   local _
-  _, H.key.tonic_idx = helpers.KeyCombo.combo(ctx, 'Tonica', H.key.tonic_idx, helpers.TONICS_STR)
+  _, H.key.tonic_idx = helpers.KeyCombo.combo(ctx, 'Tonica', H.key.tonic_idx,
+    helpers.TONICS_STR_BY_MODE[H.key.mode_idx + 1])
   reaper.ImGui_Text(ctx, 'Modo')
   reaper.ImGui_SameLine(ctx)
   local mode = H.key.mode_idx

@@ -53,7 +53,7 @@ local font = reaper.ImGui_CreateFont('sans-serif', 16)
 reaper.ImGui_Attach(ctx, font)
 
 local H = {
-  key = { tonic_idx = 4, mode_idx = 0 },  -- tonic_idx 4 = "C" (ver TONICS abajo)
+  key = { tonic_idx = 0, mode_idx = 0 },  -- tonic_idx = pitch class (0 = C), ver TONICS_BY_MODE
   key_set = false,  -- true si el proyecto tiene project_key publicada (ver load)
   roles = {},
   new_role_buf = '',
@@ -63,10 +63,29 @@ local H = {
   last_proj = nil,  -- detecta cambio de project tab, ver loop()
 }
 
-local TONICS = { 'A', 'A#', 'Bb', 'B', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab' }
-local TONICS_STR = table.concat(TONICS, '\0') .. '\0'
 local MODES = { 'major', 'minor' }
-local MODES_STR = 'major\0minor\0'
+
+-- Tonicas que ofrece cada modo, en orden cromatico desde C: tonic_idx es el
+-- pitch class (0-11) y vale igual en las dos listas, asi que cambiar de modo
+-- conserva la nota. Las grafias son las que fija el cliente (tablas
+-- MAJOR_USES_SHARPS y MINOR_USES_SHARPS de web/core/music-transpose.js):
+-- mantener sincronizado.
+local TONICS_BY_MODE = {
+  { 'C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B' },
+  { 'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B' },
+}
+local TONICS_STR_BY_MODE = {}
+for m, list in ipairs(TONICS_BY_MODE) do
+  TONICS_STR_BY_MODE[m] = table.concat(list, '\0') .. '\0'
+end
+
+-- Cualquier grafia -> pitch class, para cargar proyectos publicados con una
+-- grafia que ya no se ofrece (se normaliza al volver a publicar).
+local TONIC_NAME_TO_PC = {
+  C = 0, ['B#'] = 0, ['C#'] = 1, Db = 1, D = 2, ['D#'] = 3, Eb = 3,
+  E = 4, Fb = 4, ['E#'] = 5, F = 5, ['F#'] = 6, Gb = 6, G = 7,
+  ['G#'] = 8, Ab = 8, A = 9, ['A#'] = 10, Bb = 10, B = 11, Cb = 11,
+}
 
 -- Foco ImGui <-> REAPER: la tecla vive en MusicStateKeys_config.lua
 -- (host.focus); la accion que dispara se registra con Keys.init, mas abajo.
@@ -134,7 +153,7 @@ end
 local function nikMusicStateLoadFromProjExtState(proj)
   -- Sin project_key valida el proyecto no tiene tonalidad: se vuelve a los
   -- defaults (no arrastrar la del proyecto anterior) y key_set queda en false.
-  H.key.tonic_idx = 4
+  H.key.tonic_idx = 0
   H.key.mode_idx = 0
   H.key_set = false
   local ok_key, key_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'project_key')
@@ -142,10 +161,9 @@ local function nikMusicStateLoadFromProjExtState(proj)
     local tonic = key_json:match('"tonic"%s*:%s*"([^"]*)"')
     local mode = key_json:match('"mode"%s*:%s*"([^"]*)"')
     local found_tonic, found_mode = false, false
-    if tonic then
-      for i, t in ipairs(TONICS) do
-        if t == tonic then H.key.tonic_idx = i - 1; found_tonic = true end
-      end
+    if tonic and TONIC_NAME_TO_PC[tonic] then
+      H.key.tonic_idx = TONIC_NAME_TO_PC[tonic]
+      found_tonic = true
     end
     if mode then
       for i, m in ipairs(MODES) do
@@ -337,8 +355,7 @@ end
 -- IMPL_MusicState.md, sesion modularizacion). Se va extendiendo a medida
 -- que se extraigan Roles/Armonia/Cues.
 local helpers = {
-  TONICS_STR = TONICS_STR,
-  MODES_STR = MODES_STR,
+  TONICS_STR_BY_MODE = TONICS_STR_BY_MODE,
   captureCursorPosition = nikMusicStateCaptureCursorPosition,
   RowInputs = RowInputs,
   InputCommit = InputCommit,
@@ -382,7 +399,7 @@ local function nikMusicStateSaveAndPublish()
   local proj = 0
 
   local key_json = string.format('{"tonic":"%s","mode":"%s"}',
-    TONICS[H.key.tonic_idx + 1], MODES[H.key.mode_idx + 1])
+    TONICS_BY_MODE[H.key.mode_idx + 1][H.key.tonic_idx + 1], MODES[H.key.mode_idx + 1])
 
   local roles_parts = {}
   for _, r in ipairs(H.roles) do
