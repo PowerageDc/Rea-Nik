@@ -15,7 +15,7 @@ function M.draw(ctx, H, helpers)
   for i, role in ipairs(H.roles) do
     reaper.ImGui_Text(ctx, role)
     reaper.ImGui_SameLine(ctx)
-    if reaper.ImGui_Button(ctx, 'Quitar##role' .. i) then
+    if helpers.ButtonStyle.button(ctx, 'Quitar##role' .. i, 'danger') then
       remove_idx = i
     end
   end
@@ -29,7 +29,7 @@ function M.draw(ctx, H, helpers)
   H.new_role_buf = new_buf
 
   reaper.ImGui_SameLine(ctx)
-  local add_clicked = reaper.ImGui_Button(ctx, 'Agregar', 80, 0)
+  local add_clicked = helpers.ButtonStyle.button(ctx, 'Agregar', 'primary', 80)
 
   if (enter_commit or add_clicked) and H.new_role_buf ~= '' then
     table.insert(H.roles, H.new_role_buf)

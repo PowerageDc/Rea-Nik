@@ -5,6 +5,9 @@
 -- posicion") para poder tocar boton o steppers por separado mas adelante,
 -- sin reabrir el resto.
 
+local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
+local ButtonStyle = dofile(script_dir .. "../_Shared/ImGuiButtonStyle_common_logic.lua")
+
 local M = {}
 
 M.DEFAULT_WIDTHS = { measure = 100, beat = 90, hundredths = 100 }
@@ -94,7 +97,9 @@ function M.drawPositionInputs(ctx, row, widths, get_max_beats, ring, arrow_value
   reaper.ImGui_SetNextItemWidth(ctx, widths.measure or M.DEFAULT_WIDTHS.measure)
   if ring then ring.ring_focus(ctx, row, 'measure') end
   local ver = row._ver_measure or 0
+  ButtonStyle.push(ctx, 'subtle')
   local _, measure = reaper.ImGui_InputInt(ctx, '##compas' .. ver, row.measure, 1, 10)
+  ButtonStyle.pop(ctx)
   row.measure = measure
   if ring then ring.ring_item(ctx, row, 'measure', nil, prof and prof.measure) end
   active = active or reaper.ImGui_IsItemActive(ctx)
@@ -102,7 +107,9 @@ function M.drawPositionInputs(ctx, row, widths, get_max_beats, ring, arrow_value
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.beat or M.DEFAULT_WIDTHS.beat)
   if ring then ring.ring_focus(ctx, row, 'beat') end
+  ButtonStyle.push(ctx, 'subtle')
   local _, beat = reaper.ImGui_InputInt(ctx, '##beat' .. (row._ver_beat or 0), row.beat, 1, 4)
+  ButtonStyle.pop(ctx)
   local max_beats = get_max_beats and get_max_beats(row.measure)
   row.beat = clamp(beat, 1, max_beats or beat)
   if ring then ring.ring_item(ctx, row, 'beat', nil, prof and prof.beat) end
@@ -111,7 +118,9 @@ function M.drawPositionInputs(ctx, row, widths, get_max_beats, ring, arrow_value
   reaper.ImGui_TableNextColumn(ctx)
   reaper.ImGui_SetNextItemWidth(ctx, widths.hundredths or M.DEFAULT_WIDTHS.hundredths)
   if ring then ring.ring_focus(ctx, row, 'hundredths') end
+  ButtonStyle.push(ctx, 'subtle')
   local _, hundredths = reaper.ImGui_InputInt(ctx, '##centesimas' .. (row._ver_hundredths or 0), row.hundredths, 5, 25)
+  ButtonStyle.pop(ctx)
   row.hundredths = clamp(hundredths, 0, 99)
   if ring then ring.ring_item(ctx, row, 'hundredths', nil, prof and prof.hundredths) end
   active = active or reaper.ImGui_IsItemActive(ctx)
@@ -122,8 +131,10 @@ end
 
 -- Solo el boton -- devuelve true si se clickeo este frame. label opcional
 -- para poder reemplazarlo por un icono despues sin tocar nada mas.
-function M.drawCursorButton(ctx, label)
-  return reaper.ImGui_Button(ctx, label or 'Usar cursor')
+function M.drawCursorButton(ctx, label, kind, opts)
+  label = label or 'Usar cursor'
+  if kind then return ButtonStyle.button(ctx, label, kind, opts) end
+  return reaper.ImGui_Button(ctx, label)
 end
 
 -- Logica pura (sin ImGui): copia measure/beat/hundredths de pos a row.

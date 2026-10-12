@@ -336,17 +336,17 @@ function M.draw(ctx, H, helpers)
             helpers.Keys.ring_item(ctx, row, 'chord', { group = group.stable_id }, getChordKeys(helpers))
 
             reaper.ImGui_TableNextColumn(ctx)
-            if helpers.RowInputs.drawCursorButton(ctx) then
+            if helpers.RowInputs.drawCursorButton(ctx, nil, 'neutral') then
               helpers.RowInputs.applyCursorToRow(row, helpers.captureCursorPosition())
             end
 
             reaper.ImGui_TableNextColumn(ctx)
-            if reaper.ImGui_Button(ctx, 'Ir', COLUMN_WIDTHS.go_btn - 8, 0) then
+            if helpers.ButtonStyle.button(ctx, 'Ir', 'neutral', COLUMN_WIDTHS.go_btn - 8) then
               navigate_row = row
             end
 
             reaper.ImGui_TableNextColumn(ctx)
-            if reaper.ImGui_Button(ctx, 'Borrar', COLUMN_WIDTHS.delete_btn - 8, 0) then
+            if helpers.ButtonStyle.button(ctx, 'Borrar', 'danger', COLUMN_WIDTHS.delete_btn - 8) then
               remove_idx = i
             end
 
@@ -399,7 +399,7 @@ function M.draw(ctx, H, helpers)
 
   reaper.ImGui_Spacing(ctx)
   reaper.ImGui_Separator(ctx)
-  if reaper.ImGui_Button(ctx, '+ Agregar fila (cursor actual)', 220, 0) then
+  if helpers.ButtonStyle.button(ctx, '+ Agregar fila (cursor actual)', 'primary', 220) then
     local pos = helpers.captureCursorPosition()
     local new_row = {
       measure = pos.measure,
@@ -417,7 +417,7 @@ function M.draw(ctx, H, helpers)
   for _, row in ipairs(H.harmony) do
     if row.selected then table.insert(selected_rows, row) end
   end
-  local copy_clicked = reaper.ImGui_Button(ctx, string.format('Copiar seleccion (%d)', #selected_rows), 170, 0)
+  local copy_clicked = helpers.ButtonStyle.button(ctx, string.format('Copiar seleccion (%d)', #selected_rows), 'neutral', 170)
   if copy_clicked and #selected_rows > 0 then
     -- Ancla = fila mas temprana de la seleccion (primera en orden
     -- cronologico, ya garantizado por H.harmony ordenado). delta_qn de
@@ -434,7 +434,7 @@ function M.draw(ctx, H, helpers)
 
   local clipboard_count = H._armonia_clipboard and #H._armonia_clipboard or 0
   reaper.ImGui_SameLine(ctx)
-  if reaper.ImGui_Button(ctx, string.format('Pegar en cursor (%d)', clipboard_count), 170, 0) then
+  if helpers.ButtonStyle.button(ctx, string.format('Pegar en cursor (%d)', clipboard_count), 'neutral', 170) then
     if clipboard_count > 0 then
       local cursor_qn = helpers.captureCursorQN()
       local candidates = {}
@@ -466,9 +466,9 @@ function M.draw(ctx, H, helpers)
       reaper.ImGui_Text(ctx, string.format('Hay %d fila(s) existentes en la posicion de destino.', #pending.collisions))
       reaper.ImGui_Text(ctx, 'Sobrescribir las reemplaza puntualmente; Cancelar no pega nada.')
       reaper.ImGui_Spacing(ctx)
-      local overwrite_clicked = reaper.ImGui_Button(ctx, 'Sobrescribir [Enter]', 160, 0)
+      local overwrite_clicked = helpers.ButtonStyle.button(ctx, 'Sobrescribir [Enter]', 'danger', 160)
       reaper.ImGui_SameLine(ctx)
-      local cancel_clicked = reaper.ImGui_Button(ctx, 'Cancelar [Esc]', 100, 0)
+      local cancel_clicked = helpers.ButtonStyle.button(ctx, 'Cancelar [Esc]', 'neutral', 160)
       -- Un boton activado este frame (tambien por flechas + Enter) manda
       -- sobre la tecla.
       local do_overwrite = overwrite_clicked or (not cancel_clicked and confirm)
