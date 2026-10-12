@@ -48,7 +48,8 @@ local S = {
   tab_prev = nil,
   consumed = {},
   frame = 0,
-  rings = {},     -- rings[tab] = { cur, prev, drawn, pending, cfg }
+  ---@type table<string, MusicStateRing>
+  rings = {},
 }
 
 local function err(msg)
@@ -283,10 +284,22 @@ end
 
 -- Anillo de foco por tab (musicstate_keys.md 9.4): cada tab lleva su propia
 -- lista de items registrados, su orden y su pedido de foco pendiente.
+---@class MusicStateRing
+---@field cur table[]
+---@field prev table[]
+---@field drawn boolean
+---@field pending? table
+---@field applied? integer
+---@field rep? table
+---@field arep table<string, table>
+---@field cfg table
+
+---@param tab string
+---@return MusicStateRing
 local function ringFor(tab)
   local r = S.rings[tab]
   if not r then
-    r = { cur = {}, prev = {}, drawn = false, pending = nil, cfg = {} }
+    r = { cur = {}, prev = {}, drawn = false, pending = nil, cfg = {}, arep = {} }
     S.rings[tab] = r
   end
   return r
@@ -340,7 +353,8 @@ end
 function M.ring_focus(ctx, owner, col)
   local tab = S.tab_cur
   local r = tab and S.rings[tab]
-  local p = r and r.pending
+  if not r then return end
+  local p = r.pending
   if p and p.owner == owner and p.col == col and S.frame > p.frame then
     reaper.ImGui_SetKeyboardFocusHere(ctx, 0)
     r.pending = nil
