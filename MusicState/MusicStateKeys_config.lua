@@ -34,9 +34,9 @@ return {
     { id = 'transport.playpause',  key = 'Enter',      cmd = 40073 },
     { id = 'nav.measure_prev',     key = 'LeftArrow',  cmd = 41041, autorepeat = true },
     { id = 'nav.measure_next',     key = 'RightArrow', cmd = 41040, autorepeat = true },
-    -- Provisorio: se cambian a las homonimas de REAPER al terminar el refactor.
-    { id = 'nav.marker_prev',      key = 'DownArrow',  cmd = 40172 },
-    { id = 'nav.marker_next',      key = 'UpArrow',    cmd = 40173 },
+    -- Marker anterior / siguiente: ´ y ç (Apostrophe y Slash en este teclado).
+    { id = 'nav.marker_prev',      key = 'Apostrophe', cmd = 40172 },
+    { id = 'nav.marker_next',      key = 'Slash',      cmd = 40173 },
 
     { id = 'time.go_start',        key = 'W',          cmd = 40042 },  -- inicio del proyecto
     { id = 'time.go_end',          key = 'End',        cmd = 40043 },  -- fin del proyecto
