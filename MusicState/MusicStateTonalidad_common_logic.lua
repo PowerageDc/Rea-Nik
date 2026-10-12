@@ -6,9 +6,15 @@
 local M = {}
 
 function M.draw(ctx, H, helpers)
-  local changed
-  changed, H.key.tonic_idx = helpers.KeyCombo.combo(ctx, 'Tonica', H.key.tonic_idx, helpers.TONICS_STR)
-  changed, H.key.mode_idx = helpers.KeyCombo.combo(ctx, 'Modo', H.key.mode_idx, helpers.MODES_STR)
+  local _
+  _, H.key.tonic_idx = helpers.KeyCombo.combo(ctx, 'Tonica', H.key.tonic_idx, helpers.TONICS_STR)
+  reaper.ImGui_Text(ctx, 'Modo')
+  reaper.ImGui_SameLine(ctx)
+  local mode = H.key.mode_idx
+  _, mode = reaper.ImGui_RadioButtonEx(ctx, 'Mayor', mode, 0)
+  reaper.ImGui_SameLine(ctx)
+  _, mode = reaper.ImGui_RadioButtonEx(ctx, 'Menor', mode, 1)
+  H.key.mode_idx = mode
 end
 
 return M
