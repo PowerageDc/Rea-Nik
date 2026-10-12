@@ -57,7 +57,8 @@ tab): funciones de conversión (`rowToTime`, `rowToQN`, `qnToRow`,
 `getMaxBeats`), acceso a `RowInputs`/`InputCommit` (módulos compartidos,
 uno en `MusicState/`, el otro en `_Shared/` por ser genérico de ReaImGui,
 ver `01_CONVENCIONES.md`), `Keys` (`Keys.consume`, `Keys.held`,
-`Keys.modal`), `Modal` (modal de confirmación de `_Shared/`), captura de
+`Keys.modal`, `Keys.input`, `Keys.ring_*`: `musicstate_keys.md` §4.6 y
+§4.7), `Modal` (modal de confirmación de `_Shared/`), captura de
 cursor y `getSections()`.
 
 ## 2. Estado (`H`) y conversión de coordenadas
@@ -154,6 +155,16 @@ lo que no sea el propio input). Acá se aplica así:
   solo fallaba si la fila editada no era la primera de su grupo).
 - `resortAndFocusRow` ubica la fila por **identidad de tabla**, nunca por
   índice viejo, porque el índice es justo lo que el sort corre.
+- El `PushID` de cada fila usa `row._uid` (campo interno, asignado al
+  dibujar, no se publica), no el índice: un reorden ya no corre el ID de un
+  input enfocado (`08_REAIMGUI_PATTERNS.md` §2). El tiempo congelado sigue
+  haciendo falta: cambiar de grupo cambia el ID del widget, porque el
+  `PushID` del grupo es parte del ID stack.
+- Con las flechas, los campos de posición cambian de valor con el campo
+  activo (`08_REAIMGUI_PATTERNS.md` §3, `musicstate_keys.md` §4.7):
+  `drawPositionInputs` sigue devolviendo la fila como activa mientras un
+  refoco (`Keys.ring_holds`) está pendiente, así que no se reordena ni se
+  regrupa hasta salir del trío de posición.
 
 **Validación de rango:** Beat mínimo 1, sin tope si `get_max_beats` no se
 pasa (Cues no lo pasa todavía, ver pendientes); máximo real vía
@@ -219,8 +230,9 @@ juntas.
   y previsiblemente comparte el mismo bug de Nav si se le agrega
   `ScrollY` directo.
 - `drawPositionInputs` en Cues todavía usa la firma vieja (sin
-  `get_max_beats`): compatible hacia atrás, pero sin tope de Beat hasta
-  actualizar ese call site.
+  `get_max_beats`, `ring` ni `arrow_values`): compatible hacia atrás, pero
+  sin tope de Beat, sin Tab entre campos y sin flechas hasta actualizar ese
+  call site (`musicstate_keys.md` §4.7).
 - Extraer un módulo compartido de "lista posicionada" (Armonía + Cues) a
   `_Shared/`, recién cuando Cues tenga su propia versión de agrupado/
   auto-scroll/selección/copiar-pegar — para generalizar sobre dos

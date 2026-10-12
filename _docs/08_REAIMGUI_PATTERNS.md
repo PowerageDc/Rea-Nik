@@ -89,6 +89,15 @@ reaper.ImGui_EndChild(ctx)  -- EndChild se llama SIEMPRE, a diferencia de EndTab
   cambio un identificador que no se mueva — la posición en la lista
   maestra sin filtrar, con un valor fijo reservado para el grupo
   "sin categoría" si existe.
+- **Un índice de fila tampoco sirve si la lista se reordena con un widget
+  enfocado.** Aunque sea el índice de la lista maestra sin filtrar, un
+  `table.sort` lo corre y cambia el `PushID(i)` de la fila editada: pierde
+  el foco. Usar una identidad propia de la fila (`row._uid`, un contador
+  asignado al dibujar si falta; campo interno, no se serializa) en vez del
+  índice. Ojo: el ID de un widget es el hash de **todo** el ID stack, así
+  que el `PushID` del grupo contenedor también cuenta: una fila que cambia
+  de grupo cambia de ID aunque su uid sea estable (ver §3, valor
+  congelado).
 - **El label de un widget con texto dinámico no puede ser también su
   ID.** `CollapsingHeader('%s (%d)', nombre, cantidad)` cambia de ID cada
   vez que cambia la cantidad, perdiendo el estado abierto/cerrado en cada
@@ -127,6 +136,35 @@ foco a mitad de edición. La mitigación es usar un valor **congelado**,
 capturado al entrar en edición, para todo lo que no sea el propio input,
 y aplicar el valor final recién cuando la transición confirma que se
 terminó de editar.
+
+**Cambiar el valor desde afuera con el campo activo** (flechas, un botón).
+Mientras un `InputInt` tiene foco, ImGui conserva su texto interno e ignora
+el valor que se le pasa: devuelve el viejo en el frame siguiente y la
+asignación `row.x = valor_devuelto` pisa el cambio. Medido: un `+1` a
+`row.measure` con el campo activo vivía un frame (con parpadeo del
+resaltado de la fila). Patrón:
+
+1. Asignar el valor nuevo **después** de volcar el valor devuelto por el
+   widget; antes, se pisa en el mismo frame.
+2. Subir un contador de versión del campo (`row._ver_x`) y usarlo en el ID
+   del widget (`'##x' .. ver`): para ImGui es un widget nuevo y toma el
+   valor pasado.
+3. Pedir el foco de nuevo (§7): el widget nuevo arranca inactivo.
+4. Mientras el refoco está pendiente o recién aplicado, seguir informando
+   la fila como activa. Si no, la transición activo → inactivo dispara el
+   reorden y el regrupado, y el cambio de grupo cambia el ID (§2).
+
+```lua
+local ver = row._ver_measure or 0
+local _, v = reaper.ImGui_InputInt(ctx, '##compas' .. ver, row.measure, 1, 10)
+row.measure = v
+-- perfil de flechas, DESPUES de la asignacion:
+row.measure = row.measure + 1
+row._ver_measure = ver + 1
+Keys.ring_request(row, 'measure', true)  -- hold: la fila sigue activa
+```
+
+Implementación completa: `musicstate_keys.md` §4.7.
 
 ## 4. Botón o tecla de "mantener": flancos, layout estable y widgets que cambian
 
@@ -205,7 +243,7 @@ uno inline por fila.
   `InputText` del frame anterior como activo: Enter y Space tipeados en el
   campo no disparan Play/Stop, y no hace falta marcar la tecla como
   consumida. Si el orden fuera el inverso (atajos después del panel), sí
-  hay que marcarla (`H.consumed_enter`).
+  hay que marcarla (`Keys.consume('Enter')`).
 - **Refresh forzado tras editar.** Un cache que se recarga por
   `GetProjectStateChangeCount` queda un frame viejo tras una edición propia.
   Forzar la recarga con un valor centinela (`S.state_count = -1`) para que
@@ -292,8 +330,23 @@ y `WindowFlags_NoNav` en la raíz.
 - **Tab se lee aunque la navegación esté apagada.** `NoNav` bloquea la
   navegación de ImGui (Tab no mueve el foco entre inputs), no la lectura de
   `IsKeyPressed(Tab)`, también con un input activo. Un anillo de foco propio
-  con `SetKeyboardFocusHere` (offset `-1` apunta al widget anterior) mueve el
-  foco entre inputs, incluso dentro de un `BeginChild` con scroll.
+  con `SetKeyboardFocusHere` mueve el foco entre inputs, incluso dentro de
+  un `BeginChild` con scroll. Con offset `0` **antes** del widget enfoca el
+  campo de texto de cualquier input; con `-1` **después** funciona en un
+  `InputText` pero no en un `InputInt` (el foco no llegaba al campo; causa
+  probable, inferida: el último item es un botón del stepper). El anillo, sus
+  perfiles y las reglas de orden están en `musicstate_keys.md` §4.7.
+- **Teclas de un input activo.** ↑/↓ con un input de una línea activo se
+  leen con `IsKeyPressed` (ImGui no las usa en ese caso), igual que Tab y
+  Shift+Tab. Enter y Esc cierran el campo por su cuenta.
+- **Enter mantenido.** El sistema repite la tecla y ImGui desactiva el input
+  en cada repetición. Para devolverle el foco hay que leer Enter con
+  `repeat = true`; para un commit (agregar, aplicar), con `repeat = false`,
+  así no se duplica.
+- **Pedido de foco con identidad.** Un foco pedido hacia otra fila se
+  identifica por la tabla de la fila (no por índice) y se aplica el frame
+  siguiente: el reorden de la fila de origen ocurre antes y el ID del
+  destino ya es el definitivo (§2).
 - **Atajos globales al final del frame, con fotos del inicio.** Despachar
   después de dibujar ve lo ocurrido en el frame, pero obliga a tomar al inicio
   la foto de `IsAnyItemActive` **y de `IsPopupOpen`**: el Enter que commitea
