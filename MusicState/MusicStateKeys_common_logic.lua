@@ -222,13 +222,17 @@ function M.begin_frame(ctx)
   -- Una tab que no se dibujo el frame anterior se reinicia (con su pedido).
   S.frame = S.frame + 1
   local tab_down = reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Key_Tab())
+  local up_down = reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Key_UpArrow())
+  local down_down = reaper.ImGui_IsKeyDown(ctx, reaper.ImGui_Key_DownArrow())
   for _, r in pairs(S.rings) do
     if not tab_down then r.rep = nil end
+    if not up_down then r.arep.Up = nil end
+    if not down_down then r.arep.Down = nil end
     if r.drawn then
       r.prev, r.cur = r.cur, {}
       r.drawn = false
     else
-      r.prev, r.cur, r.pending, r.rep = {}, {}, nil, nil
+      r.prev, r.cur, r.pending, r.rep, r.arep = {}, {}, nil, nil, {}
     end
     if r.pending and S.frame > r.pending.frame + 2 then r.pending = nil end
   end
@@ -339,6 +343,23 @@ local function tabFires(ctx, r)
   return false
 end
 
+-- Igual que tabFires, para una flecha (name = 'Up' | 'Down'); un timer por
+-- tecla en r.arep, que begin_frame apaga al soltarla.
+local function arrowFires(ctx, r, name, key)
+  local now = reaper.time_precise()
+  if reaper.ImGui_IsKeyPressed(ctx, key, false) then
+    r.arep[name] = { next = now + S.defaults.delay }
+    return true
+  end
+  local a = r.arep[name]
+  if a and now >= a.next and reaper.ImGui_IsKeyDown(ctx, key) then
+    local nxt = a.next + S.defaults.rate
+    a.next = (nxt > now) and nxt or (now + S.defaults.rate)
+    return true
+  end
+  return false
+end
+
 -- cfg = { order = function(items) -> items }: reordena la lista del frame
 -- anterior (items = { {owner=, col=, meta=}, ... }, en orden de dibujado).
 -- Sin order se recorre en orden de dibujado.
@@ -368,7 +389,10 @@ end
 -- Tab / Shift+Tab con el widget activo dejan un pedido hacia el siguiente o
 -- el anterior; se aplica el frame SIGUIENTE, identificando el destino por
 -- owner y col (nunca por indice).
-function M.ring_item(ctx, owner, col, meta)
+-- profile (opcional): { on_up = fn, on_down = fn } con fn(owner, col, shift).
+-- Se llaman con la flecha (sin modificadores o con Shift) y el widget activo,
+-- con la repeticion de arrowFires. Sin perfil, las flechas no hacen nada.
+function M.ring_item(ctx, owner, col, meta, profile)
   local tab = S.tab_cur
   if not tab then return end
   local r = ringFor(tab)
@@ -377,16 +401,78 @@ function M.ring_item(ctx, owner, col, meta)
 
   if r.pending or r.applied == S.frame or not reaper.ImGui_IsItemActive(ctx) then return end
   local step = tabStep(ctx)
-  if not step or not tabFires(ctx, r) then return end
+  if step and tabFires(ctx, r) then
+    local list = orderedList(r, r.prev)
+    for i, it in ipairs(list) do
+      if it.owner == owner and it.col == col then
+        local t = list[i + step]
+        if t then r.pending = { owner = t.owner, col = t.col, frame = S.frame } end
+        return
+      end
+    end
+    return
+  end
 
+  if not profile then return end
+  local mods = reaper.ImGui_GetKeyMods(ctx) & MODS_ALL
+  if mods ~= 0 and mods ~= MODS.shift then return end
+  local shift = mods == MODS.shift
+  if profile.on_up and arrowFires(ctx, r, 'Up', reaper.ImGui_Key_UpArrow()) then
+    profile.on_up(owner, col, shift)
+  elseif profile.on_down and arrowFires(ctx, r, 'Down', reaper.ImGui_Key_DownArrow()) then
+    profile.on_down(owner, col, shift)
+  end
+end
+
+-- Pide el foco del vecino de (owner, col) en la lista del frame anterior.
+-- dir = 1 (siguiente) | -1 (anterior). opts: same_col = true (solo items de la
+-- misma col), by_group = true (salta al PRIMER item de la misma col del grupo
+-- siguiente/anterior segun meta.group; un grupo que no se dibujo no esta en la
+-- lista, asi que se salta solo). Sin vecino no hace nada. Devuelve true si pidio.
+function M.ring_neighbor(owner, col, dir, opts)
+  local tab = S.tab_cur
+  local r = tab and S.rings[tab]
+  if not r or r.pending then return false end
+  opts = opts or {}
   local list = orderedList(r, r.prev)
+
+  local idx
   for i, it in ipairs(list) do
-    if it.owner == owner and it.col == col then
-      local t = list[i + step]
-      if t then r.pending = { owner = t.owner, col = t.col, frame = S.frame } end
-      return
+    if it.owner == owner and it.col == col then idx = i; break end
+  end
+  if not idx then return false end
+
+  local here = list[idx].meta and list[idx].meta.group
+  local target, ti
+  local i = idx + dir
+  while list[i] do
+    local it = list[i]
+    local g = it.meta and it.meta.group
+    if (not opts.same_col or it.col == col) and (not opts.by_group or g ~= here) then
+      target, ti = it, i
+      break
+    end
+    i = i + dir
+  end
+  if not target then return false end
+
+  -- Hacia atras por grupo: el item hallado es el ULTIMO del grupo anterior;
+  -- retroceder hasta su primero (misma col).
+  if opts.by_group and dir == -1 then
+    local g = target.meta and target.meta.group
+    local j = ti - 1
+    while list[j] do
+      local it = list[j]
+      if it.col == col then
+        if (it.meta and it.meta.group) ~= g then break end
+        target = it
+      end
+      j = j - 1
     end
   end
+
+  r.pending = { owner = target.owner, col = target.col, frame = S.frame }
+  return true
 end
 
 -- Pide el foco de un widget del anillo de la tab activa (ej. el input de una

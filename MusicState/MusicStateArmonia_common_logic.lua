@@ -6,6 +6,23 @@ local M = {}
 
 local COLUMN_WIDTHS = { select = 36, measure = 100, beat = 90, hundredths = 100, chord = 100, cursor_btn = 110, go_btn = 50, delete_btn = 70 }
 
+-- Perfil de teclas del input de Acorde (musicstate_keys.md 9.4): las flechas
+-- pasan el foco al Acorde de la fila anterior/siguiente; con Shift, al primer
+-- Acorde de la seccion anterior/siguiente que este abierta.
+local chord_keys = nil
+local function getChordKeys(helpers)
+  if not chord_keys then
+    local Keys = helpers.Keys
+    local function move(dir)
+      return function(owner, col, shift)
+        Keys.ring_neighbor(owner, col, dir, { same_col = true, by_group = shift })
+      end
+    end
+    chord_keys = { on_up = move(-1), on_down = move(1) }
+  end
+  return chord_keys
+end
+
 local function setupHarmonyColumns(ctx)
   local fixed = reaper.ImGui_TableColumnFlags_WidthFixed()
   reaper.ImGui_TableSetupColumn(ctx, '', fixed, COLUMN_WIDTHS.select)
@@ -316,7 +333,7 @@ function M.draw(ctx, H, helpers)
             local changed_c
             helpers.Keys.ring_focus(ctx, row, 'chord')
             changed_c, row.chord = reaper.ImGui_InputText(ctx, '##acorde', row.chord)
-            helpers.Keys.ring_item(ctx, row, 'chord')
+            helpers.Keys.ring_item(ctx, row, 'chord', { group = group.stable_id }, getChordKeys(helpers))
 
             reaper.ImGui_TableNextColumn(ctx)
             if helpers.RowInputs.drawCursorButton(ctx) then
