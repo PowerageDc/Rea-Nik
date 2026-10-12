@@ -34,7 +34,7 @@ Pasos 1 a 6c del refactor de atajos hechos y documentados
 (`musicstate_keys.md` §4.6, §4.7, §9). Sonda de teclas en
 `Tests-Debug/Nik_Test_KeyProbe.lua`.
 
-**Próximo:** etapa 3.
+**Próximo:** etapa 4.
 
 ## 3. Decisiones aún no absorbidas por los docs
 
@@ -51,32 +51,17 @@ fila se borra.
 
 | # | Etapa | Estado | Subir además | Tamaño | Conversaciones |
 |---|---|---|---|---|---|
-| 3 | Módulo de estilo de botones | Pendiente | `Nik_MusicState_Helper.lua`, Armonía | ~80 a 100 líneas, aplicación gradual | Una |
 | 4 | Undo por tab (piloto Lyrics) | Pendiente | Lyrics (tab, Sync, Edit), Helper, `musicstate_lyrics.md` | Medio a grande | 2 o 3 (4a, 4b, 4c) |
 | 5 | 6d y revamp de Cues | Pendiente | Cues, Armonía, `RowInputs`, Keys, `musicstate_helper.md` | Grande | 2 o 3 (5a, 5b, 5c) |
 
 Estimación a ojo: tope práctico de 5 o 6 sub-pasos por conversación cuando
 hay que leer archivos Lua grandes. Cada conversación termina en commit y docs
-actualizados, y no mezcla temas de prueba distintos. Orden sugerido: 3, 4, 5. 
-La 4 sube primero si los bugs de undo molestan en sala.
+actualizados, y no mezcla temas de prueba distintos. Orden sugerido: 4, 5. 
+La 5 sube primero si los bugs de Cues molestan en sala.
 
 ## 5. Mini-specs de las etapas chicas
 
-### Etapa 3 — Módulo de estilo de botones
-
-- **Alcance v1:** módulo en `_Shared/` (nombre por convención, por ejemplo
-  `ImGuiButtonStyle_common_logic.lua`) con tipos semánticos (propuesta:
-  primario, neutro, peligro) que hacen `PushStyleColor` y
-  `PushStyleVar(FrameRounding)`. Primero Armonía (Borrar = peligro, Ir y Usar
-  cursor = neutro, Agregar = primario), después el resto.
-- **Fuera de v1:** degradé (no es nativo, requiere `DrawList`) e íconos (la
-  fuente debe traer los glifos; los emoji a color no se renderizan).
-- **Relación con la etapa 5:** `ring_button` (6d) tiene que dibujar a través
-  de este módulo, para tener un solo camino de dibujo.
-- **Riesgos:** balance de `Push` y `Pop` dentro de tablas; colores de
-  hover y active por tipo.
-- **Pruebas:** apariencia en las cuatro tabs, sin cambio de comportamiento ni
-  de ancho de columnas.
+Sin etapas chicas pendientes.
 
 ## 6. Etapas grandes (el spec sale de una conversación de diseño)
 
@@ -108,7 +93,7 @@ Spec propio, `SPEC-MusicState_Cues.md`, como salida de la 5a.
 - **6d:** foco por teclado y activación con Space o Enter de checkbox y
   botones. Con `NoNav` hay que dibujar el recuadro de foco a mano y evitar que
   Space dispare Play/Pause (`Keys.consume`). `ring_button` pasa por el módulo
-  de estilo (etapa 3).
+  de estilo (`ImGuiButtonStyle_common_logic.lua`).
 - **Cues:** sticky header (`musicstate_helper.md` §3), `drawPositionInputs`
   con `get_max_beats`, `ring` y `arrow_values`, "Usar selección de tiempo"
   para `duration_qn`, y el módulo de lista posicionada solo si hay dos

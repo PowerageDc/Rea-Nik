@@ -150,16 +150,17 @@ C:\dev\Rea-Nik\
 poder excluirla fácilmente si algún día se importa la carpeta completa al
 Action List (no contiene scripts ejecutables, solo módulos).
 
-Un módulo entra a `_Shared/` cuando lo consume más de un dominio (hoy:
-`StemBus_common_logic.lua` y `ReaPitchBus_common_logic.lua`, usados por
-`RemoteControl/` y por `ReaPitchBus/`), o cuando es genérico y está pensado
-para reusarse entre UIs de dominios distintos aunque hoy lo consuma uno solo
-(`ImGuiInputCommit_common_logic.lua`, patrones de input;
-`ImGuiHostFocus_common_logic.lua`, foco del teclado entre una ventana
+Un módulo entra a `_Shared/` cuando lo consume más de un dominio (ejemplos,
+no inventario: el inventario es la carpeta; hoy: `StemBus_common_logic.lua` y 
+`ReaPitchBus_common_logic.lua`, usados por `RemoteControl/` y por `ReaPitchBus/`), o 
+cuando es genérico y está pensado para reusarse entre UIs de dominios distintos 
+aunque hoy lo consuma uno solo (`ImGuiInputCommit_common_logic.lua`, patrones de 
+input; `ImGuiHostFocus_common_logic.lua`, foco del teclado entre una ventana
 ReaImGui y REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un
 modal de confirmación: patrones de ReaImGui, hoy solo en el Helper de
-`MusicState/`). Un módulo usado por un solo dominio se queda
-dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`,
+`MusicState/`; `ImGuiButtonStyle_common_logic.lua`, estilo semántico de
+botones por tipo, hoy en las tabs del Helper). Un módulo usado por un solo dominio
+se queda dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`,
 `ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de
 `RemoteControl/`, y `MusicStateBridge_common_logic.lua` y
 `MusicStateRowInputs_common_logic.lua` dentro de `MusicState/`, no en

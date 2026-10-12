@@ -358,3 +358,42 @@ y `WindowFlags_NoNav` en la raíz.
 - **Un hold se evalúa en el draw.** Una tecla de "mantener" (§4) leída en el
   despacho del final del frame pierde un frame de latencia (~30 ms) respecto
   de leerla durante el draw de la tab.
+
+## 8. Estilo de botones: pila de push/pop y tipos semánticos
+
+Primer caso: `_Shared/ImGuiButtonStyle_common_logic.lua` (estado por tab en
+`musicstate_helper.md` §10).
+
+- **Un solo camino de dibujo.** Color y redondeo de un botón salen de un
+  módulo con tipos semánticos (primario, neutro, peligro, sutil), no de
+  `PushStyleColor` suelto en cada tab. Cambiar la paleta en un lugar cambia
+  todos los botones.
+- **Balance de `Push` y `Pop`.** Un `PushStyleColor` o `PushStyleVar` sin su
+  pop (dentro de una tabla, o por un `return` temprano) arrastra el estilo al
+  resto del frame. El wrapper `button(ctx, label, kind, opts)` hace push,
+  widget y pop en una sola función. El `pop` desapila lo que apiló su `push`
+  (pila con la cantidad de colores de cada llamada), así un tipo que no apila
+  colores no desbalancea nada.
+- **Tipo "default" = no apilar.** Para dejar el color del tema se omite el
+  campo en la paleta; apilar un color igual al actual no seguiría al tema si
+  cambia.
+- **Hovered y active derivados de la base.** Se mezcla cada canal RGB de la
+  base hacia blanco (hovered) y hacia negro (active) en proporción fija
+  (0,18), sin tocar el alfa. Formato `0xRRGGBBAA`.
+- **El texto va con el color.** `Col_Text` se apila junto con el fondo: el
+  blanco sobre un fondo claro casi no se lee (el primario lima lleva texto
+  negro).
+- **El ancho no es parte del estilo.** El módulo no toca el layout: ancho
+  fijo (negativo = rellenar), o texto más margen, medido con `CalcTextSize`
+  sobre el texto visible, sin el sufijo `##`.
+- **Steppers de `InputInt` sin fondo.** Los `+` y `-` son botones internos que
+  leen `Col_Button*`: apilar el tipo transparente alrededor del `InputInt` los
+  deja sin fondo hasta el hover o el clic. El `FrameRounding` del tipo también
+  redondea el campo de texto. El pop va justo después del widget, antes de
+  `IsItemActive` o de registrar el item en el anillo de foco.
+
+```lua
+ButtonStyle.push(ctx, 'subtle')
+local changed, v = reaper.ImGui_InputInt(ctx, '##campo', v, 1, 10)
+ButtonStyle.pop(ctx)
+```

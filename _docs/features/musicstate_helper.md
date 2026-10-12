@@ -48,7 +48,8 @@ dominio consumidor, ver `01_CONVENCIONES.md`):
 
 Los módulos genéricos de ReaImGui que consume el contenedor viven en
 `_Shared/` (ver `01_CONVENCIONES.md`): `ImGuiInputCommit`, `ImGuiHostFocus`
-(foco ventana ↔ REAPER) e `ImGuiConfirmModal` (ciclo de vida de un modal).
+(foco ventana ↔ REAPER), `ImGuiConfirmModal` (ciclo de vida de un modal) e
+`ImGuiButtonStyle` (estilo semántico de botones, ver §10).
 
 Cada uno expone `M.draw(ctx, H, helpers)`. `H` es la tabla de estado
 global, mutada in-place. `helpers` es una tabla de dependencias armada
@@ -58,8 +59,8 @@ tab): funciones de conversión (`rowToTime`, `rowToQN`, `qnToRow`,
 uno en `MusicState/`, el otro en `_Shared/` por ser genérico de ReaImGui,
 ver `01_CONVENCIONES.md`), `Keys` (`Keys.consume`, `Keys.held`,
 `Keys.modal`, `Keys.input`, `Keys.ring_*`: `musicstate_keys.md` §4.6 y
-§4.7), `Modal` (modal de confirmación de `_Shared/`), captura de
-cursor y `getSections()`.
+§4.7), `Modal` (modal de confirmación de `_Shared/`), `ButtonStyle`
+(estilo de botones, §10), captura de cursor y `getSections()`.
 
 ## 2. Estado (`H`) y conversión de coordenadas
 
@@ -279,5 +280,37 @@ juntas.
   Definir primero si el color de sección lo necesita el Helper en tiempo
   real o solo importa del lado web, antes de elegir A o B.
 
-El glitch de Enter en la tab Roles ya está anotado en §7, no se repite
-acá.
+## 10. Estilo de botones
+
+Los botones pasan por `_Shared/ImGuiButtonStyle_common_logic.lua`, que el
+contenedor carga y expone como `helpers.ButtonStyle`. Los patrones genéricos
+(pila de push/pop, tipos sin color, steppers) están en
+`08_REAIMGUI_PATTERNS.md` §8.
+
+| Tipo | Aspecto |
+|---|---|
+| `primary` | Lima `#B8FF6D`, texto negro; hovered y active derivados de la base |
+| `neutral` | Colores default del tema |
+| `danger` | Rojo `#A83232`, texto blanco; hovered y active derivados |
+| `subtle` | Transparente hasta el hover o el clic |
+
+Redondeo 4 en todos. `ButtonStyle.button(ctx, label, kind, opts)` devuelve
+true con el clic. `opts` es un número (ancho fijo, negativo = rellenar) o una
+tabla `{ w, pad, min_w, h }`; sin `opts`, tamaño nativo. `push` y `pop`
+sirven para widgets que dibuja otra cosa. La paleta se ajusta en vivo con
+`Tests-Debug/Nik_Test_ButtonStyle.lua`, que imprime la tabla lista para
+pegar en el módulo.
+
+`RowInputs.drawCursorButton(ctx, label, kind, opts)` aplica el estilo solo si
+recibe `kind`; sin él dibuja el botón nativo. Los `InputInt` de Compás, Beat y
+Cent. envuelven el widget con `subtle` (steppers sin fondo), y por eso Cues,
+que usa el mismo `drawPositionInputs`, los hereda.
+
+| Tab | Estado |
+|---|---|
+| Contenedor | `Guardar y Publicar`: primary |
+| Tonalidad | Sin botones |
+| Roles | `Agregar`: primary; `Quitar`: danger |
+| Armonía | `+ Agregar fila`: primary; `Borrar` y `Sobrescribir` (modal): danger; `Ir`, `Usar cursor`, `Copiar selección`, `Pegar en cursor` y `Cancelar` (modal): neutral |
+| Cues | Sin estilo, salvo los steppers de posición |
+| Lyrics (tab, Sync y Edit) | Sin estilo |
