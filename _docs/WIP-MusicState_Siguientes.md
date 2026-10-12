@@ -1,10 +1,10 @@
 # WIP — MusicState: siguientes etapas (después del Paso 6)
 
-Documento de trabajo para retomar en conversaciones nuevas. **No describe
-cómo está hecho hoy** (eso vive en `features/musicstate_keys.md`,
-`musicstate_helper.md` y `08_REAIMGUI_PATTERNS.md`): describe qué sigue, qué
-se decidió y cómo está partido el trabajo. Se adelgaza solo: al cerrar una
-etapa, lo aprendido pasa a los docs de feature y su mini-spec se borra.
+Cola de trabajo, no historia. Un hecho vive en un solo lugar: los docs de
+feature y `08_REAIMGUI_PATTERNS.md` dicen cómo está hecho hoy; este archivo
+dice qué falta; git dice qué pasó y cuándo. Solo se achica: al cerrar una
+etapa se borran su fila, su mini-spec y sus decisiones ya absorbidas. Sin
+fechas ni narrativa.
 
 ## 1. Reglas fijas
 
@@ -18,8 +18,11 @@ etapa, lo aprendido pasa a los docs de feature y su mini-spec se borra.
   `ShowConsoleMsg` antes de tocar lógica si la causa no está medida.
 - Commits: Conventional Commits, tipo y dominio en inglés, resto en español
   sin tildes, multilínea. Código y docs en commits separados.
-- Al cerrar cada etapa: diffs a los docs de feature, bloque de cierre (§8) y
-  commit. Los patrones genéricos de ReaImGui van a `08_REAIMGUI_PATTERNS.md`.
+- Al cerrar cada etapa, en este orden: (1) commit del código; (2) lo
+  aprendido a los docs de feature y los patrones genéricos de ReaImGui a
+  `08_REAIMGUI_PATTERNS.md`, en otro commit; (3) en este archivo, borrar la
+  fila de la etapa, su mini-spec y las decisiones de §3 ya absorbidas, y
+  reescribir la línea "Próximo" de §2. No se agrega nada más.
 - Subir siempre: este archivo, `musicstate_keys.md` y
   `MusicStateKeys_common_logic.lua`, más los de la etapa (tabla de §4). El
   Proyecto trae `00` y `01` como copias de solo lectura: resubirlos si
@@ -27,25 +30,23 @@ etapa, lo aprendido pasa a los docs de feature y su mini-spec se borra.
 
 ## 2. Estado de partida
 
-Hecho y commiteado: Pasos 1 a 5 y 6a a 6c del refactor de atajos (`Keys.input`,
-anillo de foco con Tab y Shift+Tab, repetición, flechas por perfil; en
-Armonía: Acorde mueve de fila, Compás, Beat y Cent. cambian el valor).
-Docs al día: `musicstate_keys.md` §4.6, §4.7 y §9; `08` §2, §3, §7;
-`musicstate_helper.md` §1, §5, §9. Sonda de teclas en
+Pasos 1 a 6c del refactor de atajos hechos y documentados
+(`musicstate_keys.md` §4.6, §4.7, §9). Sonda de teclas en
 `Tests-Debug/Nik_Test_KeyProbe.lua`.
 
-## 3. Decisiones tomadas
+**Próximo:** etapas 1 y 2.
+
+## 3. Decisiones aún no absorbidas por los docs
+
+Solo lo decidido que todavía no está en un doc de feature. Lo ya documentado
+(anillo de foco, perfiles, `SetKeyboardFocusHere`, `InputInt` activo) vive en
+`musicstate_keys.md` §4.7 y en `08`, y no se repite acá. Al absorberse, la
+fila se borra.
 
 | Tema | Decisión |
 |---|---|
-| Anillo de foco | Por tab; orden por defecto = dibujado, `ring_config` con orden propio; sin wrap-around; foco aplicado el frame siguiente; destino por identidad `(owner, col)` |
-| `SetKeyboardFocusHere` | `0` antes del widget (`ring_focus`); `-1` después solo en `InputText` |
-| Cambio de valor con `InputInt` activo | ID versionado (`row._ver_<campo>`) + refoco con `hold`; `ring_item` va después de volcar el valor |
-| Perfil por input | `{ on_up, on_down }` declarado por input; cada tab decide qué hacen las flechas |
-| Enter y Esc | Cierran el campo (los resuelve ImGui); `keep_focus` solo donde se declara (Roles: `'always'`) |
 | Teclas ´ y ç | En ReaImGui: `Apostrophe` y `Slash` (medido con la sonda, este teclado) |
 | Undo por tab | Vive en `MusicState/` (no `_Shared/`: Armonía, Cues y Lyrics son el mismo dominio). Núcleo puro (pila: apilar, deshacer, rehacer, etiquetas, tope; sin ImGui ni `reaper.*`) separado del adaptador de cada tab. La pila se vacía al cambiar de proyecto (`H.last_proj`) |
-| `_Shared/` | Un módulo sube cuando lo consume otro dominio o es genérico para otras UIs (`01_CONVENCIONES.md`) |
 
 ## 4. Etapas
 
@@ -109,6 +110,9 @@ actualizados, y no mezcla temas de prueba distintos. Orden sugerido: 1 y 2,
 
 ## 6. Etapas grandes (el spec sale de una conversación de diseño)
 
+Al cerrar la etapa, su SPEC propio se reescribe como doc de feature (cómo
+está hecho hoy, sin plan) o se absorbe en uno existente y se borra.
+
 ### Etapa 4 — Undo por tab
 
 Spec propio, `SPEC-MusicState_Undo.md`, como salida de la 4a (lectura del
@@ -162,19 +166,12 @@ Retomo MusicState. Leé primero WIP-MusicState_Siguientes.md y
 musicstate_keys.md (§4.7 y §9). Hoy: etapa <N>, sub-paso <x>.
 ```
 
-**Bloque de cierre** (se agrega al final, por diff, al terminar cada
-conversación): fecha, etapa y sub-pasos hechos, commits, decisiones nuevas
-(también a §3), gotchas nuevos (también al doc que corresponda), próximo paso.
+**Cierre de conversación:** no hay registro, la historia es git. Se sigue
+§1 y lo único que se escribe acá es la línea "Próximo" de §2.
 
 **Conversación de sync** (cada 2 o 3 etapas cerradas, o ante un cambio de
 arquitectura): lee este archivo junto con `00`, `01` y los docs de feature, y
-verifica que lo marcado como hecho esté reflejado en los docs, que las
-decisiones de §3 sigan vigentes, que no haya contradicciones entre docs, y que
-no queden comentarios de código desactualizados. Actualiza estados y borra
-mini-specs cerrados.
-
-### Registro de cierres
-
-- 2026-10-12 — Paso 6 completo (6a a 6c) y docs (`musicstate_keys.md`, `08`,
-  `musicstate_helper.md`); sonda de teclas agregada. Gotchas: `08` §2, §3,
-  §7. Próximo: etapas 1 y 2.
+verifica que no haya hechos duplicados entre este archivo y los docs, que lo
+ya hecho no siga acá, que las decisiones de §3 sigan vigentes, que no haya
+contradicciones entre docs y que no queden comentarios de código
+desactualizados. Es una auditoría: borra y corrige, no agrega historia.
