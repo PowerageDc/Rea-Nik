@@ -15,6 +15,9 @@ function M.draw(ctx, H, helpers)
   reaper.ImGui_SameLine(ctx)
   _, mode = reaper.ImGui_RadioButtonEx(ctx, 'Menor', mode, 1)
   H.key.mode_idx = mode
+  if not H.key_set then
+    reaper.ImGui_TextDisabled(ctx, 'Sin tonalidad publicada en este proyecto. Guardar y Publicar publica la de arriba.')
+  end
 end
 
 return M

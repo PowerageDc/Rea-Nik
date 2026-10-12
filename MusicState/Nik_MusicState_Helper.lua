@@ -54,6 +54,7 @@ reaper.ImGui_Attach(ctx, font)
 
 local H = {
   key = { tonic_idx = 4, mode_idx = 0 },  -- tonic_idx 4 = "C" (ver TONICS abajo)
+  key_set = false,  -- true si el proyecto tiene project_key publicada (ver load)
   roles = {},
   new_role_buf = '',
   harmony = {},  -- array de {measure, beat, hundredths, chord}; chord == '' -> sentinel null
@@ -131,20 +132,27 @@ end
 -- Parseo manual (sin libreria JSON): formatos de project_key/project_roles
 -- son simples a proposito, ver IMPL_MusicState.md seccion 4.2/10.2/11.1.
 local function nikMusicStateLoadFromProjExtState(proj)
+  -- Sin project_key valida el proyecto no tiene tonalidad: se vuelve a los
+  -- defaults (no arrastrar la del proyecto anterior) y key_set queda en false.
+  H.key.tonic_idx = 4
+  H.key.mode_idx = 0
+  H.key_set = false
   local ok_key, key_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'project_key')
   if ok_key > 0 and key_json ~= '' then
     local tonic = key_json:match('"tonic"%s*:%s*"([^"]*)"')
     local mode = key_json:match('"mode"%s*:%s*"([^"]*)"')
+    local found_tonic, found_mode = false, false
     if tonic then
       for i, t in ipairs(TONICS) do
-        if t == tonic then H.key.tonic_idx = i - 1 end
+        if t == tonic then H.key.tonic_idx = i - 1; found_tonic = true end
       end
     end
     if mode then
       for i, m in ipairs(MODES) do
-        if m == mode then H.key.mode_idx = i - 1 end
+        if m == mode then H.key.mode_idx = i - 1; found_mode = true end
       end
     end
+    H.key_set = found_tonic and found_mode
   end
 
   local ok_ver, ver_str = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'publish_version')
@@ -441,6 +449,7 @@ local function nikMusicStateSaveAndPublish()
   H.publish_version = (H.publish_version or 0) + 1
 
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'project_key', key_json)
+  H.key_set = true
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'project_roles', roles_json)
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'harmony_data', harmony_json)
   reaper.SetProjExtState(proj, Bridge.NAMESPACE, 'cues_data', cues_json)
