@@ -294,6 +294,7 @@ end
 ---@field drawn boolean
 ---@field pending? table
 ---@field applied? integer
+---@field applied_owner? table
 ---@field rep? table
 ---@field arep table<string, table>
 ---@field cfg table
@@ -380,6 +381,7 @@ function M.ring_focus(ctx, owner, col)
     reaper.ImGui_SetKeyboardFocusHere(ctx, 0)
     r.pending = nil
     r.applied = S.frame
+    r.applied_owner = p.hold and owner or nil
   end
 end
 
@@ -477,11 +479,23 @@ end
 
 -- Pide el foco de un widget del anillo de la tab activa (ej. el input de una
 -- fila recien agregada). Se aplica el frame siguiente, si el widget se dibuja.
-function M.ring_request(owner, col)
+-- hold = true: el dueño sigue "activo" (ring_holds) mientras el pedido espera
+-- y 2 frames despues de aplicarse; para refocos que no son salida de edicion.
+function M.ring_request(owner, col, hold)
   if not S.tab_cur then return end
   local r = ringFor(S.tab_cur)
   r.drawn = true  -- evita que el relevo descarte el pedido si la tab estaba vacia
-  r.pending = { owner = owner, col = col, frame = S.frame }
+  r.pending = { owner = owner, col = col, frame = S.frame, hold = hold }
+end
+
+-- true mientras un refoco con hold de owner esta pendiente o recien aplicado.
+function M.ring_holds(owner)
+  local tab = S.tab_cur
+  local r = tab and S.rings[tab]
+  if not r then return false end
+  local p = r.pending
+  if p and p.hold and p.owner == owner then return true end
+  return r.applied_owner == owner and r.applied ~= nil and S.frame - r.applied <= 1
 end
 
 -- Teclas de un modal (lector para ImGuiConfirmModal.begin): devuelve

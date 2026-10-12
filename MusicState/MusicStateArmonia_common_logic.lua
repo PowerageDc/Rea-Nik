@@ -324,7 +324,7 @@ function M.draw(ctx, H, helpers)
               toggleSelection(H, row)
             end
 
-            if helpers.RowInputs.drawPositionInputs(ctx, row, nil, helpers.getMaxBeats, helpers.Keys) then
+            if helpers.RowInputs.drawPositionInputs(ctx, row, nil, helpers.getMaxBeats, helpers.Keys, true) then
               active_row_this_frame = row
             end
 
