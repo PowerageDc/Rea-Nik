@@ -67,11 +67,17 @@
 }
 
 .mm-row {
-  padding: calc(var(--u) * 1.5);
+  padding: calc(var(--u) * 2.5) calc(var(--u) * 1.5);
   border-top: 1px solid var(--ms-divider-color);
 }
 
+/* Más aire entre el divider del título de rol y la primera fila. */
+.mm-section-title + .mm-row {
+  padding-top: calc(var(--u) * 4);
+}
+
 .mm-row-name {
+  margin-bottom: calc(var(--u) * 1.5);
   font-size: calc(var(--u) * 4.2);
   font-weight: 500;
   color: var(--ms-song-name-color);
@@ -149,7 +155,7 @@
 /* El ancho lo fija mm-slider.js (llega hasta el centro del thumb). */
 .mm-sl-fill {
   left: 0;
-  background: var(--ms-chord-color);
+  background: var(--mm-accent, var(--ms-chord-color));
 }
 
 /* Ancho y alto los fija mm-slider.js (NIK_MM_SLIDER.THUMB_PX). */
@@ -157,8 +163,13 @@
   top: 50%;
   transform: translateY(-50%);
   border-radius: 50%;
-  background: var(--ms-chord-color);
+  background: var(--mm-accent, var(--ms-chord-color));
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+/* Faders de la sección Click: otro color para distinguirlos de un vistazo. */
+.mm-section-click {
+  --mm-accent: #3fb37f;
 }
 
 .mm-row.is-muted .mm-slider {

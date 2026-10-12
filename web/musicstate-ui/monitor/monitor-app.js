@@ -51,9 +51,9 @@ function nikMonitorPairLabel(pair) {
     return (pair + 1) + "/" + (pair + 2);
 }
 
-function nikMonitorSectionBuild(title, tracks) {
+function nikMonitorSectionBuild(title, tracks, role) {
     var sec = document.createElement("div");
-    sec.className = "mm-section";
+    sec.className = "mm-section" + (role === "click" ? " mm-section-click" : "");
     var h = document.createElement("div");
     h.className = "mm-section-title";
     h.textContent = title;
@@ -120,7 +120,7 @@ function nikMonitorListRender() {
         (L.tracks[i].role === "click" ? click : music).push(L.tracks[i]);
     }
     if (music.length) listEl.appendChild(nikMonitorSectionBuild("Música", music));
-    if (click.length) listEl.appendChild(nikMonitorSectionBuild("Click", click));
+    if (click.length) listEl.appendChild(nikMonitorSectionBuild("Click", click, "click"));
     nikMonitorFadersBuild(L.tracks);
 }
 
