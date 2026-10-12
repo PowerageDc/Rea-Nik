@@ -276,7 +276,11 @@ function M.draw(ctx, H, helpers)
           for _, entry in ipairs(group.rows) do
             local i, row = entry.idx, entry.row
             reaper.ImGui_TableNextRow(ctx)
-            reaper.ImGui_PushID(ctx, i)
+            if not row._uid then
+              H._armonia_uid_seq = (H._armonia_uid_seq or 0) + 1
+              row._uid = H._armonia_uid_seq
+            end
+            reaper.ImGui_PushID(ctx, row._uid)
 
             if i == active_idx then
               local color = active_exact and 0x3FBF3FA0 or 0x3FBF3F40  -- verde: solido en match exacto, tenue en carry-over
