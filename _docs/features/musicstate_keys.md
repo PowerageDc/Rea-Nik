@@ -223,8 +223,8 @@ Reglas:
   con Shift. Sin perfil las flechas no hacen nada; los atajos globales ↑/↓
   siguen cerrados por el guard de item activo.
 - `ring_focus` va antes del widget y con offset 0: con `-1` después de un
-  `InputInt` el foco no llegaba al campo (medido en el 6c.3; causa probable,
-  inferida: el último item es un botón del stepper). El `-1` posterior sirve
+  `InputInt` el foco no llegaba al campo (causa probable, inferida: el
+  último item es un botón del stepper). El `-1` posterior sirve
   para `InputText` (§4.6).
 - Un `InputInt` activo ignora el valor que se le pasa desde afuera. Para
   cambiarlo desde un perfil se cambia el ID del widget (`row._ver_<campo>`,

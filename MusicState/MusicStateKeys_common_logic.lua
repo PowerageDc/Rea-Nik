@@ -371,7 +371,7 @@ end
 -- Llamar justo ANTES de dibujar un widget enfocable (par de ring_item, que va
 -- despues). Si hay un pedido pendiente para (owner, col) y ya paso el frame
 -- del pedido, enfoca el widget que sigue. Va antes y con offset 0 porque con
--- -1 despues de un InputInt el foco no llegaba al campo (medido en el 6c.3).
+-- -1 despues de un InputInt el foco no llegaba al campo.
 function M.ring_focus(ctx, owner, col)
   local tab = S.tab_cur
   local r = tab and S.rings[tab]
