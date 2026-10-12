@@ -14,13 +14,14 @@ pendientes, para retomarlos sin repetir la discusión.
 
 | Archivo | Rol |
 |---|---|
-| `MusicState/MusicStateKeys_common_logic.lua` | Despacho: bindings, guards, repetición, colisiones, `Keys.held`, `Keys.modal`, `Keys.consume`, `Keys.input` |
+| `MusicState/MusicStateKeys_common_logic.lua` | Despacho: bindings, guards, repetición, colisiones, `Keys.held`, `Keys.modal`, `Keys.consume`, `Keys.input`, `Keys.ring_*` (anillo de foco, §4.7) |
 | `MusicState/MusicStateKeys_config.lua` | Bindings globales y por tab, en datos puros (convención de `<Dominio>_config.lua`, ver `01_CONVENCIONES.md`) |
 | `_Shared/ImGuiHostFocus_common_logic.lua` | Foco del teclado ventana ReaImGui ↔ REAPER y anti-rebote por auto-repeat |
 | `_Shared/ImGuiConfirmModal_common_logic.lua` | Ciclo de vida común de un modal de confirmación |
 | `MusicState/Nik_MusicState_FocusHelper.lua` | One-shot para REAPER: lleva el foco al Helper |
 | `Nik_MusicState_Helper.lua` | Carga los módulos, registra las acciones Lua (`host_focus`, `close_helper`) y llama al ciclo de frame |
 | `MusicStateLyricsSync_common_logic.lua` | `register_keys`: la tecla de tap `B` como hold de la tab Lyrics |
+| `MusicState/MusicStateRowInputs_common_logic.lua` | Registra Compás, Beat y Cent. en el anillo de foco y arma el perfil de flechas que cambia el valor (§4.7) |
 
 ## 2. Ciclo del frame
 
@@ -184,8 +185,68 @@ del perfil, todos opcionales:
 | `keep_focus` | `false` (defecto) \| `'when_empty'` \| `'always'` | Devuelve el foco al input tras Enter: con el buffer vacío, o siempre |
 
 Llama a `Keys.consume('Enter')` cuando Enter termina la edición. Lo usa la
-tab Roles. Pendientes del perfil: `on_escape`, `on_tab`, `on_up`, `on_down`
-(§9.4).
+tab Roles. Enter y Esc cierran el campo (los resuelve ImGui) y no se
+refocusea salvo con `keep_focus`; `on_escape` no hizo falta. Tab y las
+flechas no son campos de este perfil: los resuelve el anillo de foco (§4.7).
+
+### 4.7 Anillo de foco
+
+Tab y Shift+Tab recorren los inputs de la tab activa, y las flechas ejecutan
+el perfil de cada input. El estado es por tab (lista de items registrados,
+orden propio, pedido de foco pendiente) y se reinicia al cambiar de tab. Lo
+usa Armonía.
+
+| Función | Dónde se llama | Qué hace |
+|---|---|---|
+| `Keys.ring_focus(ctx, owner, col)` | Justo **antes** del widget | Si hay un pedido pendiente para `(owner, col)` y ya pasó su frame, `SetKeyboardFocusHere(ctx, 0)` |
+| `Keys.ring_item(ctx, owner, col, meta, perfil)` | Justo **después** del widget, y después de volcar su valor a los datos | Registra el item. Con el widget activo, Tab y Shift+Tab dejan un pedido hacia el anterior o el siguiente, y las flechas llaman al perfil |
+| `Keys.ring_request(owner, col, hold)` | Donde se quiera pedir foco (ej. "+ Agregar fila") | Deja un pedido pendiente; con `hold`, ver abajo |
+| `Keys.ring_holds(owner)` | En quien decide qué fila está activa | true mientras un refoco con `hold` está pendiente o recién aplicado |
+| `Keys.ring_neighbor(owner, col, dir, opts)` | Dentro de un `on_up` / `on_down` | Pide el foco del vecino (`dir` = ±1). `opts.same_col`: solo la misma columna. `opts.by_group`: primer item de la misma columna del grupo vecino (`meta.group`) |
+| `Keys.ring_config(tab, { order = fn })` | Al armar la tab (opcional) | Orden propio de Tab: `fn(items)` recibe una copia de la lista del frame anterior |
+
+Reglas:
+
+- `owner` identifica el widget entre frames: es la tabla de la fila, nunca el
+  índice. Armonía usa `row._uid` en el `PushID`, así un reorden no corre el ID
+  de un input enfocado.
+- Los items de un frame se consultan en el siguiente (lista del frame
+  anterior). El orden por defecto es el de dibujado.
+- El pedido se aplica el frame siguiente (el reorden de la fila de origen
+  ocurre antes) y expira a los 2 frames si el destino no se dibuja (grupo
+  colapsado, fila borrada).
+- Tab no da la vuelta: en el último item no hace nada. Repite con `delay` y
+  `rate` de `autorepeat`, con un timer para Tab y uno por flecha. Sin ningún
+  item activo, Tab entra al primer item y Shift+Tab al último (en `dispatch`,
+  con los guards de §3).
+- Perfil `{ on_up, on_down }`, con `fn(owner, col, shift)`, sin modificadores o
+  con Shift. Sin perfil las flechas no hacen nada; los atajos globales ↑/↓
+  siguen cerrados por el guard de item activo.
+- `ring_focus` va antes del widget y con offset 0: con `-1` después de un
+  `InputInt` el foco no llegaba al campo (medido en el 6c.3; causa probable,
+  inferida: el último item es un botón del stepper). El `-1` posterior sirve
+  para `InputText` (§4.6).
+- Un `InputInt` activo ignora el valor que se le pasa desde afuera. Para
+  cambiarlo desde un perfil se cambia el ID del widget (`row._ver_<campo>`,
+  campo interno como `_uid`, no se publica) y se pide el foco con `hold`.
+  `ring_holds` hace que `drawPositionInputs` siga devolviendo la fila como
+  activa: no se reordena ni cambia de grupo hasta salir del trío de posición.
+- `ring_item` va después de la asignación `row.<campo> = valor del widget`: si
+  va antes, el cambio del perfil se pisa con el valor viejo.
+
+Armonía:
+
+| Campo | ↑ / ↓ | Shift+↑ / Shift+↓ |
+|---|---|---|
+| Compás | ±1 (mínimo 1) | ±4 |
+| Beat | ±1 (1..tope del compás) | ±4 |
+| Cent. | ±5 (0..99) | ±25 |
+| Acorde | Acorde de la fila anterior / siguiente | Primer Acorde de la sección abierta anterior / siguiente |
+
+El orden de Tab es Compás, Beat, Cent., Acorde, fila por fila. El reorden
+corre al pasar de Cent. a Acorde (salir del trío de posición), no al salir de
+cada campo. Enter y Esc cierran el campo. Cues no pasa `ring` ni
+`arrow_values` a `drawPositionInputs`, y las demás tabs no registran items.
 
 ## 5. Modales
 
@@ -302,6 +363,13 @@ Regresión del módulo, todo debe pasar:
     cancela, ninguno reproduce ni limpia la selección de tiempo; con el foco
     en Cancelar (flechas) Enter cancela; un cambio de proyecto con el modal
     abierto lo cierra sin pegar; sin colisión pega directo.
+13. Anillo de foco (Armonía): Tab y Shift+Tab recorren Compás, Beat, Cent. y
+    Acorde fila por fila, y mantenidos repiten; sin foco, Tab entra al primer
+    item y Shift+Tab al último; ↑/↓ en Acorde pasan de fila y con Shift saltan
+    a la sección abierta vecina; ↑/↓ en Compás, Beat y Cent. cambian el valor
+    con los pasos de §4.7 y el clamp; ↑ hasta cruzar de sección mantiene el
+    foco y reordena recién al salir del trío; en las demás tabs no hacen
+    nada.
 
 ## 9. Pasos del refactor: hechos y pendientes
 
@@ -349,11 +417,11 @@ gesto fue una letra. Un click selecciona; Enter no actúa sobre el hover.
 
 ### 9.4 Paso 6 — Anillo de foco y perfil de teclas por componente
 
-**Estado:** 6a (caso Roles) y 6b (wrapper `Keys.input`, §4.6) hechos, con
-`on_enter` y `keep_focus`. Pendiente el 6c: anillo de foco (`on_tab`,
-`on_up`, `on_down`). `on_escape` probablemente no haga falta: ImGui revierte
-el buffer con Esc y el guard de item activo evita que Esc llegue a
-`time.clear_selection`; se decide al probar el anillo.
+**Estado:** 6a (caso Roles), 6b (wrapper `Keys.input`, §4.6) y 6c (anillo de
+foco con Tab, repetición y flechas por perfil, §4.7) hechos. `on_escape` no
+hizo falta: ImGui cierra el campo con Esc y el guard de item activo evita que
+Esc llegue a `time.clear_selection`. Pendiente el 6d (widgets que no son de
+texto, §9.5).
 
 **Anillo de foco.** Hoy Tab no hace nada entre inputs (§7: la lectura anda, la
 navegación de ImGui está apagada por diseño). Propuesta:
@@ -385,6 +453,15 @@ devuelve cambio, valor y commit). Campos previstos:
   on_up = fn, on_down = fn }    -- ej. Armonía: ir a la fila de arriba o abajo
 ```
 
+**Qué quedó distinto de esta propuesta (6c):** el anillo se declara por tab
+con `ring_focus` / `ring_item` y la tab puede traer su orden (`ring_config`).
+`on_tab` no es un campo del perfil: Tab recorre el anillo por defecto. El
+perfil de un input es `{ on_up, on_down }` (pasado a `ring_item`) y se
+declara por input, así cada tab decide qué hacen las flechas (en Armonía:
+mover de fila en Acorde, cambiar el valor en Compás, Beat y Cent.). El foco
+se aplica con `SetKeyboardFocusHere(ctx, 0)` antes del widget, no con `-1`
+después (ver §4.7).
+
 **Caso Roles (hecho, 6a y 6b):** Roles usa `Keys.input` con
 `{ on_enter = 'commit', keep_focus = 'always' }`: Enter con el input vacío
 deja el cursor ahí, y con texto agrega el rol y también lo deja (para cargar
@@ -399,6 +476,10 @@ Play/Pause (`musicstate_helper.md` §7).
 
 ### 9.5 Otros pendientes
 
+- **Anillo de foco, pendientes del 6c:** 6d (checkbox y botones de Armonía con
+  recuadro propio, accionados con Space o Enter); entrar al anillo por la fila
+  del cursor y no por la primera; Cues sobre el mismo anillo cuando se rehaga
+  sobre Lyrics.
 - **↑/↓:** el mapeo provisorio (↓ = marker anterior, ↑ = siguiente) se
   reemplaza por las acciones que ↑/↓ tienen en REAPER al terminar el
   refactor. Mientras tanto se mantiene para probar contra foco de input y de
