@@ -119,11 +119,38 @@ end
 -- directorio inicial del selector de archivos
 local function getDownloadsPath()
   if getOS():find("Win") then
+    -- Lee la ruta real de Descargas del registro (respeta redirecciones
+    -- y no depende del idioma de Windows). Salida forzada a UTF-8 para
+    -- no corromper tildes/ñ en la ruta.
+    local psCmd = [==[
+$ProgressPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$p = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders').'{374DE290-123F-4565-9164-39C4925E467B}'
+[Environment]::ExpandEnvironmentVariables($p)
+]==]
+    local cmd = string.format(
+      'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand %s',
+      toPowershellEncodedCommand(psCmd))
+    local ret = reaper.ExecProcess(cmd, 10000)
+    if ret then
+      local path = ""
+      for line in ret:gmatch("[^\r\n]+") do
+        if line:match("^%a:[/\\]") or line:match("^\\\\") then
+          path = line:gsub("%s+$", "")
+          break
+        end
+      end
+      if path ~= "" then
+        if not path:match("[/\\]$") then path = path .. "\\" end
+        return path
+      end
+    end
+    -- Fallback: ubicación por defecto de Windows
     local home = os.getenv("USERPROFILE")
-    if home then return home .. "\\Descargas\\" end
+    if home then return home .. "\\Downloads\\" end
   else
     local home = os.getenv("HOME")
-    if home then return home .. "/Descargas/" end
+    if home then return home .. "/Downloads/" end
   end
   return ""
 end
@@ -170,15 +197,12 @@ local function applyMediaFolderView(path)
     iniPath, path)
   local encoded = toPowershellEncodedCommand(psCmd)
   local cmd = string.format(
-    'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand %s 2>&1',
+    'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand %s',
     encoded)
-  local handle = io.popen(cmd)
-  if handle then
-    local out = handle:read("*a")
-    local closeOk = handle:close()
-    if not closeOk then
-      reaper.ShowConsoleMsg("---- Salida al setear atributos de Media ----\n" .. (out or "(sin salida)") .. "\n----------------------------------------------\n")
-    end
+  local ret = reaper.ExecProcess(cmd, 15000)
+  local code = ret and ret:match("^(%-?%d+)")
+  if code ~= "0" then
+    reaper.ShowConsoleMsg("---- Salida al setear atributos de Media ----\n" .. (ret or "(sin salida)") .. "\n----------------------------------------------\n")
   end
 end
 
@@ -191,19 +215,35 @@ local function extractZip(zipPath, destPath)
     -- con tildes/ñ nunca pase como argumento de línea de comandos
     -- (evita la conversión a codepage ANSI de CreateProcess)
     local psCmd = string.format(
-      'Expand-Archive -LiteralPath "%s" -DestinationPath "%s" -Force',
+      '$ProgressPreference = "SilentlyContinue"; Expand-Archive -LiteralPath "%s" -DestinationPath "%s" -Force',
       zipPath, destPath)
     local encoded = toPowershellEncodedCommand(psCmd)
     cmd = string.format(
-      'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand %s 2>&1',
+      'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand %s',
       encoded)
   else
     cmd = string.format('unzip -o "%s" -d "%s" 2>&1', zipPath, destPath)
   end
 
+  local output, closeOk
+  if os_str:find("Win") then
+    local ret = reaper.ExecProcess(cmd, 0) -- 0 = sin timeout (extracciones grandes)
+    if not ret then
+      reaper.ShowConsoleMsg("No se pudo ejecutar el comando de extracción\n")
+      return false, nil
+    end
+    local code, out = ret:match("^(%-?%d+)\r?\n?(.*)$")
+    closeOk = (code == "0")
+    output = out
+  else
   local handle = io.popen(cmd)
-  local output = handle:read("*a")
-  local closeOk = handle:close()
+    if not handle then
+      reaper.ShowConsoleMsg("No se pudo ejecutar el comando de extracción\n")
+      return false, nil
+    end
+    output = handle:read("*a")
+    closeOk = handle:close()
+  end
 
   if not closeOk then
     reaper.ShowConsoleMsg("---- Salida de extracción ----\n" .. (output or "(sin salida)") .. "\n-------------------------------\n")
@@ -305,7 +345,7 @@ local function insertItemOnTrack(track, filepath)
 end
 
 local function main()
-  local ok, zipPath = reaper.GetUserFileNameForRead(getDownloadsPath(), "Seleccioná el .zip de MVSEP", "zip")
+  local ok, zipPath = reaper.GetUserFileNameForRead(getDownloadsPath() .. "mvsep.zip", "Seleccioná el .zip de MVSEP", "zip")
   if not ok or zipPath == "" then return end
 
   local projDir, projErr = getProjectDir()
