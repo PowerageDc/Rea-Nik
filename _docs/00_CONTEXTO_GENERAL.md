@@ -19,8 +19,9 @@ Estructura:
 
 ```
 C:\dev\Rea-Nik
-├── AutoColor, RemoteControl, ReaPitchBus, RenderWorkflow,
-│ TempoTools, MvsepImporter, MusicState, StemFragment, Tests-Debug, _Shared
+├── AutoColor, RemoteControl, ReaPitchBus, RenderWorkflow, TempoTools,
+│ MvsepImporter, MusicState, MonitorMix, ProjectFolder, StemFragment, 
+│ Tests-Debug, _Shared
 ├── web\ ← contenido servido como reaper_www_root
 ├── _docs
 └── Rea-Nik.code-workspace

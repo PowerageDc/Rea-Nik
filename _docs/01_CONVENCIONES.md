@@ -158,6 +158,7 @@ C:\dev\Rea-Nik\
 ├── MonitorMix/ mezcla de monitoreo por músico (filtro de tracks, bus y sends de monitoreo)
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
+├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List
 ├── AutoColor/ auto-color de tracks
 ├── StemFragment/ captura/UI de fragmentos de stem
 ├── Tests-Debug/ scripts de diagnóstico y prueba (sin dominio propio)
