@@ -1,7 +1,7 @@
 # Contexto General — Proyecto REAPER Practice Rig / Stems Player
 
 ## Setup técnico
-- REAPER v7.79
+- REAPER v7.82
 - SWS/S&M Extensions
 - Windows 10
 
