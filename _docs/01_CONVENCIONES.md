@@ -119,6 +119,25 @@ los existentes en otra sesión, sin apuro.
 de testing de ImGui (módulos, workflow, gotchas del lenguaje) en
 `02_IMGUI_LUA_NOTAS.md`.
 
+### Scripts de sonda y diagnóstico (`Tests-Debug/`)
+
+Convención de acá en adelante, no retroactiva:
+
+- **Sondas nuevas:** `Nik_<Dominio>_Probe<Qué>.lua` (ej.
+  `Nik_MonitorMix_ProbeBus.lua`). El prefijo de dominio las agrupa junto a los
+  scripts reales al filtrar el Action List. `Probe` = prueba exploratoria para
+  entender el comportamiento de REAPER o de una API, no una acción de uso
+  diario.
+- **Familia existente:** `Nik_Test_<Algo>.lua` se mantiene tal cual para las
+  pruebas ya hechas y para las que no pertenecen a ningún dominio.
+- **Sin prefijo `Nik_`** (`diagnostico_*`, `test_*`): legado. No registrarlos en
+  el Action List; renombrar solo si hace falta.
+- **Reorganización futura:** si se ordena la carpeta, hacerlo con subcarpetas
+  por dominio dentro de `Tests-Debug/` (precedente: `Tests-Debug/ImGui/`), y
+  renombrar y mover en la misma pasada para re-registrar en el Action List una
+  sola vez. El nombre de archivo es lo único que muestra el Action List, por
+  eso el prefijo se conserva aunque la carpeta ya diga "Tests-Debug".
+
 ## Estructura de subcarpetas (raíz del repo, `C:\dev\Rea-Nik\`)
 
 Cada dominio funcional vive en su propia subcarpeta, nombrada en PascalCase
