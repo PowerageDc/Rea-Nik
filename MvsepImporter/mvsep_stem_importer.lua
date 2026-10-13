@@ -27,6 +27,8 @@ local STEMS = {
 }
 
 local AUDIO_EXTENSIONS = {"wav", "mp3", "flac"} -- extensiones válidas a procesar
+local CLICK_FOLDER_PATTERN = "click" -- el padre directo del track de click debe contener esto (case-insensitive)
+local CLICK_TRACK_PATTERN = "beep"   -- el track cuyo item se recorta debe contener esto (case-insensitive)
 -- ==============================================
 
 -- Decodifica un string UTF-8 a una tabla de codepoints Unicode
@@ -331,6 +333,8 @@ local function getStemBusChildren()
   return children
 end
 
+local importedMaxEnd = 0 -- extremo derecho (posición + largo) mayor entre los items importados
+
 local function insertItemOnTrack(track, filepath)
   local source = reaper.PCM_Source_CreateFromFile(filepath)
   if not source then return false end
@@ -340,8 +344,57 @@ local function insertItemOnTrack(track, filepath)
   local length = reaper.GetMediaSourceLength(source)
   reaper.SetMediaItemInfo_Value(item, "D_LENGTH", length)
   reaper.SetMediaItemInfo_Value(item, "D_POSITION", 0)
+  if length > importedMaxEnd then importedMaxEnd = length end
   reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", filepath:match("([^/\\]+)$"), true)
   return true, length
+end
+
+-- Busca el track "beep" cuyo padre directo contiene "click"
+local function findClickBeepTrack()
+  local found = nil
+  for i = 0, reaper.CountTracks(0) - 1 do
+    local track = reaper.GetTrack(0, i)
+    local _, tname = reaper.GetTrackName(track)
+    if tname:lower():find(CLICK_TRACK_PATTERN, 1, true) then
+      local parent = reaper.GetParentTrack(track)
+      if parent then
+        local _, pname = reaper.GetTrackName(parent)
+        if pname:lower():find(CLICK_FOLDER_PATTERN, 1, true) then
+          if found then
+            reaper.ShowConsoleMsg("[Click] Más de un track coincide, se usa el primero\n")
+            return found
+          end
+          found = track
+        end
+      end
+    end
+  end
+  return found
+end
+
+-- Recorta el extremo derecho del item del click al extremo mayor de los importados
+local function trimClickItem()
+  if importedMaxEnd <= 0 then return end
+  local track = findClickBeepTrack()
+  if not track then
+    reaper.ShowConsoleMsg("[Click] No se encontró un track '" .. CLICK_TRACK_PATTERN ..
+      "' dentro de un folder '" .. CLICK_FOLDER_PATTERN .. "'; no se recortó nada\n")
+    return
+  end
+  local item = reaper.GetTrackMediaItem(track, 0)
+  if not item then
+    reaper.ShowConsoleMsg("[Click] El track no tiene items; no se recortó nada\n")
+    return
+  end
+  local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+  local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+  local newLen = importedMaxEnd - pos
+  if newLen <= 0 then return end
+  if newLen > len then
+    reaper.ShowConsoleMsg("[Click] El item es más corto que los stems; no se extiende\n")
+    return
+  end
+  reaper.SetMediaItemInfo_Value(item, "D_LENGTH", newLen)
 end
 
 local function main()
@@ -435,6 +488,7 @@ local function main()
     end
   end
 
+  trimClickItem()
   reaper.Main_OnCommand(40047, 0) -- Peaks: Build any missing peaks
   reaper.UpdateArrange()
 
