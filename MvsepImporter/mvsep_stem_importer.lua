@@ -238,7 +238,7 @@ local function extractZip(zipPath, destPath)
     closeOk = (code == "0")
     output = out
   else
-  local handle = io.popen(cmd)
+    local handle = io.popen(cmd)
     if not handle then
       reaper.ShowConsoleMsg("No se pudo ejecutar el comando de extracción\n")
       return false, nil
@@ -347,6 +347,31 @@ local function insertItemOnTrack(track, filepath)
   if length > importedMaxEnd then importedMaxEnd = length end
   reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", filepath:match("([^/\\]+)$"), true)
   return true, length
+end
+
+-- Confirma solo el diálogo de guardado de screenset (requiere JS_ReaScriptAPI).
+-- Se arma antes de lanzar la acción porque el diálogo puede bloquear Main_OnCommand.
+local SCREENSET_DIALOG_TITLE = "Save Track View Screenset #1"
+
+local function autoConfirmScreensetDialog()
+  if not reaper.APIExists("JS_Window_Find") then return end
+  local deadline = reaper.time_precise() + 10 -- abandona a los 5 s si no aparece
+  local foundAt, lastSent = nil, 0
+  local function poll()
+    local now = reaper.time_precise()
+    local hwnd = reaper.JS_Window_Find(SCREENSET_DIALOG_TITLE, true)
+    if hwnd then
+      foundAt = foundAt or now
+      if now - foundAt >= 0.2 and now - lastSent >= 0.5 then
+        lastSent = now
+        reaper.JS_Window_OnCommand(hwnd, 1) -- 1 = IDOK (botón "Save")
+      end
+    elseif foundAt then
+      return -- la ventana ya se cerró: no se reprograma nada más
+    end
+    if now < deadline then reaper.defer(poll) end
+  end
+  reaper.defer(poll)
 end
 
 -- Busca el track "beep" cuyo padre directo contiene "click"
@@ -499,7 +524,13 @@ local function main()
     local paddingTime = reaper.TimeMap2_beatsToTime(0, paddingQN)
     local endTime = refItemLength + paddingTime
     reaper.BR_SetArrangeView(0, 0, endTime)
-    reaper.Main_OnCommand(SAVE_SCREENSET_COMMAND_ID, 0) -- Screenset: Save track view #01 (pisa "ALL")
+    autoConfirmScreensetDialog()
+    if reaper.APIExists("JS_WindowMessage_Post") then
+      -- Se postea (no bloquea) para que el script quede libre y su defer pueda confirmar el diálogo
+      reaper.JS_WindowMessage_Post(reaper.GetMainHwnd(), "WM_COMMAND", SAVE_SCREENSET_COMMAND_ID, 0, 0, 0)
+    else
+      reaper.Main_OnCommand(SAVE_SCREENSET_COMMAND_ID, 0) -- Screenset: Save track view #01 (pisa "ALL")
+    end
   end
 
   local msg = "Importados: " .. (#placed > 0 and table.concat(placed, ", ") or "ninguno")
