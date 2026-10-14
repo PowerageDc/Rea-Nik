@@ -25,7 +25,7 @@ local STEM_BUS_TRACK_NAME = "Stem Bus"
 local STEMS_SUBFOLDER = "PISTAS POR INSTRUMENTO"
 local MUTE_SUFFIX = " mute" -- sufijo para backing tracks (alternativa: "🚫")
 local DEFAULT_BACKGROUND_DB = -15
-local RENDER_PADDING_SECONDS = 1.0 -- padding al inicio/fin del render (evita cortar transientes/colas; ver 01_CONVENCIONES.md)
+local RENDER_PADDING_SECONDS = 1.0 -- padding al inicio/fin del render (evita cortar transientes/colas)
 -- RENDER_FORMAT devuelve un blob binario (no un fourcc plano de 4 chars),
 -- así que el chequeo de abajo es heurístico: busca "mp3"/"l3pm" como substring
 

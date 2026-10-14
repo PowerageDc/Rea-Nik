@@ -3,8 +3,8 @@
 -- REAPER. Generico: lo puede usar cualquier panel nativo, no solo el Helper.
 -- SWS primero (dependencia declarada del proyecto), js_ReaScriptAPI de
 -- respaldo. ImGui_SetNextWindowFocus NO sirve para esto: la ventana figura
--- como enfocada pero el teclado no le llega hasta hacer click (probe del
--- Paso 1). Ver 08_REAIMGUI_PATTERNS.md.
+-- como enfocada pero el teclado no le llega hasta hacer click (medido con
+-- Tests-Debug/Nik_Test_KeysFocusProbe.lua).
 
 local M = {}
 

@@ -2,8 +2,7 @@
 // Editar ACÁ cuando se registra/cambia un script Lua en el Action List, o para
 // ajustar timing/paleta sin tener que buscar en el resto del código.
 //
-// Arquitectura de referencia: Script Lua + ExtState + polling — ver
-// remote_control.md, sección "Arquitectura del patrón".
+// Arquitectura de referencia: Script Lua + ExtState + polling.
 //
 // Cargado como <script src="config.js"> clásico (sin type="module"): todo lo
 // declarado acá cuelga de `window` para no romper los onclick="..." inline
@@ -12,11 +11,10 @@
 // ==== Command IDs de scripts Lua (_RS...) ====
 // Cambian por PC — hay que re-registrar cada script en el Action List al
 // mudar de máquina/sala de ensayo. `luaFile: null` = wrapper no identificado
-// todavía contra la carpeta real de Scripts (pendiente reorg, ver
-// remote_control.md al final — convención Nik_<Dominio>_<Acción>.lua).
+// todavía contra la carpeta real de Scripts (pendiente reorg a la
+// convención Nik_<Dominio>_<Acción>.lua).
 // `pending: true` = el hash de acá es un placeholder, falta reemplazarlo por
-// el Command ID real una vez registrado el script (remote_control.md,
-// sección "Selector de proyectos (tabs)").
+// el Command ID real una vez registrado el script.
 var NIK_LUA_COMMANDS = {
     reaPitchSet: {
         luaFile: "NikRemote_ReaPitch_SetSemitones.lua",
@@ -46,24 +44,20 @@ var NIK_LUA_COMMANDS = {
     // viejo playrateBaseTempoRead (un solo BPM fijo, no servia para
     // proyectos con mapa de tempo variable). Ver playrate.js /
     // Nik_Playrate_ReadTempoMap.lua.
-    // PENDING: falta registrar el script en el Action List de esta PC y
-    // reemplazar este commandId placeholder por el real.
     playrateTempoMapRead: {
         luaFile: "Nik_Playrate_ReadTempoMap.lua",
         commandId: "_RS89d73a1e79056655be8c85b0c4c06f3293a272d2"
     },
     // Lectura consolidada: proyecto activo + playrate/preserve pitch +
     // ReaPitch (semitonos/enabled) + compases por sección, en un solo
-    // script/Command ID — ver remote_control.md, "Lectura de estado
-    // consolidada". Agregar una lectura nueva = sumar sección DENTRO de este
+    // script/Command ID. Agregar una lectura nueva = sumar sección DENTRO de este
     // script (o su common_logic), nunca un _RS nuevo encadenado acá.
     statePoll: {
         luaFile: "Nik_RemoteState_Poll.lua",
         commandId: "_RS77cef7ebc79f9272c90cdcbe1f5f3dce141ef742"
     },
     // Lectura on-demand, deliberadamente FUERA del poll de fondo (costo de
-    // EnumProjects no vale la pena en cada tick de 1000ms) — ver
-    // remote_control.md, "Selector de proyectos (tabs)".
+    // EnumProjects no vale la pena en cada tick de 1000ms).
     projectTabsRead: {
         luaFile: "Nik_ProjectTabs_Read.lua",
         commandId: "_RS3a08f9b323ce908079914d573fffd19355cc69a1"
@@ -73,11 +67,7 @@ var NIK_LUA_COMMANDS = {
         commandId: "_RSb727e02414793872e7398ac26b113906d666d407"
     },
     // Publica harmony_data/project_key/project_roles/cues_data juntos, en
-    // una sola pasada (mismo trigger: conexión de UI / cambio de proyecto,
-    // ver IMPL_MusicState.md sección 1). Renombrado desde
-    // Nik_MusicState_PublishHarmony.lua (ver IMPL sección 7).
-    // PENDING: falta registrar el script en el Action List de esta PC y
-    // reemplazar este commandId placeholder por el real.
+    // una sola pasada (mismo trigger: conexión de UI / cambio de proyecto).
     musicStatePublishAll: {
         luaFile: "Nik_MusicState_PublishAll.lua",
         commandId: "_RS79030cbf502d5745efda6628fa8b10e36f9b898d"
@@ -141,8 +131,8 @@ function nikBuildSlowPoll() {
 var NIK_ONDEMAND_READS = nikBuildSlowPoll;
 
 // ==== Diccionario de colores/traducción de markers por sección ====
-// Editable acá — fuente de verdad de colores, ver 01_CONVENCIONES.md (del
-// control remoto) para los nombres de sección del proyecto.
+// Editable acá — fuente de verdad de colores (los nombres de sección son los
+// de la nomenclatura estándar del proyecto).
 // "words"  : formas completas, match por PREFIJO sobre el nombre normalizado
 //            (sin acentos/espacios, minúsculas) -> solo cambia el color.
 // "abbrev" : formas abreviadas, match EXACTO -> cambia el color Y ADEMÁS

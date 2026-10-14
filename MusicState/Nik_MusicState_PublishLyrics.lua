@@ -2,7 +2,6 @@
 -- One-shot: lee los eventos lyric (MIDI tipo 5) del track "Lyrics" del
 -- proyecto activo y publica NikMusicState/lyrics_data + lyrics_version
 -- a ExtState. Si no hay track o no hay eventos, borra ambas keys.
--- Contrato de datos: musicstate_data_model.md 4.7.
 
 local DEBUG = true -- false = sin mensajes en consola
 

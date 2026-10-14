@@ -4,7 +4,7 @@
 -- en Debug.pcallLoop, y cierre de ventana (open == false corta el loop).
 -- Vive en Tests-Debug/ImGui/ junto a Debug_common_logic.lua (mismo dominio:
 -- pruebas de ImGui). Si en el futuro otro dominio lo consume, migra a
--- _Shared/ (ver "Patrón de módulos de lógica compartida" en 01_CONVENCIONES.md).
+-- _Shared/.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Debug = dofile(script_dir .. "Debug_common_logic.lua")

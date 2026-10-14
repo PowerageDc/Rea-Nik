@@ -8,7 +8,7 @@
 // Mismos gradientes/paths que el fader de volumen de track (fGrad1-5 + outline),
 // re-IDeados con sufijo único por instancia para evitar colisión de <linearGradient
 // id> si se montan varios faders en la misma página (mismo problema que resuelve
-// nikUniquifyGradientIds() en core/wwr-dispatch.js, ver 01_CONVENCIONES.md).
+// nikUniquifyGradientIds() en core/wwr-dispatch.js).
 //
 // Geometría lógica fija, viewBox "0 0 320 72" (mismo box que usa .nikVFaderTrack
 // para el <input> antes de rotarlo):

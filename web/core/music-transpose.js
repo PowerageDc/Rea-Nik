@@ -1,15 +1,12 @@
 // core/music-transpose.js — transposición de tonalidad y acordes para la
-// feature MusicState (ver IMPL_MusicState.md, secciones 10.x). Puro
-// cálculo, sin estado propio y sin dependencia de DOM — el delta de
-// semitonos vive en nikReaPitchLastSemitone (core/state.js), lo lee quien
-// consuma este módulo, no este archivo.
+// feature MusicState. Puro cálculo, sin estado propio y sin dependencia
+// de DOM — el delta de semitonos vive en nikReaPitchLastSemitone (core/state.js),
+// lo lee quien consuma este módulo, no este archivo.
 //
-// Patrón: wrapper de objeto único (ver 01_CONVENCIONES.md, "Patrón de
-// módulos JS de puro cálculo") — primer caso de este patrón en el
-// proyecto.
+// Patrón: wrapper de objeto único (módulos JS de puro cálculo) — primer caso de
+// este patrón en el proyecto.
 //
-// Debe cargar antes que cualquier consumidor (core/music-state.js,
-// todavía no existe — ver IMPL_MusicState.md sección 8.1).
+// Debe cargar antes que cualquier consumidor (core/music-state.js).
 
 var SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 var FLAT_NAMES  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
@@ -18,8 +15,7 @@ var FLAT_NAMES  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "
 // tonalidad resultante en ESA posición se escribe tradicionalmente con
 // sostenidos o con bemoles? Dos casos son empate enarmónico real
 // (F#/Gb mayor, D#/Eb menor) — resueltos a mano hacia la grafía más común
-// en la práctica, no derivados matemáticamente. Ver IMPL_MusicState.md
-// sección 10.4.
+// en la práctica, no derivados matemáticamente.
 var MAJOR_USES_SHARPS = [true, false, true, false, true, false, true, true, false, true, false, true];
 // pc:                     C     Db    D     Eb    E     F     F#*   G     Ab    A     Bb    B
 // * F# elegido a mano sobre Gb (empate enarmónico)
@@ -81,7 +77,7 @@ var nikTranspose = {
     },
 
     // Tonalidad resultante + grafía a usar para TODA la transposición
-    // (uniforme — ver IMPL_MusicState.md 10.4).
+    // (uniforme).
     key: function(tonicName, mode, semitones) {
         var pc = this._noteNameToPc(tonicName);
         if (pc === null) return { tonic: tonicName, mode: mode, useSharps: true };

@@ -1,12 +1,11 @@
 // musicstate-ui/shared/ms-dispatch.js
 // wwr_onreply() propio de las UIs MusicState (instrumentista, cantante) y de
-// Monitor Mix — NO reusa core/wwr-dispatch.js del control remoto general (ver
-// musicstate_instrumentista.md, sección 3: ese dispatcher tiene casos sin
-// guard `if (elemento) {...}` que asumen DOM de tracks/faders/sends que acá
-// no existe).
+// Monitor Mix — NO reusa core/wwr-dispatch.js del control remoto general:
+// ese dispatcher tiene casos sin guard `if (elemento) {...}` que asumen DOM de
+// tracks/faders/sends que acá no existe).
 //
 // Ganchos opcionales de Monitor Mix (monitor.js; guard typeof, no-op si el
-// archivo no se carga — ver monitor_mix.md 3.5):
+// archivo no se carga):
 //   nikMmOnExtState(key, val) → EXTSTATE de NikMonitorMix (list, list_version)
 //   nikMmOnLine(tok)          → líneas sin caso propio en el switch (SEND)
 //   nikMmRequestList()        → en nikMsHandleProjectSwitch: dispara el publish
@@ -283,11 +282,10 @@ function nikMsSetReaPitchSemitone(val) {
 // ---- Trigger on-demand: tempo_map + timesig_map ----
 // Equivalente chico de nikPlayrateRequestTempoMap() (playrate.js), sin la
 // parte de BPM/DOM del popup — esta UI no carga playrate.js. Mismo Command
-// ID reusado (un solo script Lua publica las dos keys, ver
-// remote_control_faders.md), no un script nuevo. Confirmado contra
-// config.js: NIK_ONDEMAND_READS (= nikBuildSlowPoll) NO incluye
-// tempo_map/timesig_map, así que este pedido separado es necesario, no
-// una duplicación de algo que ya está en el bundle.
+// ID reusado (un solo script Lua publica las dos keys), no un script nuevo.
+// Confirmado contra config.js: NIK_ONDEMAND_READS (= nikBuildSlowPoll) NO incluye
+// tempo_map/timesig_map, así que este pedido separado es necesario, no una 
+// duplicación de algo que ya está en el bundle.
 function nikMsRequestTempoAndTimesig() {
     wwr_req(NIK_LUA_COMMANDS.playrateTempoMapRead.commandId +
         ";GET/EXTSTATE/NikRemote/tempo_map;GET/EXTSTATE/NikRemote/timesig_map");

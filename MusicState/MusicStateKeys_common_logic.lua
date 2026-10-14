@@ -255,7 +255,7 @@ end
 
 local INPUT_DEFAULTS = { on_enter = 'commit', keep_focus = false }
 
--- InputText con perfil de teclas (musicstate_keys.md 9.4). Devuelve
+-- InputText con perfil de teclas. Devuelve
 -- changed, value, commit. profile (todo opcional):
 --   on_enter   = 'commit' | 'none'   commit: true si Enter cierra una edicion
 --   keep_focus = false | 'when_empty' | 'always'   devolver el foco al input
@@ -286,8 +286,8 @@ function M.input(ctx, label, value, profile)
   return changed, new_value, commit and true or false
 end
 
--- Anillo de foco por tab (musicstate_keys.md 9.4): cada tab lleva su propia
--- lista de items registrados, su orden y su pedido de foco pendiente.
+-- Anillo de foco por tab: cada tab lleva su propia lista de 
+-- items registrados, su orden y su pedido de foco pendiente.
 ---@class MusicStateRing
 ---@field cur table[]
 ---@field prev table[]

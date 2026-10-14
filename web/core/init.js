@@ -3,8 +3,7 @@
 // bucket: nikCheckProjectNameWatchdog, on_record_button, prompt_abort,
 // prompt_seek, calculateScale, nikToggleLoopRecSection,
 // nikApplyLoopRecState, init(). Extraído sin cambios de
-// nsaudio_remote_control.html como parte de la modularización (ver
-// MODULARIZACION_CONTROL_REMOTO.md).
+// nsaudio_remote_control.html como parte de la modularización.
 // Depende de: config.js, core/utils.js, markers/markers.js, core/state.js,
 // core/faders.js, core/tracks-render.js, core/wwr-dispatch.js — deben
 // cargarse antes en el HTML. init() llama a wwr_req_recur/wwr_start (main.js)

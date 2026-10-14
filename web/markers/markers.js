@@ -18,8 +18,8 @@ function nikEscapeRegex(str) {
 
 // Resuelve nombre a mostrar + color para un marker dado el estado de cadena
 // acumulado hasta el momento (mismo criterio que el popup de markers: un
-// marker sin categoria en el medio no corta la cadena, ver 01_CONVENCIONES.md
-// / remote_control.md). chainState = {color, step}, se muta in-place.
+// marker sin categoria en el medio no corta la cadena).
+// chainState = {color, step}, se muta in-place.
 function nikResolveMarkerDisplay(rawName, chainState) {
     var normalized = nikNormalizeMarkerName(rawName);
     var displayName = rawName, resolvedColor = null;

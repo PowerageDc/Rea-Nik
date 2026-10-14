@@ -1,7 +1,5 @@
 -- Nik_MusicState_PublishAll.lua
--- (renombrado desde Nik_MusicState_PublishHarmony.lua -- ver
--- IMPL_MusicState.md seccion 10.5/11: paso de publicar solo armonia a
--- publicar las 5 piezas de datos de la feature MusicState en la misma
+-- Publica las 5 piezas de datos de la feature MusicState en la misma
 -- pasada, ya que comparten el mismo trigger -- conexion de UI /
 -- cambio de proyecto, seccion 1.)
 --

@@ -1,5 +1,5 @@
 // core/utils.js — utilidades puras sin estado, sin dependencias cruzadas.
-// Extraído de nsaudio_remote_control.html (ver MODULARIZACION_CONTROL_REMOTO.md).
+// Extraído de nsaudio_remote_control.html.
 
 function setTextForObject(obj, text) {
     if (obj.lastChild) obj.lastChild.nodeValue = text;

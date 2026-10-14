@@ -1,8 +1,8 @@
 // monitor.js — capa de datos de la UI de Monitor Mix
 //
 // Solo estado y pedidos, sin DOM (el bootstrap y el render llegan con la
-// UI, ver monitor_mix.md). Los ganchos de ms-dispatch.js llaman acá con
-// guard typeof: las UIs que no cargan este archivo no cambian.
+// UI). Los ganchos de ms-dispatch.js llaman acá con guard typeof: las UIs 
+// que no cargan este archivo no cambian.
 //
 // Requiere, ya cargados antes: main.js (wwr_req), config.js
 // (NIK_LUA_COMMANDS.monitorMixPublish) y musicstate-ui/shared/ms-dispatch.js.
@@ -40,7 +40,7 @@ function nikMmRearmLive() {
     if (next !== null) wwr_req_recur(next, NIK_MM_LIVE_MS);
 }
 
-// Des-escapa las barras que duplica el web control (data_model §3) antes
+// Des-escapa las barras que duplica el web control antes
 // del JSON.parse. Vacío, null, JSON inválido o sin tracks deja el estado en null.
 function nikMmSetList(val) {
     var raw = (typeof val === "string") ? val.replace(/\\\\/g, "\\") : val;

@@ -1,8 +1,7 @@
 -- MusicStateRowInputs_common_logic.lua
 -- Trio de posicion (Compas/Beat/Cent.) + boton de cursor, reusado por las
 -- tablas de Armonia y Cues en Nik_MusicState_Helper.lua. Separado en piezas
--- chicas a proposito (ver IMPL_MusicState.md seccion 13, sesion "trio de
--- posicion") para poder tocar boton o steppers por separado mas adelante,
+-- chicas a proposito, para poder tocar boton o steppers por separado mas adelante,
 -- sin reabrir el resto.
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
@@ -19,11 +18,10 @@ local function clamp(v, lo, hi)
   return v
 end
 
--- Perfil de flechas por campo (musicstate_keys.md 9.4): arriba suma, abajo
--- resta, Shift = paso grande. Un InputInt activo ignora el valor que se le
--- pasa desde afuera: se cambia el ID del widget (row._ver_<campo>) y se pide
--- el foco de nuevo con hold (la fila sigue "activa" para Armonia y no se
--- reordena hasta que se salga del campo).
+-- Perfil de flechas por campo: arriba suma, abajo resta, Shift = paso grande. 
+-- Un InputInt activo ignora el valor que se le pasa desde afuera: se cambia 
+-- el ID del widget (row._ver_<campo>) y se pide el foco de nuevo con hold (la 
+-- fila sigue "activa" para Armonia y no se reordena hasta que se salga del campo).
 local ARROW_STEPS = {
   measure    = { small = 1, big = 4 },
   beat       = { small = 1, big = 4 },

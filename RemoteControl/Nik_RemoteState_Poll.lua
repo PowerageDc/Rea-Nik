@@ -29,8 +29,7 @@
 --
 -- Escalar a futuro = agregar una sección nueva acá adentro, sin tocar el
 -- HTML del remoto ni sumar otro _RS a la cola (evita el parpadeo que
--- aparece al empaquetar varios scripts en el mismo tick -- ver
--- DEBUG_CONTEXTO_undo_remoto.md).
+-- aparece al empaquetar varios scripts en el mismo tick).
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local ActiveProject = dofile(script_dir .. "ActiveProject_common_logic.lua")

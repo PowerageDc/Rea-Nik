@@ -25,7 +25,7 @@ local REGION_PREFIX = "🎵 Audio - "
 local RENDER_ACTION_ID = 42230
 
 -- Correspondencia Track (inglés) / Instrumento (español) / nombres de
--- snapshot esperados (ver 01_CONVENCIONES.md)
+-- snapshot esperados
 local INSTRUMENT_MAP = {
   { track = "Drums",  es = "Batería",  snap_protagonist = "SN_Drums",  snap_muted = "SN_Drums_Muted"  },
   { track = "Bass",   es = "Bajo",     snap_protagonist = "SN_Bass",   snap_muted = "SN_Bass_Muted"   },

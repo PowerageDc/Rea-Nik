@@ -1,6 +1,6 @@
 -- MusicStateRoles_common_logic.lua
--- Tab "Roles" de Nik_MusicState_Helper.lua -- ver 01_CONVENCIONES.md,
--- patron dofile + M={}. Consumido solo por el Helper, no vive en _Shared/.
+-- Tab "Roles" de Nik_MusicState_Helper.lua (patron dofile + M={}).
+-- Consumido solo por el Helper, no vive en _Shared/.
 
 local M = {}
 

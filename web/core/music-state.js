@@ -12,12 +12,9 @@
 //
 // Patrón: variables/funciones sueltas en global scope, prefijo
 // nikMusicState* — igual que playrate.js, NO el wrapper de objeto único
-// (ver 01_CONVENCIONES.md, "Patrón de módulos JS de puro cálculo"): este
-// módulo tiene estado propio cacheado (los 5 arrays/objetos de abajo), no
-// es puro cálculo como core/music-transpose.js.
-//
-// IMPL_MusicState.md, secciones 10-11, tiene el detalle de cada decisión
-// de diseño referenciada en los comentarios de abajo.
+// (patrón de módulos JS de puro cálculo): este módulo tiene estado 
+// propio cacheado (los 5 arrays/objetos de abajo), no es puro cálculo 
+// como core/music-transpose.js.
 
 // --- Estado cacheado (llenado por los setters, uno por key de EXTSTATE) ---
 var nikMusicStateHarmonyFlat = [];   // array ordenado {bar, qn_offset, chord}
@@ -329,8 +326,8 @@ function nikMusicStateActiveCues(roleFilter) {
 }
 
 // --- Lyrics (cantantes) ---
-// lyrics_data: mismo formato keyed por compás que harmony_data/cues_data
-// (musicstate_data_model.md §4.7). "Línea" = evento con texto; "marcador"
+// lyrics_data: mismo formato keyed por compás que harmony_data/cues_data.
+// "Línea" = evento con texto; "marcador"
 // = evento con text null (fin de línea explícito, sin él hay carry-over).
 var nikMusicStateLyricsFlat = [];   // eventos ordenados {bar, qn_offset, text, lastLine}, con marcadores
 var nikMusicStateLyricsLines = [];  // solo las líneas, con `index` absoluto
@@ -354,8 +351,8 @@ function nikMusicStateCompareLyricPos(a, b) {
     return aMarker ? -1 : 1;
 }
 
-// Des-escapa las barras que duplica el web control (data_model §3) antes
-// del JSON.parse. Vacío, null o JSON inválido deja el estado en vacío.
+// Des-escapa las barras que duplica el web control antes del JSON.parse. 
+// Vacío, null o JSON inválido deja el estado en vacío.
 function nikMusicStateSetLyricsData(val) {
     var raw = (typeof val === "string") ? val.replace(/\\\\/g, "\\") : val;
     var flat = nikMusicStateFlattenBarKeyed(nikMusicStateParseJsonSafe(raw));

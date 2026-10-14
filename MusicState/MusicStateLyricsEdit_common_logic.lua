@@ -398,7 +398,8 @@ function M.draw(ctx, S, H, helpers)
   -- Enter agrega (igual que el boton, vacio = solo fin): Tab o click afuera no.
   drawAddRow(ctx, S, Ed, helpers)
 
-  -- Linea de aviso siempre reservada (08_REAIMGUI_PATTERNS.md §4).
+  -- Linea de aviso siempre reservada: si aparece y desaparece, el layout se
+  -- corre y se pierde el click.
   reaper.ImGui_TextDisabled(ctx, Ed.msg)
 end
 

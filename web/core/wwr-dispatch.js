@@ -1,8 +1,7 @@
 // core/wwr-dispatch.js
 // wwr_onreply() — parser central del feed de REAPER (main.js llama a esta
 // función global en cada respuesta del poll). Extraído sin cambios de
-// nsaudio_remote_control.html como parte de la modularización (ver
-// MODULARIZACION_CONTROL_REMOTO.md).
+// nsaudio_remote_control.html como parte de la modularización.
 // Depende de: config.js, core/utils.js, markers/markers.js, core/state.js,
 // core/faders.js, core/tracks-render.js — deben cargarse antes en el HTML.
 

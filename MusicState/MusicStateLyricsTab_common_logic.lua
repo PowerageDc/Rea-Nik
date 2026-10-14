@@ -138,10 +138,9 @@ local function deselectRow(S)
   end
 end
 
--- Primer caso de override por tab (musicstate_keys.md 9.2): con una fila
--- seleccionada Esc la deselecciona; sin seleccion devuelve false y el
--- despacho cae a la global (time.clear_selection, 40020). Llamar una vez
--- despues de Keys.init.
+-- Primer caso de override por tab: con una fila seleccionada Esc la 
+-- deselecciona; sin seleccion devuelve false y el despacho cae a la 
+-- global (time.clear_selection, 40020). Llamar una vez despues de Keys.init.
 function M.register_keys(Keys, H)
   Keys.add_tab('Lyrics', {
     { id = 'lyrics.escape', key = 'Escape', override = true,

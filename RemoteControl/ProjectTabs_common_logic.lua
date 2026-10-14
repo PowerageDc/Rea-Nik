@@ -2,7 +2,7 @@
 -- Enumera los proyectos (tabs) abiertos en REAPER y arma el estado agregado
 -- que consume el popup de selección de proyecto en nsaudio_remote_control.html.
 --
--- Patrón de módulo de agregación (ver 01_CONVENCIONES.md):
+-- Patrón de módulo de agregación:
 --   read_aggregated_state() -> lógica pura, devuelve el string ya formateado
 --   write_aggregated_state() -> llama a la anterior y escribe la ExtState
 --

@@ -1,7 +1,7 @@
 -- ImGuiConfirmModal_common_logic.lua
 -- Ciclo de vida comun de un modal de confirmacion en ReaImGui (NoNav: Esc no
 -- cierra un popup por si solo). Generico: el cuerpo, los botones y lo que
--- hace cada uno quedan en quien lo usa. Ver 08_REAIMGUI_PATTERNS.md.
+-- hace cada uno quedan en quien lo usa.
 --
 -- El modal se describe con una tabla "pendiente" (p) que el llamador crea al
 -- pedir la confirmacion, con p.open = true. Es la fuente congelada de lo que

@@ -2,8 +2,7 @@
 -- Cantidad de compases entre cada marker y el siguiente. Usa TimeMap2_timeToQN +
 -- TimeMap_QNToMeasures (no division simple de segundos) para que el numero sea
 -- correcto aunque el proyecto tenga tempo map con varios tempo markers y/o
--- cambios de time signature en el medio -- ver 01_CONVENCIONES.md / notas de
--- remote_control.md sobre este calculo.
+-- cambios de time signature en el medio.
 
 local M = {}
 

@@ -1,8 +1,7 @@
 // ms-section-row.js — fila de sección prev / actual / next con animación
 // (compartida por instrumentista y cantante)
 //
-// Traslado 1:1 desde instrumentista.js, sin cambios de lógica. Ver
-// musicstate_instrumentista.md §7 ("Animación de la fila de sección").
+// Traslado 1:1 desde instrumentista.js, sin cambios de lógica.
 //
 // Contrato de DOM (los dos shells deben usar estos ids):
 //   msSectionRow, msSectionPrev, msSection, msSectionNext, msSectionNextFill
@@ -85,8 +84,8 @@ function nikMsFlipTransform(beforeRect, afterRect) {
 }
 
 // Arma (sin disparar) el clon-fantasma de lo que sourceEl tenía, para que
-// se desvanezca en su lugar en vez de descartarse sin más -- ver "Clonar
-// elementos DOM con id" en 01_CONVENCIONES.md. No fuerza reflow ni dispara
+// se desvanezca en su lugar en vez de descartarse sin más -- el clon pierde
+// su id para no pisar al original en getElementById. No fuerza reflow ni dispara
 // el fade acá: el flush y el release quedan a cargo del lote completo en
 // nikMsSectionRowShift.
 function nikMsBuildGhost(sourceEl, containerEl) {

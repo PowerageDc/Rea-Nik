@@ -39,7 +39,7 @@ function nikInstrumentistaInit() {
 
 // --- Selector de rol: persistencia por dispositivo (localStorage, no ---
 // --- tab-ui-memory.js -- el eje acá es "de quién es este celular",   ---
-// --- no el proyecto/tab activo de REAPER, ver diseño §4).            ---
+// --- no el proyecto/tab activo de REAPER).                           ---
 
 var NIK_INSTRUMENTISTA_ROLE_STORAGE_KEY = "nikInstrumentistaRole";
 
@@ -53,18 +53,17 @@ function nikInstrumentistaSetRole(role) {
     catch (e) { /* localStorage no disponible (modo privado, etc.) -- sin persistencia, no bloqueante */ }
 }
 
-// "todos" es válido siempre (reservado, IMPL_MusicState.md §11.1), sin
-// necesidad de estar en nikMusicStateProjectRoles. Se calcula on-demand,
-// sin cachear -- nikMusicStateProjectRoles llega on-demand (ver
-// ms-dispatch.js) y puede no estar listo todavía al momento del boot, o
-// puede cambiar tras un cambio de proyecto sin que haya un evento que avise.
+// "todos" es válido siempre (reservado), sin necesidad de estar 
+// en nikMusicStateProjectRoles. Se calcula on-demand, sin cachear -- nikMusicStateProjectRoles llega 
+// on-demand (ver ms-dispatch.js) y puede no estar listo todavía al momento del boot,
+// o puede cambiar tras un cambio de proyecto sin que haya un evento que avise.
 function nikInstrumentistaIsRoleValid(role) {
     if (!role) return false;
     if (role === "todos") return true;
     return nikMusicStateProjectRoles.indexOf(role) !== -1;
 }
 
-// --- Render: layout vertical estático (roadmap punto 3, doc §5) ---
+// --- Render: layout vertical estático ---
 // Separado de nikInstrumentistaInit() a propósito: el bootstrap (polls,
 // on-demand) tiene que poder correr solo, sin asumir que existen estos
 // IDs de DOM -- así nsaudio_musicstate_test.html sigue funcionando sin

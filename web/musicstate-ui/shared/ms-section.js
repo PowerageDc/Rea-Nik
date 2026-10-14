@@ -15,8 +15,7 @@
 // proyecto (ver discusión de sesión): recalcular cada 500ms es barato
 // (pocos markers por canción) y cubre de yapa markers editados en vivo,
 // sin necesidad de detectar "¿cambió algo?" -- si esto no es lo que se
-// quería decir en musicstate_instrumentista.md §2/§3, es fácil acotar a
-// project-change nada más.
+// quería decir, es fácil acotar a project-change nada más.
 
 var nikMsMarkersSorted = [];   // copia de g_markers ordenada por pos ascendente
 var nikMsMarkerChainMap = {};  // id -> {displayName, resolvedColor}, resuelto una vez por actualización
@@ -26,7 +25,7 @@ var nikMsMarkerChainMap = {};  // id -> {displayName, resolvedColor}, resuelto u
 // resuelve TODA la timeline una sola vez, no marker por marker on-demand
 // -- necesario para que una cadena "x2/x3..." herede el color correcto
 // aunque su ancla no sea el marker actual (mismo bug ya documentado y
-// resuelto ahí, ver remote_control_markers.md "Fix: color de markers xN").
+// resuelto ahí).
 function nikMsSectionOnMarkersUpdated() {
     nikMsMarkersSorted = g_markers.slice().sort(function (a, b) {
         return parseFloat(a[3]) - parseFloat(b[3]);

@@ -4,7 +4,7 @@
 // la clase "is-stale" (el CSS de cada UI decide qué atenuar y dónde mostrar
 // el cartel "SIN SEÑAL"). Mientras está stale, limita g_wwr_errcnt a 2 para que
 // los reintentos de main.js queden cerca de 100 ms y la recuperación al volver
-// la red sea rápida (ver musicstate_instrumentista.md §4.6 y §4.7).
+// la red sea rápida.
 //
 // Requiere, ya cargados: main.js (g_wwr_errcnt), ms-dispatch.js (nikTransportAnchorMs).
 

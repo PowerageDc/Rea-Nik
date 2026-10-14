@@ -57,7 +57,7 @@ function M.scan_candidates(proj)
 end
 
 -- Snapshot de timepos de TODOS los markers del proyecto (no solo candidatos),
--- usado para restaurar posiciones tras el drift en cascada (ver tempo_mapping.md).
+-- usado para restaurar posiciones tras el drift en cascada.
 function M.capture_all_timepos(proj)
   proj = proj or 0
   local snap = {}
@@ -126,7 +126,7 @@ function M.preview_console(candidates)
 end
 
 -- Aplica los cambios de compas de las filas tildadas, con doble pasada
--- para evitar drift en cascada (ver tempo_mapping.md, gotcha SetTempoTimeSigMarker).
+-- para evitar drift en cascada (gotcha de SetTempoTimeSigMarker).
 function M.apply_changes(proj, candidates)
   proj = proj or 0
   reaper.Undo_BeginBlock()

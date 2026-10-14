@@ -1,15 +1,14 @@
 // cantante.js — bootstrap de la UI de cantante (lyrics, MusicState)
 //
 // Mismo molde que instrumentista.js: polls propios, pedidos on-demand de
-// boot. El render real de la UI de cantante está pendiente (ver
-// musicstate_lyrics.md §5-6); nikCantanteDebugRender es un panel temporal.
+// boot. nikCantanteDebugRender es un panel temporal.
 //
 // Requiere, ya cargados antes en el shell: main.js, config.js,
 // config.local.js (opcional), core/utils.js, markers/markers.js,
 // core/music-transpose.js, core/music-state.js,
 // musicstate-ui/shared/ms-tempo.js, ms-dispatch.js.
 
-// --- Roles del reel (musicstate_cantante.md §4.1-4.2) ---
+// --- Roles del reel ---
 // Toda línea se compone al font-size de --cn-lyric-size (rol "cur"); el rol
 // se expresa solo con scale (cociente de font-size respecto de "cur") y
 // opacity en reposo. Valores iniciales, a ajustar en pantalla.
@@ -21,13 +20,13 @@ var NIK_CANTANTE_ROLES = {
     prev2: { scale: 0.50, opacity: 0.20 }
 };
 
-// Orden de prioridad para agregar slots mientras entren en el escenario (§4.2).
+// Orden de prioridad para agregar slots mientras entren en el escenario.
 var NIK_CANTANTE_SLOT_ORDER = ["cur", "next1", "prev1", "next2", "prev2"];
 
-// Tope del gap proporcional (§4.2): múltiplo de --cn-lyric-gap.
+// Tope del gap proporcional: múltiplo de --cn-lyric-gap.
 var NIK_CANTANTE_GAP_MAX = 4;
 
-// Barrido de proximidad (§4.6): segundos antes del inicio de la línea en que
+// Barrido de proximidad: segundos antes del inicio de la línea en que
 // arranca (a calibrar con una letra real) y dirección: "up" o "right".
 var NIK_CANTANTE_PRELUDE_S = 2.0;
 var NIK_CANTANTE_SWEEP_DIR = "right";
@@ -64,7 +63,7 @@ function nikCantanteInit() {
     nikMusicStateRequestLyrics();
 }
 
-// --- Medidor de renglones (musicstate_cantante.md §4.1-4.2) ---
+// --- Medidor de renglones ---
 // Mide una vez cada línea al ancho del escenario y a la fuente del rol
 // "cur". rows[line.index] = cantidad de renglones. Se recalcula solo si
 // cambió la letra o el tamaño (nunca por frame).
@@ -156,12 +155,12 @@ function nikCantanteMarkMeasureDirty() {
     nikCantanteMeasure.dirty = true;
 }
 
-// --- Slots y foco (musicstate_cantante.md §4.2) ---
+// --- Slots y foco ---
 // Desplazamiento de cada rol respecto de la línea ancla.
 var NIK_CANTANTE_ROLE_OFFSET = { cur: 0, next1: 1, prev1: -1, next2: 2, prev2: -2 };
 
 // Posición (en nikMusicStateLyricsLines) de la línea que se está cantando
-// (cur0, §4.3). -1 en intro, sin datos o si el index no está en el mapa.
+// (cur0). -1 en intro, sin datos o si el index no está en el mapa.
 function nikCantanteAnchorPos() {
     var cur0 = nikMusicStateCurrentLyric(0);
     if (!cur0) return -1;
@@ -252,7 +251,7 @@ function nikCantanteGetLayout(anchorPos) {
     return nikCantanteLayoutCache.layout;
 }
 
-// --- Reel de letra: dibujo estático (musicstate_cantante.md §4.1-4.2) ---
+// --- Reel de letra: dibujo estático ---
 // Un nodo por POSICIÓN de línea; el rol solo cambia transform/opacity.
 // Se redibuja únicamente cuando cambia el layout cacheado, nunca por frame.
 
@@ -276,7 +275,7 @@ function nikCantanteReelRender() {
         R.nodes = {};
         R.epoch = nikCantanteMeasure.epoch;
     } else if (R.anchor !== null && Math.abs(ap - R.anchor) > 1) {
-        // Salto (seek): crossfade en vez de deslizar la pila (§4.7).
+        // Salto (seek): crossfade en vez de deslizar la pila.
         R.jumped = true;
         for (var o in R.nodes) nikCantanteReelFadeOut(R.nodes[o]);
         R.nodes = {};
@@ -321,7 +320,7 @@ function nikCantanteReelFadeOut(node) {
     }, 600);
 }
 
-// --- Estados de la línea (musicstate_cantante.md §4.3-4.4) ---
+// --- Estados de la línea ---
 // Solo color y opacity. Se reaplica cuando cambia el layout o el flag armada.
 
 var nikCantanteStates = { layout: null, armed: null };
@@ -361,7 +360,7 @@ function nikCantanteReelApplyStates() {
     T.ended = ended;
 }
 
-// --- Barrido de proximidad (musicstate_cantante.md §4.6) ---
+// --- Barrido de proximidad ---
 // Sobre el hijo .cn-sweep de la línea next1. Una transition de CSS cuya
 // duración es el tiempo restante; el tick solo decide cuándo (re)armarla.
 

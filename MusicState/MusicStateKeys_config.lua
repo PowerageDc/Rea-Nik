@@ -1,7 +1,7 @@
 -- MusicStateKeys_config.lua
 -- Atajos globales del Helper, en datos puros (sin logica). Se carga con
 -- dofile desde Nik_MusicState_Helper.lua y lo interpreta
--- MusicStateKeys_common_logic.lua. Ver 01_CONVENCIONES.md (config en codigo).
+-- MusicStateKeys_common_logic.lua.
 --
 -- Campos de cada binding:
 --   id                    nombre unico (se usa en los avisos de consola)

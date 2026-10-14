@@ -5,7 +5,7 @@
 // nikRenderProjectTabsList() es llamada por nombre desde wwr_onreply
 // (dispatch central en index.html) cuando llega el ExtState
 // "project_tabs" — lectura on-demand, deliberadamente fuera del poll de
-// fondo (ver remote_control.md, "Selector de proyectos (tabs)").
+// fondo.
 //
 // nikParseProjectTabs() se mudó acá desde index.html: es un parser
 // exclusivo de este dominio (nadie más lo usa), a diferencia de
@@ -44,8 +44,7 @@ function nikOpenProjectTabsModal() {
 // Repinta el resaltado de la lista ya renderizada (de la última apertura)
 // contra nikCurrentProjectName, que el poll de fondo mantiene fresco sin
 // costo extra — evita mostrar el resaltado viejo mientras se espera la
-// respuesta on-demand de Nik_ProjectTabs_Read.lua (ver remote_control.md,
-// "Selector de proyectos (tabs)", bug de parpadeo).
+// respuesta on-demand de Nik_ProjectTabs_Read.lua.
 function nikRefreshProjectTabsHighlight() {
     var list = document.getElementById("nikProjectTabsList");
     if (!list || typeof nikCurrentProjectName == "undefined" || nikCurrentProjectName == null) return;

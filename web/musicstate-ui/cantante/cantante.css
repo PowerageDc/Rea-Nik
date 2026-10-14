@@ -169,7 +169,7 @@
   color: var(--cn-lyric-active-color);
 }
 
-/* Barrido de proximidad (§4.6): copia del texto en color de armada,
+/* Barrido de proximidad: copia del texto en color de armada,
    revelada con clip-path desde JS. Hereda escala y posición del nodo. */
 .cn-sweep {
   position: absolute;

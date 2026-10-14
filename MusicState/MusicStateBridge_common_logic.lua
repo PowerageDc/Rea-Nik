@@ -1,8 +1,8 @@
 -- MusicStateBridge_common_logic.lua
 -- Puente ProjExtState -> ExtState global para la feature MusicState.
--- ProjExtState no es legible directo desde el Web Control (confirmado,
--- ver IMPL_MusicState.md seccion 2) -- este modulo centraliza el copiado,
--- consumido por Nik_MusicState_PublishAll.lua y por el Helper UI.
+-- ProjExtState no es legible directo desde el Web Control (confirmado) --
+-- este modulo centraliza el copiado, consumido por Nik_MusicState_PublishAll.lua 
+-- y por el Helper UI.
 
 local M = {}
 

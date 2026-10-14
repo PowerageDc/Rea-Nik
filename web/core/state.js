@@ -1,6 +1,6 @@
 // core/state.js — consolida el estado global desperdigado en el shell.
 // No es optimización de performance, es documentación viva: un solo lugar
-// para ver qué estado global existe (ver MODULARIZACION_CONTROL_REMOTO.md).
+// para ver qué estado global existe.
 // Debe cargar antes que cualquier script que lo use (config.js/core/utils.js/
 // markers/markers.js no dependen de esto, pero el resto del shell sí).
 

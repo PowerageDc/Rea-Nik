@@ -1,9 +1,9 @@
 // musicstate-ui/shared/ms-beat.js
 // Conteo de pulsos por compás + distancia en beats hasta el próximo evento
-// de armonía, para el indicador visual de §10 (musicstate_instrumentista.md).
+// de armonía, para el indicador de pulso.
 // Puro cálculo sobre el estado ya cacheado en core/music-state.js (timesig
 // map, harmony flat) -- sin estado propio, wrapper de objeto único
-// (01_CONVENCIONES.md, "Patrón de módulos JS de puro cálculo").
+// (patrón de módulos JS de puro cálculo).
 //
 // No decide CUÁNDO disparar una animación ni cachea el último pulso visto
 // -- eso es responsabilidad del render loop en instrumentista.js (mismo
@@ -92,7 +92,7 @@ var nikBeat = {
 
     // Segundos hasta el próximo evento de armonía, al BPM/playrate
     // vigentes en este instante. Se llama UNA VEZ al cruzar el evento
-    // anterior (mismo criterio anti-tirón que la tira de acordes, §10) --
+    // anterior (mismo criterio anti-tirón que la tira de acordes) --
     // instrumentista.js no debe llamarla en cada render.
     secUntilNextChordEvent: function () {
         var qn = this.qnUntilNextChordEvent();

@@ -1,10 +1,9 @@
 // musicstate-ui/shared/ms-tempo.js
 // Lookup de tempo puro, portado de modals/playrate/playrate.js
 // (nikPlayrateTempoMap / nikPlayrateTempoAt / nikPlayrateSetTempoMap) --
-// duplicación deliberada, no reuso (ver musicstate_instrumentista.md §2:
-// playrate.js mezcla DOM del popup, esta UI no lo carga). Candidato a
-// extraer a módulo compartido si playrate.js se refactoriza (deuda
-// documentada, no bloqueante).
+// duplicación deliberada, no reuso (playrate.js mezcla DOM del popup, esta UI
+// no lo carga). Candidato a extraer a módulo compartido si playrate.js se 
+// refactoriza (deuda documentada, no bloqueante).
 //
 // Llamado desde ms-dispatch.js: nikMsTempoSetMap(tok[3]) al llegar
 // EXTSTATE/NikRemote/tempo_map.
@@ -12,7 +11,7 @@
 // Patrón: variables/funciones sueltas con prefijo (no wrapper de objeto
 // único) -- mismo criterio que core/music-state.js, no el de
 // core/music-transpose.js: este módulo tiene estado propio cacheado
-// (nikMsTempoMap), no es puro cálculo sin memoria (01_CONVENCIONES.md).
+// (nikMsTempoMap), no es puro cálculo sin memoria.
 
 var nikMsTempoMap = null; // array de {pos, bpm} ordenado por pos ascendente, o null
 

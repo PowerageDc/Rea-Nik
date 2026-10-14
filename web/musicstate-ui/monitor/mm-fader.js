@@ -1,7 +1,7 @@
 // mm-fader.js — curva y conversiones del fader de Monitor Mix
 //
-// Puro cálculo, sin estado ni DOM (patrón de objeto único, ver
-// 01_CONVENCIONES.md). Curva por tramos lineales en dB entre POINTS;
+// Puro cálculo, sin estado ni DOM (patrón de objeto único).
+// Curva por tramos lineales en dB entre POINTS;
 // posición del slider 0..1 <-> dB. Tope 0 dB, piso -60 dB.
 
 var nikMmFader = {

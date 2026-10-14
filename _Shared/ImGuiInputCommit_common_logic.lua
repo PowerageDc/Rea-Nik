@@ -1,7 +1,6 @@
 -- ImGuiInputCommit_common_logic.lua
 -- Commit real de InputText (Enter, no deactivation por click afuera).
 -- Los atajos globales los despacha MusicStateKeys_common_logic.lua.
--- Ver ARQ_captura_keys_reaimgui_ruteo_reaper.md (patron A).
 
 local M = {}
 

@@ -1,7 +1,7 @@
 -- Nik_Markers_SeekRelative.lua
 -- Seek relativo: N compases antes de un marker dado. Se dispara desde el
 -- popup de markers del control remoto (long-press sobre un marker) -- ver
--- marker-browser.js / PENDING_optionsbar_markers.md, punto 3.
+-- marker-browser.js.
 --
 -- El paso de compases usa la accion nativa 41043 ("Move edit cursor back
 -- one measure") en vez de calculo manual sobre TimeMap -- REAPER ya

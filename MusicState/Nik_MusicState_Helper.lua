@@ -101,8 +101,8 @@ local EXT_KEY_BLOCK_HELPER = 'host_focus_block_helper'
 local HOST_FOCUS_BLOCK_S = 0.8
 local HOST_FOCUS_SLIDE_S = 0.15
 
--- Duracion de un beat en QN para el compas dado (depende del denominador,
--- ver IMPL_MusicState.md seccion 4.2/13.3). measure es 1-indexed;
+-- Duracion de un beat en QN para el compas dado (depende del denominador).
+-- measure es 1-indexed;
 -- TimeMap_GetMeasureInfo espera 0-indexed, de ahi el -1.
 local function nikMusicStateBeatUnitQN(proj, measure)
   local _, _, _, _, timesig_denom = reaper.TimeMap_GetMeasureInfo(proj, measure - 1)
@@ -141,8 +141,7 @@ local function nikMusicStateQnOffsetToBeat(qn_offset, beat_unit_qn)
 end
 
 -- beat.hundredths -> qn_offset, redondeado a la grilla de 0.25 (resolucion
--- de semicorchea, cerrado en IMPL_MusicState.md seccion 4.2). Inverso de
--- nikMusicStateQnOffsetToBeat.
+-- de semicorchea). Inverso de nikMusicStateQnOffsetToBeat.
 local function nikMusicStateBeatToQnOffset(beat, hundredths, beat_unit_qn)
   local qn_offset = beat_unit_qn * (beat - 1 + hundredths / 100)
   return math.floor(qn_offset / 0.25 + 0.5) * 0.25
@@ -151,7 +150,7 @@ end
 -- Recarga H desde ProjExtState del proyecto dado. Se usa al abrir el panel
 -- y cada vez que se detecta un cambio de project tab (ver loop()).
 -- Parseo manual (sin libreria JSON): formatos de project_key/project_roles
--- son simples a proposito, ver IMPL_MusicState.md seccion 4.2/10.2/11.1.
+-- son simples a proposito.
 local function nikMusicStateLoadFromProjExtState(proj)
   -- Sin project_key valida el proyecto no tiene tonalidad: se vuelve a los
   -- defaults (no arrastrar la del proyecto anterior) y key_set queda en false.
@@ -334,10 +333,10 @@ end
 
 -- Escanea markers del proyecto (excluye regiones) y devuelve una lista
 -- ordenada por tiempo: { {name=, time=}, ... }. No filtra por nomenclatura
--- (ver 01_CONVENCIONES.md) -- cualquier marker cuenta como seccion, para no
--- bloquear la nomenclatura alternativa abreviada (V1, V2, PC...) todavia
--- sin parser. Nombres repetidos (ej. "INTRO" x2) quedan como instancias
--- separadas -- el llamador agrupa por indice, no por nombre.
+-- de secciones -- cualquier marker cuenta como seccion, para no bloquear la 
+-- nomenclatura alternativa abreviada (V1, V2, PC...) todavia sin parser. 
+-- Nombres repetidos (ej. "INTRO" x2) quedan como instancias separadas -- el 
+-- llamador agrupa por indice, no por nombre.
 local function nikMusicStateGetSections()
   local proj = 0
   local sections = {}
@@ -353,9 +352,8 @@ local function nikMusicStateGetSections()
 end
 
 -- Tabla de dependencias compartidas que el contenedor le pasa a cada modulo
--- de tab -- se arma una sola vez aca, nunca dofile por modulo de tab (ver
--- IMPL_MusicState.md, sesion modularizacion). Se va extendiendo a medida
--- que se extraigan Roles/Armonia/Cues.
+-- de tab -- se arma una sola vez aca, nunca dofile por modulo de tab.
+-- Se extiende cuando un modulo nuevo necesita algo del contenedor.
 local helpers = {
   TONICS_STR_BY_MODE = TONICS_STR_BY_MODE,
   captureCursorPosition = nikMusicStateCaptureCursorPosition,

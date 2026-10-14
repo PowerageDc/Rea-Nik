@@ -156,8 +156,8 @@ local function undoEntry(Sy, Lyrics)
   reaper.Undo_EndBlock('Lyrics: deshacer tap', -1)
 end
 
--- Contrato con 3c (musicstate_lyrics.md 8.6). flush se llama antes de una
--- edicion (inserta el fin pendiente, si hay) y onEdit despues, para que hist
+-- Contrato con el panel de edicion (MusicStateLyricsEdit). flush se llama antes de
+-- una edicion (inserta el fin pendiente, si hay) y onEdit despues, para que hist
 -- siga apuntando a eventos que existen. Sy puede ser nil (cola nunca abierta).
 function M.flush(Sy, Lyrics)
   if Sy then insertEnd(Sy, Lyrics) end
@@ -350,7 +350,7 @@ function M.draw(ctx, S, H, helpers)
   if #Sy.queue > 0 then
     label = string.format('%s - %d/%d', label, math.min(Sy.pos, #Sy.queue), #Sy.queue)
   end
-  -- '###': el ID no depende del texto dinamico (08_REAIMGUI_PATTERNS.md §2).
+  -- '###': el ID no depende del texto dinamico.
   if not reaper.ImGui_CollapsingHeader(ctx, label .. '###lyrics_sync') then
     Sy.held_prev = false
     Sy.cur_entry = nil

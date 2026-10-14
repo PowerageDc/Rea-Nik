@@ -1,7 +1,6 @@
 -- Debug_common_logic.lua
 -- Helpers de logging y captura de errores para scripts de prueba (Tests-Debug/ImGui/).
 -- Patrón de módulo: tabla única (M), sin funciones/variables sueltas en global scope
--- (ver "Patrón de módulos de lógica compartida" en 01_CONVENCIONES.md).
 
 local M = {}
 

@@ -1,14 +1,14 @@
 -- MusicStateArmonia_common_logic.lua
--- Tab "Armonia" de Nik_MusicState_Helper.lua -- ver 01_CONVENCIONES.md,
--- patron dofile + M={}. Consumido solo por el Helper, no vive en _Shared/.
+-- Tab "Armonia" de Nik_MusicState_Helper.lua (patron dofile + M={}).
+-- Consumido solo por el Helper, no vive en _Shared/.
 
 local M = {}
 
 local COLUMN_WIDTHS = { select = 36, measure = 100, beat = 90, hundredths = 100, chord = 100, cursor_btn = 110, go_btn = 50, delete_btn = 70 }
 
--- Perfil de teclas del input de Acorde (musicstate_keys.md 9.4): las flechas
--- pasan el foco al Acorde de la fila anterior/siguiente; con Shift, al primer
--- Acorde de la seccion anterior/siguiente que este abierta.
+-- Perfil de teclas del input de Acorde: las flechas pasan el foco al Acorde
+-- de la fila anterior/siguiente; con Shift, al primer Acorde de la seccion
+-- anterior/siguiente que este abierta.
 local chord_keys = nil
 local function getChordKeys(helpers)
   if not chord_keys then
@@ -218,7 +218,7 @@ function M.draw(ctx, H, helpers)
     -- Cada fila va a la ULTIMA seccion cuyo marker es anterior o igual a su
     -- tiempo. Sin marker anterior -> "unsectioned". Se agrupa por indice de
     -- seccion (no por nombre) porque la nomenclatura estandar repite
-    -- nombres (INTRO, PRECORO aparecen 2 veces, ver 01_CONVENCIONES.md).
+    -- nombres (INTRO, PRECORO aparecen 2 veces en la nomenclatura estandar).
     local section_groups = {}
     for s_idx = 1, #sections do
       section_groups[s_idx] = { name = sections[s_idx].name, rows = {}, stable_id = s_idx }
@@ -454,7 +454,7 @@ function M.draw(ctx, H, helpers)
 
   -- Modal de colision de pegado: ciclo de vida en ImGuiConfirmModal (open,
   -- armed, Esc/Enter via Keys.modal). Enter SOBRESCRIBE (decision del
-  -- usuario, excepcion a la regla de 08_REAIMGUI_PATTERNS.md seccion 6) y
+  -- usuario, excepcion a la regla por defecto de los modales) y
   -- se marca en el boton. EndPopup solo si visible.
   local pending = H._armonia_paste_pending
   local visible, cancel, confirm, stale = helpers.Modal.begin(

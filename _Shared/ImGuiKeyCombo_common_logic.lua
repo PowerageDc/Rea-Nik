@@ -2,7 +2,7 @@
 -- Combo con teclado para ReaImGui (BeginCombo + Selectable): flechas, Enter y
 -- Esc los maneja ImGui; este modulo suma letras con ciclo (A, A#, Ab, A...),
 -- dibuja el resaltado de la letra y confirma con Enter tras una letra.
--- Generico: sirve para cualquier lista. Ver musicstate_keys.md 9.3.
+-- Generico: sirve para cualquier lista.
 --
 -- Uso (misma firma que ImGui_Combo, indice base 0):
 --   local changed, idx = KeyCombo.combo(ctx, 'Tonica', idx, items)
@@ -48,7 +48,7 @@ end
 -- (2) mouse y despues flecha: el recuadro parpadea (la flecha lo prende y el
 --     delta residual del frame siguiente lo apaga).
 -- Los ensayos con ancla de posicion y filtro por IsWindowHovered no
--- anduvieron; ver musicstate_keys.md 9.3.
+-- anduvieron.
 local function updateMouseGesture(ctx, st)
   local mdx, mdy = reaper.ImGui_GetMouseDelta(ctx)
   if mdx ~= 0 or mdy ~= 0 then st.mouse_mode = true end

@@ -1,7 +1,6 @@
 -- MusicStateTonalidad_common_logic.lua
 -- Tab "Tonalidad" de Nik_MusicState_Helper.lua -- extraido para modularizar
--- el contenedor (ver 01_CONVENCIONES.md, patron dofile + M={}). Consumido
--- solo por el Helper, no vive en _Shared/.
+-- el contenedor (patron dofile + M={}). Consumido solo por el Helper, no vive en _Shared/.
 
 local M = {}
 

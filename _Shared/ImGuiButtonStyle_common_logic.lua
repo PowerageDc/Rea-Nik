@@ -1,7 +1,7 @@
 -- ImGuiButtonStyle_common_logic.lua
 -- Estilo semantico de botones ReaImGui (primario, neutro, peligro). Genera
--- solo color y redondeo: no toca anchos, SameLine ni layout. Ver
--- 01_CONVENCIONES.md, patron dofile + M={}. Vive en _Shared/ porque es
+-- solo color y redondeo: no toca anchos, SameLine ni layout.
+-- Patron dofile + M={}. Vive en _Shared/ porque es
 -- generico y lo consumen las tabs del Helper (y luego ring_button).
 --
 -- Colores en formato ReaImGui 0xRRGGBBAA. La paleta es editable en vivo
