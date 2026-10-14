@@ -31,182 +31,10 @@ local CLICK_FOLDER_PATTERN = "click" -- el padre directo del track de click debe
 local CLICK_TRACK_PATTERN = "beep"   -- el track cuyo item se recorta debe contener esto (case-insensitive)
 -- ==============================================
 
--- Decodifica un string UTF-8 a una tabla de codepoints Unicode
-local function utf8ToCodepoints(str)
-  local codepoints = {}
-  local i = 1
-  local len = #str
-  while i <= len do
-    local b1 = str:byte(i)
-    local cp, size
-    if b1 < 0x80 then
-      cp, size = b1, 1
-    elseif b1 >= 0xF0 then
-      local b2, b3, b4 = str:byte(i + 1, i + 3)
-      cp = ((b1 - 0xF0) * 262144) + ((b2 - 0x80) * 4096) + ((b3 - 0x80) * 64) + (b4 - 0x80)
-      size = 4
-    elseif b1 >= 0xE0 then
-      local b2, b3 = str:byte(i + 1, i + 2)
-      cp = ((b1 - 0xE0) * 4096) + ((b2 - 0x80) * 64) + (b3 - 0x80)
-      size = 3
-    elseif b1 >= 0xC0 then
-      local b2 = str:byte(i + 1)
-      cp = ((b1 - 0xC0) * 64) + (b2 - 0x80)
-      size = 2
-    else
-      cp, size = b1, 1 -- byte inválido, se toma literal
-    end
-    table.insert(codepoints, cp)
-    i = i + size
-  end
-  return codepoints
-end
-
--- Codifica codepoints a bytes UTF-16LE (con soporte de surrogate pairs)
-local function codepointsToUtf16LE(codepoints)
-  local bytes = {}
-  for _, cp in ipairs(codepoints) do
-    if cp < 0x10000 then
-      table.insert(bytes, string.char(cp % 256))
-      table.insert(bytes, string.char(math.floor(cp / 256) % 256))
-    else
-      cp = cp - 0x10000
-      local hi = 0xD800 + math.floor(cp / 1024)
-      local lo = 0xDC00 + (cp % 1024)
-      table.insert(bytes, string.char(hi % 256))
-      table.insert(bytes, string.char(math.floor(hi / 256) % 256))
-      table.insert(bytes, string.char(lo % 256))
-      table.insert(bytes, string.char(math.floor(lo / 256) % 256))
-    end
-  end
-  return table.concat(bytes)
-end
-
--- Codificador Base64 estándar, sin dependencias externas
-local B64CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-local function base64Encode(data)
-  local result = {}
-  for i = 1, #data, 3 do
-    local b1, b2, b3 = data:byte(i, i + 2)
-    b2 = b2 or 0
-    b3 = b3 or 0
-    local n = b1 * 65536 + b2 * 256 + b3
-    local c1 = math.floor(n / 262144) % 64
-    local c2 = math.floor(n / 4096) % 64
-    local c3 = math.floor(n / 64) % 64
-    local c4 = n % 64
-    table.insert(result, B64CHARS:sub(c1 + 1, c1 + 1))
-    table.insert(result, B64CHARS:sub(c2 + 1, c2 + 1))
-    table.insert(result, (#data - i >= 1) and B64CHARS:sub(c3 + 1, c3 + 1) or '=')
-    table.insert(result, (#data - i >= 2) and B64CHARS:sub(c4 + 1, c4 + 1) or '=')
-  end
-  return table.concat(result)
-end
-
--- Arma un -EncodedCommand a partir de un comando PowerShell en UTF-8.
--- Como el argumento final que recibe CreateProcess es Base64 (solo
--- ASCII), la conversión a codepage ANSI de Windows no puede corromper
--- tildes/ñ: el string acentuado nunca viaja como argv, viaja codificado.
-local function toPowershellEncodedCommand(psCommand)
-  local codepoints = utf8ToCodepoints(psCommand)
-  local utf16bytes = codepointsToUtf16LE(codepoints)
-  return base64Encode(utf16bytes)
-end
-
-local function getOS()
-  return reaper.GetOS()
-end
-
--- Devuelve la carpeta de Descargas del usuario para usarla como
--- directorio inicial del selector de archivos
-local function getDownloadsPath()
-  if getOS():find("Win") then
-    -- Lee la ruta real de Descargas del registro (respeta redirecciones
-    -- y no depende del idioma de Windows). Salida forzada a UTF-8 para
-    -- no corromper tildes/ñ en la ruta.
-    local psCmd = [==[
-$ProgressPreference = 'SilentlyContinue'
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$p = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders').'{374DE290-123F-4565-9164-39C4925E467B}'
-[Environment]::ExpandEnvironmentVariables($p)
-]==]
-    local cmd = string.format(
-      'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand %s',
-      toPowershellEncodedCommand(psCmd))
-    local ret = reaper.ExecProcess(cmd, 10000)
-    if ret then
-      local path = ""
-      for line in ret:gmatch("[^\r\n]+") do
-        if line:match("^%a:[/\\]") or line:match("^\\\\") then
-          path = line:gsub("%s+$", "")
-          break
-        end
-      end
-      if path ~= "" then
-        if not path:match("[/\\]$") then path = path .. "\\" end
-        return path
-      end
-    end
-    -- Fallback: ubicación por defecto de Windows
-    local home = os.getenv("USERPROFILE")
-    if home then return home .. "\\Downloads\\" end
-  else
-    local home = os.getenv("HOME")
-    if home then return home .. "/Downloads/" end
-  end
-  return ""
-end
-
--- Devuelve el directorio donde está guardado el .rpp (NO usar
--- GetProjectPath, que devuelve el recording path, ej: .../Media)
-local function getProjectDir()
-  local _, projfn = reaper.EnumProjects(-1, "")
-  if not projfn or projfn == "" then
-    return nil, "El proyecto no está guardado (no tiene .rpp asociado todavía)"
-  end
-  local dir = projfn:match("^(.*)[/\\][^/\\]+$")
-  if not dir then
-    return nil, "No se pudo determinar la carpeta del proyecto"
-  end
-  return dir
-end
-
-local function ensureDir(path)
-  -- reaper.RecursiveCreateDirectory maneja UTF-8 nativamente,
-  -- evitando el problema de codepage de cmd.exe con tildes/ñ
-  reaper.RecursiveCreateDirectory(path, 0)
-end
-
--- Marca la carpeta Media como "Elementos generales" en el explorador
--- de Windows, escribiendo el desktop.ini que Explorer espera para
--- ese tipo de vista (equivale al toggle manual en Propiedades >
--- Personalizar). No-op en Mac/Linux.
-local function applyMediaFolderView(path)
-  if not getOS():find("Win") then return end
-
-  local iniPath = path .. "/desktop.ini"
-  local f = io.open(iniPath, "w")
-  if not f then return end
-  f:write("[ViewState]\r\nMode=\r\nVid=\r\nFolderType=Generic\r\n")
-  f:close()
-
-  -- Hidden+System en desktop.ini y ReadOnly en la carpeta: es la
-  -- combinación que Windows Explorer necesita para respetar FolderType
-  local psCmd = string.format(
-    '(Get-Item -LiteralPath "%s" -Force).Attributes = "Hidden,System"; ' ..
-    '$f = Get-Item -LiteralPath "%s" -Force; ' ..
-    '$f.Attributes = $f.Attributes -bor [System.IO.FileAttributes]::ReadOnly',
-    iniPath, path)
-  local encoded = toPowershellEncodedCommand(psCmd)
-  local cmd = string.format(
-    'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand %s',
-    encoded)
-  local ret = reaper.ExecProcess(cmd, 15000)
-  local code = ret and ret:match("^(%-?%d+)")
-  if code ~= "0" then
-    reaper.ShowConsoleMsg("---- Salida al setear atributos de Media ----\n" .. (ret or "(sin salida)") .. "\n----------------------------------------------\n")
-  end
-end
+local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
+local Mvsep = dofile(script_dir .. "MvsepImporter_common_logic.lua")
+local getOS = reaper.GetOS
+local toPowershellEncodedCommand = Mvsep.to_powershell_encoded_command
 
 local function extractZip(zipPath, destPath)
   local os_str = getOS()
@@ -423,17 +251,15 @@ local function trimClickItem()
 end
 
 local function main()
-  local ok, zipPath = reaper.GetUserFileNameForRead(getDownloadsPath() .. "mvsep.zip", "Seleccioná el .zip de MVSEP", "zip")
+  local ok, zipPath = reaper.GetUserFileNameForRead(Mvsep.get_downloads_path() .. "mvsep.zip", "Seleccioná el .zip de MVSEP", "zip")
   if not ok or zipPath == "" then return end
 
-  local projDir, projErr = getProjectDir()
+  local projDir, projErr = Mvsep.get_project_dir()
   if not projDir then
     reaper.ShowMessageBox(projErr, "Error", 0)
     return
   end
-  local mediaPath = projDir .. "/" .. MEDIA_SUBFOLDER
-  ensureDir(mediaPath)
-  applyMediaFolderView(mediaPath)
+  local mediaPath = Mvsep.ensure_media_folder(projDir, MEDIA_SUBFOLDER)
 
   local extractOk, extractOutput = extractZip(zipPath, mediaPath)
   if not extractOk then
