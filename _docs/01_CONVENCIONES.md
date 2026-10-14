@@ -325,3 +325,6 @@ Casos implementados:
   mantiene con un grep al renombrar.
 - Al tocar un archivo con citas viejas, se limpian ahí mismo; no hay barrido
   masivo.
+- Los comentarios no hacen afirmaciones temporales ("todavía no existe",
+  "pendiente", "por ahora"): caducan sin que nadie lo note. Lo pendiente va
+  en la sección de pendientes de un doc.
