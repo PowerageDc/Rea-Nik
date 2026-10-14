@@ -107,11 +107,8 @@ function wwr_onreply(results, sentAtMs) {
                     nikMsSetTransportPlayRate(tok[3]);
                 }
                 if (tok[1] == "NikRemote" && tok[2] == "tempo_map") {
-                    // Duplicación deliberada respecto a playrate.js (ver
-                    // remote_control_faders.md) — ms-tempo.js todavía no está
-                    // escrito, guard de existencia para no romper este archivo
-                    // en soledad durante el desarrollo por pasos.
-                    if (typeof nikMsTempoSetMap === "function") nikMsTempoSetMap(tok[3]);
+                    // Duplicación deliberada respecto a playrate.js.
+                    nikMsTempoSetMap(tok[3]);
                 }
                 if (tok[1] == "NikRemote" && tok[2] == "timesig_map") {
                     // Reusado tal cual: music-state.js ya consume timesig_map
