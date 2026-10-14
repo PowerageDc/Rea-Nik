@@ -265,9 +265,10 @@ frame).
   `transform-origin: 50% 50%`), no por esquina: los textos están centrados
   en cajas de ancho distinto.
 - **Guard:** si algún rect mide alto 0 (nodo vacío), no aplicar transform.
-- Implementaciones: `nikInstrumentistaShiftChordSlots` (la técnica) y
-  `nikMsSectionRowShift` (`musicstate-ui/shared/ms-section-row.js`; escala
-  uniforme por centros), ver `features/musicstate_instrumentista.md` §7.
+- Implementaciones: `nikInstrumentistaShiftChordSlots` (la técnica; ver
+  `features/musicstate_instrumentista.md` §2) y `nikMsSectionRowShift`
+  (`musicstate-ui/shared/ms-section-row.js`; escala uniforme por centros;
+  ver `features/musicstate_shared_ui.md`).
 
 ## Patrón de módulos JS de puro cálculo (wrapper de objeto único)
 
@@ -296,8 +297,23 @@ antes en el documento).
 
 Casos implementados:
 - `nikTranspose` (`core/music-transpose.js`) — transposición de
-  tonalidad/acordes para la feature MusicState (ver IMPL_MusicState.md).
+  tonalidad/acordes para la feature MusicState (ver
+  `features/musicstate_client.md` §2).
 - `nikBeat` (`musicstate-ui/shared/ms-beat.js`) — pulso por compás y
   distancia al próximo evento de armonía para el indicador de pulso del
   prompter de instrumentista (ver `features/musicstate_instrumentista.md`
-  §4.8).
+  §3).
+
+## Comentarios de código y referencias a docs
+
+- El código no cita secciones de docs (ni número ni título): se desfasan
+  con cada reorganización y nadie las revisa desde el código. El comentario
+  explica por sí mismo el porqué.
+- Tampoco cita historia (sesiones, pasos, "cerrado en…") ni docs
+  archivados: eso vive en git.
+- La relación es de una sola vía: los docs citan código, el código no cita
+  docs (ni siquiera por nombre de archivo).
+- Los docs sí citan código (archivos, funciones, constantes): es lo que se
+  mantiene con un grep al renombrar.
+- Al tocar un archivo con citas viejas, se limpian ahí mismo; no hay barrido
+  masivo.

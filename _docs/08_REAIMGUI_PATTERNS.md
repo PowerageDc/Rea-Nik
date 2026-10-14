@@ -5,7 +5,7 @@ es documentación de una feature: aplica a cualquier panel nativo del
 proyecto, presente o futuro (hoy: `Nik_MusicState_Helper.lua`; también
 relevante para `ReaPitchBus/Nik_ReaPitchBus_Knob.lua` y cualquier panel
 nuevo). Primer caso donde se resolvió cada patrón: la tab Armonía del
-MusicState Helper (`features/musicstate.md` §8).
+MusicState Helper (`features/musicstate_helper.md`).
 
 ## 1. Sticky header sin romper Nav (tablas con scroll)
 
@@ -169,7 +169,7 @@ Implementación completa: `musicstate_keys.md` §4.7.
 ## 4. Botón o tecla de "mantener": flancos, layout estable y widgets que cambian
 
 Primer caso: la cola de tap-to-sync de la tab Lyrics del MusicState Helper
-(`features/musicstate_lyrics.md` §8.5). Aplica a cualquier control que
+(`features/musicstate_lyrics_helper.md` §7). Aplica a cualquier control que
 dependa de mantener apretado (tap con hold, push-to-talk, arrastre manual).
 
 - **Una sola señal `held`, flancos por comparación con el frame
@@ -215,7 +215,7 @@ dependa de mantener apretado (tap con hold, push-to-talk, arrastre manual).
 ## 5. `InputText` de edición con borrador: commit, foco y atajos globales
 
 Primer caso: el panel de edición de la tab Lyrics del MusicState Helper
-(`features/musicstate_lyrics.md` §8.6). Aplica a editar un valor de la fila
+(`features/musicstate_lyrics_helper.md` §8). Aplica a editar un valor de la fila
 seleccionada de una lista con un `InputText` en un panel aparte, en vez de
 uno inline por fila.
 
@@ -257,7 +257,7 @@ uno inline por fila.
 ## 6. Modales de confirmación y teclas con un popup abierto
 
 Primer caso: el alta de línea de la tab Lyrics del MusicState Helper
-(`features/musicstate_lyrics.md` §8.6). El modal de colisión de pegado de
+(`features/musicstate_lyrics_helper.md` §8). El modal de colisión de pegado de
 Armonía comparte el mismo ciclo de vida (`ImGuiConfirmModal`: `OpenPopup`
 una sola vez, `BeginPopupModal`, `EndPopup` solo si devolvió `true`).
 

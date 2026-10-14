@@ -2,8 +2,9 @@
 
 Cómo los datos que carga el Helper llegan al `ExtState` global que el web
 control de REAPER puede servir. Relevante al tocar el guardado, la
-publicación, o el ciclo de vida por cambio de proyecto. El formato de
-cada dato está en `musicstate_data_model.md` §4, no se repite acá.
+publicación, o el ciclo de vida por cambio de proyecto del lado Helper
+(el lado cliente: `musicstate_sync.md` §11). El formato de cada dato está
+en `musicstate_data_model.md` §4, no se repite acá.
 
 Este doc describe **cómo está hecho hoy**, no cómo se llegó ahí.
 
@@ -89,21 +90,18 @@ activo (`nikMusicStateLoadFromProjExtState`) y actualiza `H.last_proj`.
 Es detección por polling dentro del propio loop de ImGui, no un callback
 de REAPER.
 
-**Lado cliente:** el reset y re-pedido al detectar cambio de proyecto, y
-la limitación de que `ExtState` es un store global sin ninguna forma de
-etiquetar a qué proyecto corresponde una respuesta, están descritos en
-`features/musicstate_instrumentista.md` §6 (ciclo de vida por proyecto) y
-no se duplican acá. El reset de lyrics y su re-pedido, que es opt-in por
-UI, están en `musicstate_client.md` §1.6.
+**Lado cliente:** el reset y re-pedido al detectar cambio de proyecto, la
+limitación de que `ExtState` no etiqueta a qué proyecto corresponde una
+respuesta, y el reset de lyrics con su re-pedido opt-in:
+`musicstate_sync.md` §1 y §11.
 
 ## 5. `publish_version` y refresco automático
 
 Sirve para que una UI abierta detecte que hay armonía nueva sin necesitar
-que el músico recargue la página. El cliente guarda el último valor
-visto y compara: si cambió, vuelve a pedir las cuatro keys de datos con
-`nikMusicStateRequestAll()`. El valor se resetea a `null` en cada cambio
-de proyecto para que la comparación nunca cruce entre proyectos (detalle
-de esa lógica, en `features/musicstate_instrumentista.md` §6).
+que el músico recargue la página. El Helper la incrementa en cada
+guardado (§3); la comparación y el reset del cliente (si cambió, vuelve a
+pedir las cuatro keys de datos con `nikMusicStateRequestAll()`):
+`musicstate_sync.md` §11.
 
 Como el store de publicación es global y no versionado por proyecto,
 `publish_version` tampoco distingue proyectos por sí solo: un valor de 5
@@ -119,29 +117,24 @@ armonía cambie mientras la UI ya está conectada al proyecto correcto.
 incrementa `PublishLyrics`. No reusa `publish_version`: el Helper carga
 ese valor al abrirse y le suma 1 al guardar, así que si otro script lo
 incrementara, el siguiente guardado repetiría el mismo número con datos
-distintos y el cliente no detectaría el cambio. La UI de lyrics lo
-compara con `nikMsLastKnownLyricsVersion` y lo resetea a `null` en cada
-cambio de proyecto.
+distintos y el cliente no detectaría el cambio. Comparación y reset en el
+cliente: `musicstate_sync.md` §11.
 
 **A diferencia de `publish_version`, cada ejecución de `PublishLyrics`
 incrementa el contador** (a `publish_version` lo incrementa el Helper;
 `PublishAll` no lo toca). Consecuencias:
 
-- El cliente pide la letra de dos formas, ninguna dentro de
-  `nikMusicStateRequestAll()`. `nikMusicStateRequestLyrics()` **dispara**
-  el script, y por lo tanto sube la versión: se usa al conectar y al
-  cambiar de proyecto. `nikMusicStateFetchLyrics()` es solo `GET` de
-  `lyrics_data`: es lo que corre al detectar un cambio de versión. Si
-  ese camino volviera a disparar el script, cada disparo subiría la
-  versión y dispararía otro: un bucle (`musicstate_client.md` §1.6).
+- El cliente pide la letra de dos formas (`musicstate_client.md` §1.6):
+  `RequestLyrics` **dispara** el script (sube la versión) y se usa al
+  conectar y al cambiar de proyecto; `FetchLyrics` es solo `GET` y es lo
+  que corre al detectar un cambio de versión. Si ese camino disparara el
+  script, cada disparo subiría la versión y dispararía otro: un bucle.
 - El cambio de proyecto dispara el script dos veces (inmediato y a los
   400 ms, igual que `RequestAll`), así que la versión sube dos veces.
   Inocuo: es un contador, no se compara contra ningún valor fijo.
-- El re-pedido es opt-in por UI (`NIK_MS_LYRICS_ENABLED`): una UI que no
-  muestra letra, como instrumentista, no dispara el script.
-- Un valor vacío (el script borró la key porque el proyecto no tiene
-  track de lyrics) cuenta como cambio a `null`, así una letra que
-  desaparece se refresca.
+- Opt-in por UI, comparación contra `nikMsLastKnownLyricsVersion`, reset
+  a `null` y tratamiento del valor vacío (el script borró la key porque
+  el proyecto no tiene track de lyrics): `musicstate_sync.md` §1 y §11.
 
 ## 6. Cómo testear: round-trip manual
 

@@ -1,22 +1,23 @@
 # Feature — MusicState: UI de cantante (layout, módulos y decisiones)
 
-**Doc en construcción.** Es el punto de entrada de la UI de cantante
-(`musicstate-ui/cantante/`), paralelo a `musicstate_instrumentista.md`. Lo que
-**no** vive acá: el contrato de datos de la letra y su estado general están en
-`musicstate_lyrics.md`; la API de consultas, en `musicstate_client.md` §1.6;
-el modelo de datos, en `musicstate_data_model.md` §4.7.
+Punto de entrada de la UI de cantante (`musicstate-ui/cantante/`),
+paralelo a `musicstate_instrumentista.md`. Lo que **no** vive acá: el
+contrato de datos de la letra y su estado general están en
+`musicstate_lyrics.md`; la API de consultas, en `musicstate_client.md`
+§1.6; el modelo de datos, en `musicstate_data_model.md` §4.7; polls,
+posición efectiva y ciclo de proyecto, en `musicstate_sync.md`; módulos
+visuales compartidos, en `musicstate_shared_ui.md`.
 
 ## 1. Estado
 
 | Pieza | Estado |
 |---|---|
-| Módulos compartidos extraídos del prompter (`ms-stale.js`, `ms-section-row.js`, `ms-header.js`, `ms-base.css`) | Hecho; prompter verificado sin cambios de comportamiento |
-| Shell estático y layout (`nsaudio_cantante.html`, `cantante.css`) | Hecho; validado en DevTools (modo dispositivo) y en Android (Fully Kiosk y Chrome con barra de direcciones) |
+| Módulos compartidos extraídos del prompter (`ms-stale.js`, `ms-section-row.js`, `ms-header.js`, `ms-base.css`) | Hecho |
+| Shell estático y layout (`nsaudio_cantante.html`, `cantante.css`) | Hecho; validado en DevTools (modo dispositivo), Android (Fully Kiosk y Chrome con barra de direcciones), iPhone y sala |
 | Cabecera (nombre, tonalidad transpuesta, tempo) y fila de sección | Funcionando en cantante |
 | Medición del escenario (renglones por línea, slots que entran, foco con tope) | Hecho en `cantante.js` (`nikCantanteMeasure`, `nikCantanteComputeLayout`); verificado en vertical y horizontal con letras reales (§4.2). El caso con tope en horizontal no se observó todavía |
-| Reel de letra (nodos por posición, animación de ancla, estados, barrido de proximidad, crossfade en seek) | Funcionando y validado en dev. Pendientes: afinar (ver §6, punto 1), gap y distribución vertical (§6, punto 2) |
+| Reel de letra (nodos por posición, animación de ancla, estados, barrido de proximidad, crossfade en seek) | Funcionando y validado en dev y sala. Pendientes: afinar (ver §6, punto 1), gap y distribución vertical (§6, punto 2) |
 | Banda de cues | Altura reservada (1 renglón), sin cablear (§6) |
-| Validación en iPhone (comportamiento de `100dvh` con la barra de Safari) | Pendiente, en sala |
 
 ## 2. Archivos y módulos consumidos
 
@@ -24,33 +25,24 @@ el modelo de datos, en `musicstate_data_model.md` §4.7.
 - `musicstate-ui/cantante/cantante.css` — layout propio del perfil.
 - `musicstate-ui/cantante/cantante.js` — bootstrap, polls, render loop, offset superior, medición, layout y render del reel, estados de línea, barrido de proximidad y panel de debug temporal (oculto salvo con `?debug=1`).
 
-Del código compartido consume:
+Módulos compartidos con instrumentista y qué aporta cada uno:
+`musicstate_shared_ui.md` §1. Esta UI consume `ms-base.css`,
+`ms-header.js`, `ms-section-row.js`, `ms-stale.js`, `ms-section.js`,
+`ms-tempo.js`, `ms-dispatch.js` y `core/music-state.js`.
 
-| Módulo | Aporta | Lo usa también |
-|---|---|---|
-| `ms-base.css` | Paleta, dividers, glifos de tonalidad, componentes de la fila de sección, `is-stale` | instrumentista |
-| `ms-header.js` | `nikMsHeaderRender()` (nombre, tonalidad, tempo) | instrumentista |
-| `ms-section-row.js` | `nikMsSectionRowRender(screenJumped)`: fila prev/actual/next con FLIP, preludio y jump | instrumentista |
-| `ms-stale.js` | `nikMsUpdateStaleIndicator(screenEl)`: clase `is-stale` y tope de `g_wwr_errcnt` | instrumentista |
-| `ms-section.js`, `ms-tempo.js`, `ms-dispatch.js`, `core/music-state.js` | Posición efectiva, secciones, tempo, polls, consultas de lyrics | instrumentista |
-
-Orden de carga del shell: `main.js`, `config.js`, `config.local.js` (opcional),
-`core/utils.js`, `markers/markers.js`, `core/music-transpose.js`,
-`core/music-state.js`, `ms-tempo.js`, `ms-section.js`, `ms-section-row.js`,
-`ms-header.js`, `ms-stale.js`, `ms-dispatch.js`, `cantante.js`. (`ms-beat.js`
-no se carga: el pulso depende de cómo se sienta el preludio de la línea.)
-
-El poll lento de cantante pide `active_project_name`, `reapitch_semitone`
-(solo para la tonalidad transpuesta; la letra no se transpone), `playrate` y
-`lyrics_version`.
+Orden de carga del shell: `musicstate_sync.md` §3, sin `ms-beat.js` (el
+pulso depende de cómo se sienta el preludio de la línea) y con
+`cantante.js` al final. Poll lento (`nikCantanteBuildSlowPoll()`):
+`musicstate_sync.md` §8. La letra no se transpone: `reapitch_semitone` se
+pide solo para la tonalidad de la cabecera.
 
 ## 3. Layout
 
 Por qué no se reusó el layout del prompter: ahí `.ms-screen` mide `100vh` y todo
 va absoluto anclado a `top: 50%`. En iOS Safari `100vh` es el viewport grande
-(sin descontar la barra), así que el 50% cae por debajo del centro visible
-(hipótesis, pendiente de validar en iPhone). Además los bloques absolutos no se
-conocen entre sí y los gaps mezclan px fijos con unidades de viewport.
+(sin descontar la barra), así que el 50% cae por debajo del centro visible. 
+Además los bloques absolutos no se conocen entre sí y los gaps mezclan px fijos 
+con unidades de viewport.
 
 Cantante es una **columna en flujo** que llena el viewport visible:
 
@@ -219,7 +211,7 @@ igual a los segundos restantes.
   `qn * 60 / bpm / playrate`, con `nikMsTempoAt(nikMsEffectivePosSeconds())` y
   `nikTransportPlayRate`.
 - Se cancela al detener, en seek y al cambiar de línea; resetear también la
-  clave de dedupe (gotcha de `musicstate_instrumentista.md` §8).
+  clave de dedupe (regla en `musicstate_shared_ui.md` §5).
 - Pausas largas (instrumental de varios segundos): el barrido final no cubre
   toda la espera. Una barra fina de progreso como la de acordes queda fuera de
   la v1; se decide viendo cómo se siente en sala.
@@ -243,12 +235,11 @@ igual a los segundos restantes.
 
 ### 4.7 Conexión inestable y "Sin señal"
 
-Se reutiliza todo lo compartido: la posición interpolada y compensada de
-`ms-dispatch.js` / `nikMsEffectivePosSeconds()` y `ms-stale.js`. El reel
-sigue extrapolando (hasta 8 s) como los acordes; con `is-stale` se atenúan
-cabecera y sección. Un seek o cambio de proyecto hace fade (`is-jumping`); un
-avance de ±1 línea se anima (`transition`, sin FLIP: §4.1). Es la misma
-política de `musicstate_instrumentista.md` §4.6 y §7.
+Se reutilizan la posición efectiva y el indicador de datos viejos
+(`musicstate_sync.md` §5 y §9; efecto visual en `musicstate_shared_ui.md`
+§4). El reel sigue extrapolando (hasta 8 s) como los acordes. Un seek o
+cambio de proyecto hace fade (`is-jumping`); un avance de ±1 línea se
+anima (`transition`, sin FLIP: §4.1).
 
 **Implementación del salto:** es un cambio de ancla de más de 1 línea, en
 cualquier dirección. Los nodos viejos se desvanecen y los nuevos entran en su
@@ -259,18 +250,8 @@ salto: recrea todo sin animar.
 
 ## 5. Gotchas verificados
 
-- **Fantasma de la fila de sección:** `nikMsBuildGhost` posiciona el clon en
-  absoluto contra `#msSectionRow`; si la fila es `static`, el clon aparece
-  arriba de la página, detrás del título. `ms-base.css` fija
-  `.ms-section-row { position: relative }` (el prompter lo pisa con `absolute`).
 - **`--u` y `dvh`:** una custom property no hace fallback si el valor es inválido
   en tiempo de cómputo; por eso el valor con `dvh` va dentro de `@supports`.
-- **Tempo por defecto:** un proyecto sin marcadores de tempo muestra 120 BPM
-  (el default de REAPER); `nikMsTempoAt` no distingue ese caso. Preexistente,
-  también en el prompter.
-- **Jump de otra capa:** `cantante.js` le pasa a `nikMsSectionRowRender` el
-  flag `nikCantanteReel.jumped`. El reel debe renderizarse **antes** que la
-  fila de sección para que el flag llegue en el mismo tick.
 - **Variable CSS cambiada a mano:** no dispara ningún evento, así que el
   medidor no se entera. En pruebas, después de tocar `--cn-lyric-size` desde
   DevTools hay que llamar `nikCantanteMarkMeasureDirty()` (o provocar un
@@ -290,32 +271,36 @@ salto: recrea todo sin animar.
 
 ## 6. Pendientes, en orden
 
-1. **Afinar el reel:** quitar el `outline` del escenario y el panel de debug
-   (hoy detrás de `?debug=1`); probar `NIK_CANTANTE_ANCHOR_ON_END` (§4.5);
-   implementar la red de seguridad de más de 2 renglones (§4.1, hoy solo se
-   cuenta en el debug); limpiar `nikCantanteIsArmed` y el `refCenter === null`
-   que quedó sin uso; probar el cambio de playrate durante la reproducción;
-   mejorar el efecto del barrido (§4.6); ver el caso con tope en horizontal
-   (§4.2).
-2. **Gap y distribución vertical:** con `NIK_CANTANTE_GAP_MAX = 4` en vertical
-   sobra espacio. Subirlo a 8 mejora vertical, pero en horizontal desplaza la
-   línea central y `prev2` queda pegado a la sección actual. A resolver
-   combinando más slots en vertical (`next3`/`prev3`), otro manejo del gap en
-   horizontal y un espacio mínimo en blanco arriba y abajo de `prev2`/`next2`.
-3. **Cues en cantante:** decidir si ve todos los cues o solo los dirigidos a su
-   rol, y si el render de cues de `instrumentista.js` se extrae a un módulo
-   compartido; definir qué pasa con cues largos o simultáneos.
-4. **Validar en iPhone** (en sala): comportamiento de `100dvh` con la barra de
-   Safari y safe areas.
-5. **Calibrar el lead** y el `PRELUDE` con una letra real.
-6. Evaluar la barra de progreso para pausas largas (§4.6).
-7. Extraer la tira de acordes a `shared/` (ver `musicstate_instrumentista.md`
-   §11); la usaría esta UI en una v2 o v3 si el cantante también toca.
-8. Rol en la fila de metadata (hoy solo tonalidad | tempo).
+1. **Afinar el reel:** quitar el `outline` del escenario y el panel de
+   debug (hoy detrás de `?debug=1`); probar `NIK_CANTANTE_ANCHOR_ON_END`
+   (§4.5); implementar la red de seguridad de más de 2 renglones (§4.1, hoy
+   solo se cuenta en el debug); limpiar `nikCantanteIsArmed` y el
+   `refCenter === null` que quedó sin uso; probar el cambio de playrate
+   durante la reproducción; mejorar el efecto del barrido (§4.6); ver el
+   caso con tope en horizontal (§4.2).
+2. **Gap y distribución vertical:** con `NIK_CANTANTE_GAP_MAX = 4` en
+   vertical sobra espacio. Subirlo a 8 mejora vertical, pero en horizontal
+   desplaza la línea central y `prev2` queda pegado a la sección actual. A
+   resolver combinando más slots en vertical (`next3`/`prev3`), otro manejo
+   del gap en horizontal y un espacio mínimo en blanco arriba y abajo de
+   `prev2`/`next2`.
+3. **Cues en cantante:** decidir si ve todos los cues o solo los dirigidos
+   a su rol, y si el render de cues de `instrumentista.js` se extrae a un
+   módulo compartido; definir qué pasa con cues largos o simultáneos.
+   Decidir también si la letra se filtra por rol (`cantantes`) o es para
+   todos.
+4. **Calibrar el lead** (`nikMusicStateLyricsLeadSec`, 1.0 s extra) y
+   `NIK_CANTANTE_PRELUDE_S` (2.0 s) con una letra real.
+5. Evaluar la barra de progreso para pausas largas (§4.6).
+6. Rol en la fila de metadata (hoy solo tonalidad | tempo).
+
+Extraer la tira de acordes a `shared/` (si el cantante también toca):
+`musicstate_instrumentista.md` §5.
 
 ## 7. Para retomar en otra sesión
 
 Pasar: este doc y `musicstate_lyrics.md`; `musicstate_client.md` §1.6;
+`musicstate_shared_ui.md`; `musicstate_sync.md` §5 a §9;
 `cantante.js`, `cantante.css` y `nsaudio_cantante.html`; y, para la técnica
 FLIP, `ms-section-row.js` (`nikMsSectionRowShift`) y
 `nikInstrumentistaShiftChordSlots` de `instrumentista.js`. No hace falta el

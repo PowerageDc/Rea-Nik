@@ -1,24 +1,20 @@
 # Feature — MusicState: capa cliente (JS)
 
-Cómo el cliente convierte los datos publicados (ver
-`musicstate_data_model.md`) más la posición del transporte en respuestas
-concretas: qué acorde suena, qué sección, qué tonalidad. Es lo que
-necesita leer quien construye o extiende una UI (hoy: instrumentista y
-cantante; mañana: coordinador). Leer antes `musicstate_data_model.md` para
-el contrato de datos — no se duplica acá.
+Cómo el cliente convierte los datos publicados (`musicstate_data_model.md`,
+contrato que se lee antes y no se duplica acá) más la posición del
+transporte en respuestas concretas: qué acorde suena, qué sección, qué
+tonalidad. Lo lee quien construye o extiende una UI (instrumentista,
+cantante, y el control remoto general, que es la UI del coordinador).
 
-Este doc describe **cómo está hecho hoy**, no cómo se llegó ahí. Modelo
-de sincronización con el transporte (ancla, extrapolación, playrate,
-indicador de datos viejos): `musicstate_instrumentista.md` §4, específico
-de esa UI y no de esta capa.
+Este doc describe **cómo está hecho hoy**, no cómo se llegó ahí. Posición
+efectiva, ancla, polls y ciclo de proyecto: `musicstate_sync.md`.
 
 ## 1. Capa cliente
 
-`core/music-state.js` convierte los datos publicados (`musicstate_data_model.md`
-§4) más la posición
-del transporte en respuestas concretas: qué acorde está vigente, cuál
-sigue, qué indicaciones están activas. Es un módulo de **consultas sin
-efectos secundarios**: las UIs lo llaman en cada render.
+`core/music-state.js` es un módulo de **consultas sin efectos
+secundarios** (sobre los datos de `musicstate_data_model.md` §4): qué
+acorde está vigente, cuál sigue, qué indicaciones están activas. Las UIs
+lo llaman en cada render.
 
 **Patrón:** variables y funciones sueltas en el scope global con prefijo
 `nikMusicState*`, no un wrapper de objeto. Tiene estado propio cacheado,
@@ -32,8 +28,8 @@ nombre fijo, no renombrar), `nikReaPitchLastSemitone`, `nikTranspose`
 Para el adelanto de posición (`nikTransportPlayState`,
 `nikTransportAnchorMs`, `nikTransportPlayRate`, `nikMsTempoAt`) el módulo
 verifica que existan; en una UI que no las define, el adelanto es 0 y la
-posición es la cruda. Cómo se calcula la posición efectiva está en
-`features/musicstate_instrumentista.md` §4.
+posición es la cruda. Cómo se calcula la posición efectiva:
+`musicstate_sync.md` §5.
 
 ### 1.1. Estado cacheado y setters
 
@@ -51,7 +47,7 @@ de proyecto reutiliza los mismos setters, ver
 | `nikMusicStateProjectKey` | `nikMusicStateSetProjectKey` | `{tonic, mode}` o `null` |
 | `nikMusicStateProjectRoles` | `nikMusicStateSetProjectRoles` | array de strings, sin `"todos"` |
 | `nikMusicStateLyricsFlat` | `nikMusicStateSetLyricsData` | array ordenado `{bar, qn_offset, text, lastLine}`, **con** marcadores de fin de línea (`text: null`); el setter des-escapa las barras antes del `JSON.parse` (§1.6) |
-| `nikMusicStateLyricsLines` | `nikMusicStateSetLyricsData` | solo las líneas (eventos con texto), con `index` absoluto; sin marcadores. Observado: coincide con la posición en este array, pero la UI de cantante no lo asume (arma un mapa `index -> posición`) |
+| `nikMusicStateLyricsLines` | `nikMusicStateSetLyricsData` | solo las líneas (eventos con texto), con `index` absoluto; sin marcadores. El `index` no está garantizado igual a la posición en este array: la UI de cantante arma un mapa `index -> posición` |
 
 `nikMusicStateFlattenBarKeyed` aplana `harmony_data`, `cues_data` y
 `lyrics_data` por igual (todos keyed por compás): anota `bar` en cada evento y ordena por la
@@ -114,30 +110,18 @@ Detalles de comportamiento:
 - **La transposición se aplica al leer**, nunca sobre los arrays
   cacheados: un cambio de semitonos en caliente no obliga a re-aplanar
   nada (detalle en §2).
+- **`nikMusicStateNextChord()` hoy solo lo llama
+  `web/nsaudio_musicstate_test.html`** (panel de debug); ningún consumidor
+  de producción lo ejercita. Para el próximo *cambio* real de acorde (por
+  ejemplo, un contador de beats) hay que saltear las entradas `isRepeat`
+  con el mismo acorde, no usar esta función tal cual.
 
-### 1.5. Carga de datos y cableado por UI
+### 1.5. Carga de datos
 
-`nikMusicStateRequestAll()` pide, en un solo request, la publicación y las
-cuatro keys de `NikMusicState` (dispara el Command ID
-`NIK_LUA_COMMANDS.musicStatePublishAll` y agrega los `GET/EXTSTATE`).
-`publish_version` no va en ese pedido: llega por el poll lento de la UI.
-No vive en el poll de fondo porque el namespace `NikMusicState` es
-independiente de `NIK_SLOW_POLL`.
-
-| UI | Dispatcher | Cuándo pide los datos |
-|---|---|---|
-| Control remoto general | `core/wwr-dispatch.js` | al conectar y al cambiar de proyecto |
-| Prompter | `musicstate-ui/shared/ms-dispatch.js` | al conectar, al cambiar de proyecto y cuando cambia `publish_version` |
-| Cantante | `musicstate-ui/shared/ms-dispatch.js` (compartido; la UI aporta su bootstrap, `musicstate-ui/cantante/cantante.js`) | pedido de lyrics propio (§1.6): al conectar y al cambiar de proyecto; solo `GET` cuando cambia `lyrics_version` |
-
-En el control remoto general, `nikLastPositionBeatsStr` (`core/state.js`)
-se cachea incondicionalmente en cada `TRANSPORT`, a diferencia de
-`statusPosition[0]`, que solo recibe `tok[5]` cuando
-`nikPositionDisplayMode == "measures"`. `core/music-transpose.js` y
-`core/music-state.js` cargan después de `core/state.js` y antes de
-`core/wwr-dispatch.js`. `nikPlayrateRequestTempoMap()` y
-`nikOpenPlayrateModal()` piden `timesig_map` junto con `tempo_map`; el
-prompter hace lo mismo con `nikMsRequestTempoAndTimesig()`.
+`nikMusicStateRequestAll()` pide en un solo request la publicación
+(`NIK_LUA_COMMANDS.musicStatePublishAll`) y las cuatro keys de datos de
+`NikMusicState`. No incluye `publish_version` (llega por el slow poll) ni
+la letra (§1.6). Qué UI la llama y cuándo: `musicstate_sync.md` §10.
 
 ### 1.6. Lyrics
 
@@ -150,8 +134,8 @@ con `text: null` (fin de línea explícito). Sin marcador, carry-over: la
 línea vigente se mantiene hasta el próximo evento.
 
 **Setter.** `nikMusicStateSetLyricsData(raw)` des-escapa las barras
-invertidas (`raw.replace(/\\\\/g, "\\")`, `musicstate_data_model.md` §3)
-antes del `JSON.parse`, y deja el estado vacío ante un valor vacío,
+invertidas (`musicstate_data_model.md` §3) antes del `JSON.parse`, y deja
+el estado vacío ante un valor vacío,
 `null` o JSON inválido (así el reset por cambio de proyecto reusa el
 setter). Ordena con `nikMusicStateCompareLyricPos`: a igual
 `(bar, qn_offset)` el marcador va antes que la línea, así que **la línea
@@ -187,37 +171,20 @@ comportan como antes, así que acordes, secciones y pulso no cambian. Es
 tiempo real: se multiplica por el playrate, y con el transporte detenido
 no hay adelanto. Se ajusta en caliente desde la consola.
 
-**Pedidos.** Son dos y no se pueden unificar:
+**Pedidos.** Son dos y no se pueden unificar; ninguno entra en
+`nikMusicStateRequestAll()` (lo recibiría el control remoto general sin
+usarlo):
 
 - `nikMusicStateRequestLyrics()`: **dispara** `PublishLyrics`
   (`NIK_LUA_COMMANDS.musicStatePublishLyrics`) y pide `lyrics_data` y
   `lyrics_version`. Con guard: sin `commandId` avisa por consola y no
   sale.
-- `nikMusicStateFetchLyrics()`: solo `GET` de `lyrics_data`.
+- `nikMusicStateFetchLyrics()`: solo `GET` de `lyrics_data`. Es lo que
+  corre al detectar un cambio de `lyrics_version`; disparar el script ahí
+  sería un bucle (`musicstate_bridge.md` §5).
 
-Cada ejecución de `PublishLyrics` incrementa `lyrics_version`
-(`musicstate_bridge.md` §5). Si la detección de un cambio de versión
-volviera a disparar el script, cada disparo subiría la versión y
-dispararía otro: un bucle. Por eso el camino por versión usa solo `GET`.
-No entra en `nikMusicStateRequestAll()`: lo recibiría el control remoto
-general sin usarlo.
-
-**Cableado en `ms-dispatch.js`:**
-
-- Handler de `lyrics_data` hacia el setter, y de `lyrics_version` contra
-  `nikMsLastKnownLyricsVersion`: si cambió, `nikMusicStateFetchLyrics()`.
-  Un valor vacío (el script borró la key: proyecto sin track de lyrics)
-  cuenta como cambio a `null`, así una letra que desaparece se refresca.
-- Reset por cambio de proyecto: vacía la letra y deja la versión en
-  `null`.
-- **Opt-in por UI:** el re-pedido en el cambio de proyecto (inmediato y a
-  los 400 ms, mismo criterio FIFO que `RequestAll`) solo corre si
-  `NIK_MS_LYRICS_ENABLED` es `true`. Su default es `false`, así que
-  instrumentista no dispara `PublishLyrics`; `cantante.js` lo activa. Cada
-  cambio de proyecto sube `lyrics_version` dos veces: inocuo, es un
-  contador.
-- `lyrics_version` viaja en el slow poll de cada UI que muestra letra
-  (`nikCantanteBuildSlowPoll()`), no en el de instrumentista.
+Quién los llama y cuándo (opt-in por UI, handlers, reset, slow poll):
+`musicstate_sync.md` §1, §8, §10 y §11.
 
 ## 2. Transposición
 
@@ -273,11 +240,9 @@ entrada.
 - `nikMusicStateTransposeChordIfNeeded(chord)`: un `null` (silencio) pasa
   intacto. Calcula el delta con `parseInt(nikReaPitchLastSemitone)` y
   **devuelve el acorde sin tocar** si el delta no es un número (los
-  sentinels `"none"` y `"mixed"` del Stem Bus, §2 de
-  `features/musicstate_instrumentista.md`), si es 0, o si no hay
-  `project_key` cargado. Si no, pide `nikTranspose.key()` con la
-  tonalidad del proyecto y aplica `nikTranspose.chord()` con su
-  `useSharps`.
+  sentinels `"none"` y `"mixed"` del Stem Bus, `musicstate_sync.md` §2),
+  si es 0, o si no hay `project_key` cargado. Si no, pide `nikTranspose.key()` 
+  con la tonalidad del proyecto y aplica `nikTranspose.chord()` con su `useSharps`.
 - `nikMusicStateCurrentProjectKey()`: devuelve `null` sin `project_key`.
   Con un delta no numérico usa 0. Siempre pasa la tonalidad por
   `nikTranspose.key()`, incluso con delta 0.
@@ -291,26 +256,14 @@ Consecuencias de comportamiento:
 | `"none"` o `"mixed"` | tal como se cargaron, sin aviso | como delta 0 |
 | Sin `project_key` | tal como se cargaron, aunque el delta sea distinto de 0 | `null` |
 
-Nota: la grafía de la tónica cargada (`musicstate_data_model.md` §4.2)
-y la que devuelve `nikMusicStateCurrentProjectKey()` con delta 0 pueden
-diferir cuando la grafía publicada no es la que las tablas prefieren (por
-ejemplo, `C#` mayor sale como `Db`). Es intencional: la tabla de §2.2 es la
-única autoridad de grafía, con o sin transposición, para que una misma
-tonalidad no se escriba distinto según el pitch. El Helper ya ofrece solo
-esas grafías (`musicstate_helper.md` §2.1), así que la diferencia solo
-aparece en proyectos publicados antes de ese cambio, hasta que se vuelvan a
-publicar.
-
-### 2.4. Nota de consumo (`NextChord`)
-
-`nikMusicStateNextChord()` (§1.4) hoy solo lo llama
-`web/nsaudio_musicstate_test.html` (panel de debug). El prompter no lo
-usa. Su comportamiento en un acorde sostenido (devuelve la repetición del
-mismo acorde, no el próximo cambio real) está sin ejercitar por ningún
-consumidor de producción. Si algún día un consumidor necesita el próximo
-*cambio* real (por ejemplo, un contador de beats hasta el próximo
-acorde), hay que saltear las entradas `isRepeat` con el mismo acorde, no
-usar esta función tal cual.
+Nota: la grafía publicada (`musicstate_data_model.md` §4.2, que guarda la
+elegida por el usuario) y la que devuelve
+`nikMusicStateCurrentProjectKey()` con delta 0 pueden diferir (por
+ejemplo, `C#` mayor sale como `Db`). Es intencional: la tabla de §2.2 es
+la única autoridad de grafía, con o sin transposición. El Helper ofrece
+solo esas grafías (`musicstate_helper.md` §2.1), así que la diferencia
+solo aparece en proyectos publicados antes con otra grafía, hasta que se
+republiquen.
 
 ## 3. Cómo testear
 
@@ -336,16 +289,13 @@ usar esta función tal cual.
   debe subir una vez y quedar estable (si sigue subiendo, hay un bucle).
 
 Pruebas de sincronización con el transporte (ancla, extrapolación,
-lookahead, indicador de datos viejos) están en
-`musicstate_instrumentista.md` §9, porque son específicas de esa UI y no
-de esta capa.
+lookahead, indicador de datos viejos): `musicstate_testing.md`.
 
 ## 4. Pendientes
 
-- **`nikMsTempoAt` en el control remoto general.** Sin esa función,
-  `nikMusicStateCurrentPos` no aplica ningún adelanto (ni el de acordes),
-  y el lead de lyrics no funciona. Cuando lyrics llegue al remoto general
-  (paneles activables, `musicstate_lyrics.md` §5), su dispatcher tiene que
-  definirla.
-- **Calibrar `nikMusicStateLyricsLeadSec`** (1.0 s extra, sin calibrar)
-  con una letra real y un cantante leyendo en la UI.
+Sin pendientes propios de esta capa.
+
+- `nikMsTempoAt` ausente en el control remoto general (sin ella no hay
+  adelanto ni lead de lyrics): `musicstate_sync.md` §14.
+- Calibrar `nikMusicStateLyricsLeadSec` (1.0 s extra, sin calibrar) con una
+  letra real: `musicstate_cantante.md` §6.

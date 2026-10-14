@@ -5,9 +5,9 @@ Diagnóstico e infraestructura de red para que el web control de REAPER
 celulares de los músicos dentro de la sala.
 
 Este doc es de infraestructura, no de código: no es una feature del repo,
-pero `features/musicstate_instrumentista.md` depende de él (esa UI tiene
-resiliencia de software ante cortes, pero no reemplaza una red que
-funcione). Convenciones generales en `01_CONVENCIONES.md` y
+pero el prompter de MusicState depende de él (tiene resiliencia de
+software ante cortes, `features/musicstate_sync.md` §9, pero no
+reemplaza una red que funcione). Convenciones generales en `01_CONVENCIONES.md` y
 `00_CONTEXTO_GENERAL.md`.
 
 ## 1. Síntoma y diagnóstico
@@ -48,7 +48,7 @@ altos o "tiempo de espera agotado":
 propia PC (`localhost`), si durante un pegue esa pestaña también se
 congela, el cuello de botella es la PC o REAPER, no la red — en ese caso
 conviene revisar la frecuencia de poll del cliente antes que la
-infraestructura (ver `features/musicstate_instrumentista.md` §4.7 y §8).
+infraestructura (ver `features/musicstate_sync.md` §8 y §9).
 
 **Antes de invertir en hardware, descartar lo barato:** probar otro cable
 UTP y otro puerto del router; en Administrador de dispositivos → la placa
@@ -77,8 +77,8 @@ músicos en su Wi-Fi.
   §1.
 - Saturación del servidor web de REAPER por un poll demasiado agresivo
   del cliente — resuelto del lado software, ver
-  `features/musicstate_instrumentista.md` §4.7 y §8 (tope de
-  `g_wwr_errcnt`, frecuencia de poll unificada).
+  `features/musicstate_sync.md` §8 y §9 (tope de `g_wwr_errcnt`,
+  frecuencia de poll unificada).
 - Un Wi-Fi interno malo si el router elegido es de mala calidad o queda
   mal ubicado.
 - Internet en la PC: con el WAN del router conectado a internet, la PC

@@ -99,17 +99,12 @@ render, pero conviven en el mismo proyecto/entorno):
 - **Control remoto web**: interfaz HTML para controlar REAPER desde el
   celular en ensayos (transporte, faders, markers, playrate, semitonos
   ReaPitch), ver `features/remote_control.md`.
-- **MusicState (armonía, cues y prompter)**: el Helper (ReaImGui) carga por
-  proyecto tonalidad, roles, armonía y cues; se publican vía ExtState y un
-  prompter web de celular (`nsaudio_prompter.html`) los muestra a los
-  músicos sincronizados con el transporte, tolerando una red inestable.
-  Modelo de datos y protocolo (punto de entrada de la feature): ver
-  `features/musicstate_data_model.md`. UI de instrumentista: ver
-  `features/musicstate_instrumentista.md`. UI de cantante (letra, en
-  construcción): ver `features/musicstate_cantante.md` (UI) y
-  `features/musicstate_lyrics.md` (contrato de datos y estado). Atajos de
-  teclado del Helper (despacho central, foco ImGui ↔ REAPER, modales): ver
-  `features/musicstate_keys.md`.
+- **MusicState (armonía, cues, prompter y letra)**: el Helper (ReaImGui)
+  carga por proyecto tonalidad, roles, armonía, cues y letra; se publican
+  vía ExtState y UIs web de celular (prompter de instrumentista, UI de
+  cantante) los muestran sincronizados con el transporte, tolerando una
+  red inestable. Punto de entrada e índice de docs de la feature:
+  `features/musicstate_data_model.md`.
 - **Monitor Mix (monitoreo por músico)**: mezcla personal del baterista
   (a futuro, de otros músicos) por un bus con `B_MAINSEND=0` hacia el par
   de salidas secundario de la placa, con volumen y mute a nivel de send.
@@ -132,7 +127,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
-| MusicState / Prompter     | Helper y prompter (vertical y landscape) funcionales y validados en dev y sala. Indicador de pulso (dots + barra, ver `features/musicstate_instrumentista.md` §4.8), tira de acordes y fila de sección (preludio + cruce animado) animadas por `transform` (técnica FLIP), y cambio de proyecto sincronizado (secciones y acordes juntos, §6). Pendientes: selector de rol, desfase de los dots en proyectos con mapas de tempo extensos, datos parciales al cambiar de proyecto, y el resto de §11 de la feature. Lyrics para cantantes: publicador, capa cliente, cableado y UI de cantante (shell, layout, cabecera, reel de letra) validados en dev, iPhone y sala; pendientes: afinar el reel y cues (ver `features/musicstate_cantante.md`; contrato en `features/musicstate_lyrics.md`) |
+| MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra) validados en dev, iPhone y sala. Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Completo y validado en PC destino y sala: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante) y MonitorMix, vía metapaquetes + .www. Pendiente: `MonitorMix_config.lua` se pisa en cada update de ReaPack (ver `05_REAPACK_DEPLOY.md`) |
 | Monitor Mix               | Filtro, creación idempotente de bus y sends (con `no_tracks` y `no_pair` sin tocar el proyecto) y canal de datos (lista publicada por ExtState más feed nativo, capa cliente `monitor.js`) verificados en dev y sala. UI web del baterista (lista por role, faders con curva en dB, mute, doble tap, lectura en vivo y escritura de sends) validada en dev y sala, ya deployada. Pendientes: cues en el footer y el problema conocido de la UI (cambio entre pestañas sin guardar). El scroll sobre sliders quedó resuelto con un slider propio (`mm-slider.js`). Ver `features/monitor_mix.md` |
 
@@ -146,7 +141,7 @@ render, pero conviven en el mismo proyecto/entorno):
   otros proyectos — no bloqueante.
 - Evaluar portar al control remoto general el manejo de conexión del prompter
   (indicador de datos viejos, tope del backoff de `main.js`, compensación por
-  RTT) — ver §10 de `features/musicstate_instrumentista.md`.
+  RTT) — ver `features/musicstate_sync.md` §14.
 - Control remoto web: decidir si los `commandId` hardcodeados como fallback en
   `config.js` deben eliminarse (forzar error visible si falta
   `config.local.js`) o mantenerse con validación explícita — hoy fallan en

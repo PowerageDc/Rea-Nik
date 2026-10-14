@@ -4,7 +4,7 @@ Despacho central de teclas del Helper (`Nik_MusicState_Helper.lua`): atajos
 globales que se reenvían a REAPER, bindings por tab, repetición por hold,
 teclas de los modales y paso del foco del teclado entre el Helper y REAPER.
 Es solo del panel nativo ReaImGui; el prompter web tiene su propio manejo
-(ver `musicstate_instrumentista.md`).
+(ver `musicstate_instrumentista.md` y `musicstate_cantante.md`).
 
 Las §1 a §8 describen **cómo está hecho hoy**. La §9 recoge los pasos del
 refactor: los hechos (con sus bugs conocidos) y el diseño ya acordado de los

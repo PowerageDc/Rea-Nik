@@ -27,14 +27,14 @@ dominio consumidor, ver `01_CONVENCIONES.md`):
 - `MusicStateArmonia_common_logic.lua`
 - `MusicStateCues_common_logic.lua`
 - `MusicStateLyricsTab_common_logic.lua` (la letra no vive en `H`: cache
-  de lectura en `H._lyrics`, ver `musicstate_lyrics.md` §8; el contenedor
+  de lectura en `H._lyrics`, ver `musicstate_lyrics_helper.md` §6; el contenedor
   expone `helpers.Lyrics`)
 - `MusicStateLyricsSync_common_logic.lua` (submódulo de la tab Lyrics: cola
-  de tap-to-sync, ver `musicstate_lyrics.md` §8.5). No es una tab propia:
+  de tap-to-sync, ver `musicstate_lyrics_helper.md` §7). No es una tab propia:
   la tab lo invoca vía `helpers.LyricsSync.draw(ctx, S, H, helpers)`, con
   `S = H._lyrics`, y su estado vive en `S.sync`.
 - `MusicStateLyricsEdit_common_logic.lua` (submódulo de la tab Lyrics: panel
-  de edición de la fila seleccionada, ver `musicstate_lyrics.md` §8.6).
+  de edición de la fila seleccionada, ver `musicstate_lyrics_helper.md` §8).
   Tampoco es una tab propia: la tab lo invoca vía
   `helpers.LyricsEdit.draw(ctx, S, H, helpers)`, con `S = H._lyrics`, y su
   estado vive en `S.edit`.
@@ -129,9 +129,8 @@ ReaImGui, no específicos de esta feature — documentados en
 
 Aplicado hoy: `harmony_header` (fija) + `harmony_body` (`BeginChild` con
 `WindowFlags_NoNav()`), columnas sincronizadas por `setupHarmonyColumns(ctx)`
-(anchos fijos en `COLUMN_WIDTHS`). Cues todavía no lo tiene (pendiente,
-§8); al agregarlo, previsiblemente comparte el mismo bug si se le pone
-`ScrollY` directo.
+(anchos fijos en `COLUMN_WIDTHS`). Cues todavía no lo tiene (ver pendientes); 
+al agregarlo, previsiblemente comparte mismo bug si se le pone `ScrollY` directo.
 
 ## 4. Agrupado por sección, auto-scroll y highlight (tab Armonía)
 

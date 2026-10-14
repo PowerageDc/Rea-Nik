@@ -9,22 +9,36 @@ Este doc describe **cómo está hecho hoy**, no cómo se llegó ahí (para eso,
 `git log`). Convenciones generales en `01_CONVENCIONES.md` y
 `00_CONTEXTO_GENERAL.md`; no se duplican acá.
 
-Documentos relacionados:
-- `features/musicstate_client.md`: capa cliente JS (consultas,
-  transposición) — para quien construye o extiende una UI.
-- `features/musicstate_bridge.md`: puente y publicación (Lua) — para
-  quien toca el lado de guardado/publicación.
+Documentos relacionados (índice único de la feature):
+
+Datos y publicación (lado REAPER):
+- `features/musicstate_bridge.md`: puente y publicación (Lua), guardado
+  desde el Helper, `publish_version`.
 - `features/musicstate_helper.md`: el panel ReaImGui de carga.
-- `features/musicstate_instrumentista.md`: UI de instrumentista
-  (prompter), modelo de sincronización con el transporte.
+- `features/musicstate_keys.md`: atajos de teclado del Helper.
 - `features/musicstate_lyrics.md`: estado y decisiones de la feature de
-  lyrics para cantantes (doc liviano, en construcción). El contrato de
-  datos está en §4.7 de este doc.
-- `07_RED_SALA_ENSAYO.md`: diagnóstico e infraestructura de red para la
-  sala (no es parte de esta feature, pero la UI de instrumentista
-  depende de que la red aguante).
-- `08_REAIMGUI_PATTERNS.md`: patrones y gotchas de ReaImGui usados en el
-  Helper, no específicos de esta feature.
+  lyrics, y el publicador. El contrato de datos está en §4.7 de este doc.
+- `features/musicstate_lyrics_helper.md`: ingreso de letras y tab Lyrics
+  del Helper.
+
+Cliente web:
+- `features/musicstate_client.md`: consultas y transposición
+  (`core/music-state.js`).
+- `features/musicstate_sync.md`: posición efectiva, ancla, polls, ciclo de
+  proyecto, conexión inestable.
+- `features/musicstate_shared_ui.md`: módulos visuales compartidos (fila de
+  sección, cabecera, sin señal).
+- `features/musicstate_instrumentista.md`: UI de instrumentista
+  (prompter).
+- `features/musicstate_cantante.md`: UI de cantante (reel de letra).
+- `features/musicstate_testing.md`: pruebas de sincronización y UIs.
+
+Otros:
+- `05_REAPACK_DEPLOY.md`: deploy, `config.local.js`.
+- `07_RED_SALA_ENSAYO.md`: red de la sala (las UIs dependen de que
+  aguante).
+- `08_REAIMGUI_PATTERNS.md`: patrones y gotchas de ReaImGui del Helper, no
+  específicos de esta feature.
 - `REAPER Musical Metadata & Web Controller — Specification.md`: spec
   conceptual original (objetivo y arquitectura, sin editar).
 
@@ -48,7 +62,6 @@ Helper mientras el usuario lo tiene abierto.
 **Los datos se publican sin transponer.** El servidor publica acordes y
 tonalidad tal como fueron cargados; la transposición por semitonos de
 ReaPitch la aplica el cliente al leer (ver `musicstate_client.md` §2).
-
 
 ## 2. Flujo de datos y keys
 
@@ -91,15 +104,12 @@ store **global**, compartido por todos los proyectos abiertos: no
 distingue a qué proyecto pertenece lo que guarda (consecuencia para el
 puente en `musicstate_bridge.md` §1).
 
-
 ## 3. Gotchas de protocolo
 
 **`GET/EXTSTATE` no lee `ProjExtState`.** El web control de REAPER solo
 lee el `ExtState` global. Un dato guardado en `ProjExtState` (lo correcto
 por ser por proyecto) es invisible para el cliente hasta que un script lo
-copia a `ExtState`. De ahí el puente. Reproducible con
-`Tests-Debug/Nik_Tests_ExtStateProbe.lua`, que escribe el mismo valor en
-ambos stores y compara lo que devuelve el endpoint.
+copia a `ExtState`. De ahí el puente. Reproducible con la sonda de §5.1.
 
 **El web control escapa los saltos de línea.** Un valor con saltos de
 línea reales vuelve como `\n` literal (dos caracteres), porque el
@@ -123,10 +133,8 @@ raw.replace(/\\\\/g, "\\")
 ```
 
 Aplica a toda key cuyo valor pueda llevar texto libre con comillas o
-barras. Reproducible con `Tests-Debug/Nik_Tests_ExtStateProbe.lua`.
-Si REAPER dejara de escapar así, una letra con comillas dejaría de
-parsear: repetir la prueba ante cualquier cambio de versión.
-
+barras. Si REAPER dejara de escapar así, una letra con comillas dejaría
+de parsear: repetir la prueba de §5.1 ante cualquier cambio de versión.
 
 ## 4. Modelo de datos
 
@@ -171,7 +179,9 @@ igual (ausencia de eventos en el medio).
 
 `mode` es `major` o `minor`, sin casos exóticos. La tónica se guarda con
 la grafía que eligió el usuario (Db y C# son tonalidades distintas en
-notación real aunque suenen igual); no se normaliza ni se deriva.
+notación real aunque suenen igual); no se normaliza ni se deriva al publicar. 
+La grafía que muestra el cliente la decide `musicstate_client.md` §2.2–2.3 y 
+puede diferir.
 
 ### 4.3. `project_roles`
 
@@ -260,12 +270,11 @@ Verificado en 2/4, 4/4 y 6/8, y en ambas direcciones (posición → QN en el
 cliente, QN → beat en el Helper). El resultado tiene un pequeño error de
 redondeo porque el display de REAPER trunca a centésimas.
 
-
 ### 4.7. `lyrics_data` y `lyrics_version`
 
-*Publicador (`Nik_MusicState_PublishLyrics.lua`) y capa cliente
-(`musicstate_client.md` §1.6) implementados; UI de cantante pendiente
-(`musicstate_lyrics.md`).* Es la única key de este
+Implementación: publicador `Nik_MusicState_PublishLyrics.lua`, capa
+cliente `musicstate_client.md` §1.6, UI `musicstate_cantante.md`; estado
+y decisiones en `musicstate_lyrics.md`. Es la única key de este
 namespace cuyo origen no es el Helper ni `ProjExtState`: las líneas de
 letra viven como eventos lyric MIDI dentro del `.rpp`, en un track
 dedicado (`🎤 Lyrics`; el script lo descubre por nombre, sin distinguir
@@ -275,8 +284,7 @@ publica directo a `ExtState`, sin pasar por `ProjExtState` ni por
 
 **Origen.** Eventos de texto tipo LYRIC (tipo 5) de los items MIDI del
 track, leídos con `MIDI_GetTextSysexEvt`. Se acepta que no haya notas: un
-lyric sin nota es válido. No se usa `GetTrackMIDILyrics`: devuelve la
-posición truncada a centésimas de beat y mezcla el texto con tabs.
+lyric sin nota es válido (alternativas descartadas: `musicstate_lyrics.md` §3).
 
 **Formato.** JSON compacto en una sola línea, keyed por número de compás
 (string), con un array de eventos por compás. Misma estructura que
@@ -310,35 +318,23 @@ igual a la duración del compás.
 **Orden.** Por `(compás, qn_offset)` dentro de cada compás, igual que el
 resto de las keys keyed por compás.
 
-**Lectura.** El setter del cliente debe des-escapar las barras
-invertidas antes del `JSON.parse` (ver §3): una línea con comillas
-(`Dijo "hola"`) o con barra (`a\b`) llega duplicada y no parsea sin ese
-paso. Verificado con una letra de prueba con ambos casos. Implementado
-en `nikMusicStateSetLyricsData` (`musicstate_client.md` §1.6).
+**Lectura.** El setter del cliente des-escapa las barras invertidas
+antes del `JSON.parse` (§3; implementado en `nikMusicStateSetLyricsData`,
+`musicstate_client.md` §1.6).
 
 **`lyrics_version`.** Contador entero que `PublishLyrics` incrementa en
-cada publicación, es decir, en cada ejecución del script, incluidas las
-que dispara el cliente al conectar y al cambiar de proyecto
-(`musicstate_bridge.md` §5). **No reusa `publish_version`:** el Helper carga ese
-valor al abrirse y le suma 1 al guardar, así que si otro script lo
-incrementara, el siguiente guardado del Helper repetiría el mismo número
-con datos distintos y el cliente no detectaría el cambio. El cliente
-compara `lyrics_version` igual que `publish_version` (ver
-`musicstate_bridge.md` §5), y se resetea a `null` en cada cambio de
-proyecto.
+cada ejecución, incluidas las que dispara el cliente. Es independiente de
+`publish_version` y se resetea a `null` en cada cambio de proyecto.
+Motivo de la independencia, comparación en el cliente y bucle evitado:
+`musicstate_bridge.md` §5.
 
-**Higiene por proyecto.** `ExtState` es global y no etiqueta el proyecto
-(§2). Si el proyecto activo no tiene track de lyrics, `PublishLyrics`
-**borra** `lyrics_data` y `lyrics_version` del lado global
-(`DeleteExtState`); si no, quedarían las letras del proyecto anterior.
-Mismo criterio que `bridgeKey`.
+**Higiene por proyecto.** Si el proyecto activo no tiene track de lyrics,
+`PublishLyrics` borra `lyrics_data` y `lyrics_version` del `ExtState`
+global (mismo criterio que `bridgeKey`, `musicstate_bridge.md` §1).
 
-**Refresco.** Como la letra se edita en el editor MIDI y no en el
-Helper, nada incrementa `lyrics_version` solo: la UI la recibe al
-conectar y al cambiar de proyecto, y se refresca al republicar con la
-acción de `PublishLyrics`. Al detectar un cambio de versión, el cliente
-solo vuelve a leer `lyrics_data`: no re-dispara el script, porque cada
-ejecución sube la versión y sería un bucle (`musicstate_bridge.md` §5).
+**Refresco.** Nada incrementa `lyrics_version` al editar en el editor
+MIDI: la UI recibe la letra al conectar y al cambiar de proyecto, y se
+refresca al ejecutar la acción de `PublishLyrics`.
 
 **Extensibilidad.** El cliente ignora campos que no conoce, así que se
 pueden sumar campos opcionales por evento sin romper nada de v1 (por
@@ -350,7 +346,7 @@ sílaba→línea y pausa dentro de una línea como evento propio.
 
 ### 5.1. Protocolo `ProjExtState` → `ExtState`
 
-`Tests-Debug/Nik_Tests_ExtStateProbe.lua` es la herramienta para
+`Tests-Debug/Nik_MusicState_ProbeExtState.lua` es la herramienta para
 reproducir problemas de protocolo (§3): escribe el mismo valor en
 `ProjExtState` y en `ExtState` y compara lo que devuelve el endpoint del
 web control. Útil para confirmar de entrada si un dato "no llega" es un
@@ -362,9 +358,10 @@ capa.
 En este orden, de más a menos probable:
 
 1. `config.local.js` desactualizado o ausente en esa PC (Command IDs
-   viejos, `NIK_LUA_COMMANDS.musicStatePublishAll` sin resolver).
-2. Caché del navegador (recarga forzada antes de sospechar del código,
-   mismo gotcha que en `musicstate_instrumentista.md`).
+   viejos, `NIK_LUA_COMMANDS.musicStatePublishAll` sin resolver; ver
+   `05_REAPACK_DEPLOY.md`).
+2. Caché del navegador (recarga forzada antes de sospechar del código;
+   `musicstate_testing.md` §1).
 3. El puente nunca corrió para ese proyecto (nadie disparó
    `PublishAll`/"Guardar y Publicar" desde que se abrió esa pestaña) —
    ver `musicstate_bridge.md` §2-3.
@@ -376,33 +373,17 @@ Pruebas de round-trip completo (cargar en el Helper → publicar → leer en
 el cliente) están en `musicstate_bridge.md` §6, porque ejercitan el
 Helper y el puente juntos.
 
-## 6. Pendientes de esta capa
+## 6. Verificaciones pendientes
 
-Ningún bug de protocolo o de modelo de datos sin corregir hoy. Sí hay
-verificaciones pendientes en la capa de datos (`lyrics_data` ya está
-implementado de punta a punta, §4.7):
+Sin bugs de protocolo ni de modelo de datos sin corregir. Falta verificar:
 
-- **`cues_data` y el escape de barras (§3):** el texto de una cue es
-  libre y puede llevar comillas o barras. Revisar cómo las escapa el
-  Helper al guardar y si el cliente aplica el des-escape antes del
-  `JSON.parse` en `nikMusicStateSetCuesData`; hoy solo está verificado
-  para `lyrics_data`.
+- **`cues_data` y el escape de barras (§3):** el texto de una cue es libre
+  y puede llevar comillas o barras. Revisar cómo las escapa el Helper al
+  guardar y si el cliente aplica el des-escape antes del `JSON.parse` en
+  `nikMusicStateSetCuesData`; hoy solo está verificado para `lyrics_data`.
 - **Tamaño máximo de `EXTSTATE`:** la documentación del web control solo
   menciona un tope de ~16k para `PROJEXTSTATE`; el de `EXTSTATE` no está
-  documentado. Medir con una letra larga real.
-- **Emparejamiento lyric↔nota MIDI** (para duración o progreso por
-  sílaba a futuro): no verificado, la prueba de lyrics se hizo sin notas.
-
-Los demás pendientes de la feature están repartidos por capa, en el doc
-que los toca resolver:
-
-- `musicstate_client.md` §4: bug de grafía con delta 0 en la
-  transposición.
-- `musicstate_bridge.md`: sin pendientes propios hoy.
-- `musicstate_helper.md` §9: header `@provides` desactualizado, backlog
-  de UX (Cues sin sticky header, highlight sin calibrar, diccionario de
-  color de secciones compartido, glitch de Enter en Roles).
-- `musicstate_instrumentista.md` §11: desfase de los dots en mapas de
-  tempo extensos, datos parciales al cambiar de proyecto, delta de
-  lookahead por tempo, validación en compases no x/4, selector de rol en
-  la UI, validación de landscape en pantallas más chicas.
+  documentado. La prueba midió 318 bytes con 6 líneas de letra; medir con
+  una letra larga real.
+- **Emparejamiento lyric↔nota MIDI** (para duración o progreso por sílaba
+  a futuro): no verificado, la prueba de lyrics se hizo sin notas.
