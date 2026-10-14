@@ -118,8 +118,9 @@ de globales del prompter, el pedido de lyrics es propio (no entra en
 
 ## 6. Pendientes
 
-- **`01_CONVENCIONES.md`:** documentar el nombre del track `🎤 Lyrics`;
-  revisar que AutoColor y los snapshots lo ignoren.
+- **`01_CONVENCIONES.md`, track de letra:** el nombre ya está documentado;
+  falta verificar que AutoColor y los snapshots ignoren el track `🎤 Lyrics`
+  y anotar el resultado ahí.
 - **Verificaciones de datos** (tope de `EXTSTATE`, emparejamiento
   lyric↔nota MIDI, `cues_data` y escape de barras):
   `musicstate_data_model.md` §6.

@@ -81,6 +81,14 @@ Nota: existe una nomenclatura alternativa abreviada usada en otros proyectos
 (V1, V2, PC, C1, etc.) — pendiente de considerar un parser a futuro, no
 bloqueante hoy.
 
+## Track de letra (MusicState)
+Nombre fijo: `🎤 Lyrics` (constante `DEFAULT_TRACK_NAME` en
+`MusicStateLyrics_common_logic.lua`). Se descubre por nombre, sin distinguir
+mayúsculas, y la letra vive en eventos lyric MIDI de sus items. No es un
+track de stems: no pertenece al Stem Bus ni a la tabla de snapshots.
+Contrato y publicación: `features/musicstate_lyrics.md`; ingreso y tab del
+Helper: `features/musicstate_lyrics_helper.md`.
+
 ## Convención de nombres de scripts Lua (raíz del repo, `C:\dev\Rea-Nik\`)
 
 Dos categorías, para poder distinguirlas a simple vista (y para poder

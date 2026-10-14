@@ -317,6 +317,15 @@ antes de `wwr-dispatch.js`.
   extrapolación solo sirve para lo que avanza con el tiempo (posición,
   markers, cursor), no para faders ni meters. Antes, inventariar qué pide
   `core/wwr-dispatch.js` y a qué frecuencia.
+- Quitar los guards `typeof` redundantes de `ms-dispatch.js`. Las cuatro
+  páginas que lo cargan (prompter, cantante, monitor y test) cargan antes
+  `music-state.js`, `ms-section.js` y `ms-tempo.js`, así que esas funciones
+  siempre existen. Candidatos: setters, pedidos y resets de `nikMusicState*`,
+  `nikMsTempoSetMap` y `nikMsSectionOnMarkersUpdated`. Se mantienen el
+  opt-in `NIK_MS_LYRICS_ENABLED` y los ganchos `nikMm*` (solo los define
+  monitor). Cuidado: sin guard, un nombre mal escrito aborta el
+  procesamiento de `wwr_onreply` en lugar de ignorarse. Verificar cada
+  función en las cuatro páginas antes de quitarla.
 - Refresco de `tempo_map`/`timesig_map` editados en vivo con la UI abierta
   (no los cubre `publish_version`); caso raro en ensayo.
 - Semitono `"mixed"` del Stem Bus: manejo escrito, sin probar con datos
