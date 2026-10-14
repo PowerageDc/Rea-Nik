@@ -31,6 +31,7 @@ Cliente web:
 - `features/musicstate_instrumentista.md`: UI de instrumentista
   (prompter).
 - `features/musicstate_cantante.md`: UI de cantante (reel de letra).
+- `features/monitor_mix.md`: UI de Monitor Mix (mezcla de monitoreo).
 - `features/musicstate_testing.md`: pruebas de sincronización y UIs.
 
 Otros:

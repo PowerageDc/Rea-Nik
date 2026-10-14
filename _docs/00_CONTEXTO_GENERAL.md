@@ -104,7 +104,8 @@ render, pero conviven en el mismo proyecto/entorno):
   vía ExtState y UIs web de celular (prompter de instrumentista, UI de
   cantante) los muestran sincronizados con el transporte, tolerando una
   red inestable. Punto de entrada e índice de docs de la feature:
-  `features/musicstate_data_model.md`.
+  `features/musicstate_data_model.md`. Qué adjuntar según la tarea: sección
+  "Qué adjuntar según la tarea (MusicState)", al final de este doc.
 - **Monitor Mix (monitoreo por músico)**: mezcla personal del baterista
   (a futuro, de otros músicos) por un bus con `B_MAINSEND=0` hacia el par
   de salidas secundario de la placa, con volumen y mute a nivel de send.
@@ -149,3 +150,19 @@ render, pero conviven en el mismo proyecto/entorno):
 - Control remoto web: crear `manifest.json` (+ íconos) para habilitar PWA
   instalable — referenciado por `nsaudio_remote_control.html` al boot,
   nunca se llegó a crear (404 preexistente, sin impacto funcional).
+
+## Qué adjuntar según la tarea (MusicState)
+
+Punto de partida: el doc principal de la tarea y lo que ese doc cita como dependencia. Docs en `_docs/features/`; código de las UIs en `web/musicstate-ui/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| UI de prompter | `musicstate_instrumentista.md` | `instrumentista/`, `nsaudio_prompter.html` |
+| UI de cantante | `musicstate_cantante.md` | `cantante/`, `nsaudio_cantante.html` |
+| UI de Monitor Mix | `monitor_mix.md` | `monitor/`, `nsaudio_monitor.html` |
+| Módulo compartido (fila de sección, cabecera, sin señal) | `musicstate_shared_ui.md` y el de la UI | `shared/ms-*.js` |
+| Sync (posición, lookahead, tempo, playrate, polls) | `musicstate_sync.md`, `musicstate_client.md`, `musicstate_testing.md` | `core/music-state.js`, `shared/ms-tempo.js`, `shared/ms-beat.js`, `shared/ms-dispatch.js` |
+| Lógica y cableado de Monitor Mix | `monitor_mix.md` | `monitor/monitor.js`, `monitor/mm-fader.js`, `shared/ms-dispatch.js`, `config.js` |
+| Reutilizar la tira de acordes | `musicstate_instrumentista.md`, `musicstate_shared_ui.md`, `musicstate_sync.md`, `musicstate_client.md` | `instrumentista/`, `shared/ms-beat.js`, `shared/ms-section-row.js` (ejemplo de extracción) |
+| Key nueva publicada desde el Helper | `musicstate_data_model.md`, `musicstate_bridge.md`, `musicstate_helper.md` | `MusicState/*.lua` |
+| Letras (ingreso y publicación) | `musicstate_lyrics.md`, `musicstate_lyrics_helper.md` | `MusicState/Nik_MusicState_PublishLyrics.lua` |
