@@ -118,7 +118,7 @@ asignada y en `resize` / `orientationchange`, nunca por frame.
 
 **Foco:** el objetivo es el centro de la pantalla, limitado al rango que el escenario permite.
 
-**Implementación (paso 3c, `cantante.js` y `cantante.css`):**
+**Implementación (`cantante.js` y `cantante.css`):**
 
 - **Medidor:** nodo oculto `.cn-measurer` dentro del escenario, con el ancho
   del escenario y la fuente del rol "actual" (`--cn-lyric-size` 6.5u,

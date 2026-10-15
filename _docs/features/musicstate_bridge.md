@@ -129,6 +129,8 @@ incrementa el contador** (a `publish_version` lo incrementa el Helper;
   conectar y al cambiar de proyecto; `FetchLyrics` es solo `GET` y es lo
   que corre al detectar un cambio de versión. Si ese camino disparara el
   script, cada disparo subiría la versión y dispararía otro: un bucle.
+- Monitor Mix repite el patrón con `list_version`: `nikMmRequestList`
+  dispara el script y `nikMmFetchList` solo lee (`monitor_mix.md` §5).
 - El cambio de proyecto dispara el script dos veces (inmediato y a los
   400 ms, igual que `RequestAll`), así que la versión sube dos veces.
   Inocuo: es un contador, no se compara contra ningún valor fijo.

@@ -85,7 +85,7 @@ MVSEP Importer  →  llena el folder "Stem Bus" con los 6 stems
         (regiones nombradas + count-in + preset)
                          │
                          ▼
-        Batch Script (Paso 7 — EN DESARROLLO)
+        Batch Script (EN DESARROLLO)
    vincula región ↔ snapshot ↔ render automático
 ```
 
@@ -112,7 +112,9 @@ render, pero conviven en el mismo proyecto/entorno):
   Filtro de tracks configurable en código, publicado por ExtState con un
   script one-shot que dispara el cliente, y una interfaz web separada
   (segundo Web Control) sin controles de transporte, con el mismo header,
-  secciones y cues que lyrics. Ver `features/monitor_mix.md`.
+  secciones que las UIs de MusicState (la fila de cues del footer no está
+  cableada). Ver `features/monitor_mix.md` (ruteo, filtro y datos) y
+  `features/monitor_mix_ui.md` (interfaz).
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color + MusicState + MonitorMix) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -124,13 +126,13 @@ render, pero conviven en el mismo proyecto/entorno):
 | Auto-color system        | Confirmado funcionando                         |
 | MVSEP stem importer      | En progreso (caso borde "instrum" pendiente)   |
 | Sistema de Snapshots      | Implementado (script custom, prefijo SN_)      |
-| Render Workflow           | Pasos 1–6 cerrados, Paso 7 (batch) pendiente   |
+| Render Workflow           | Regiones, count-in y preset implementados; batch render pendiente |
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
-| MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra) validados en dev, iPhone y sala. Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
-| Deploy vía ReaPack        | Completo y validado en PC destino y sala: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante) y MonitorMix, vía metapaquetes + .www. Pendiente: `MonitorMix_config.lua` se pisa en cada update de ReaPack (ver `05_REAPACK_DEPLOY.md`) |
-| Monitor Mix               | Filtro, creación idempotente de bus y sends (con `no_tracks` y `no_pair` sin tocar el proyecto) y canal de datos (lista publicada por ExtState más feed nativo, capa cliente `monitor.js`) verificados en dev y sala. UI web del baterista (lista por role, faders con curva en dB, mute, doble tap, lectura en vivo y escritura de sends) validada en dev y sala, ya deployada. Pendientes: cues en el footer y el problema conocido de la UI (cambio entre pestañas sin guardar). El scroll sobre sliders quedó resuelto con un slider propio (`mm-slider.js`). Ver `features/monitor_mix.md` |
+| MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra) implementados. Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
+| Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante) y MonitorMix, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
+| Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo) y UI web del baterista implementados y deployados. Validación en sala a medias. Pendientes en sus docs. Ver `features/monitor_mix.md` y `features/monitor_mix_ui.md` |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -159,10 +161,10 @@ Punto de partida: el doc principal de la tarea y lo que ese doc cita como depend
 |---|---|---|
 | UI de prompter | `musicstate_instrumentista.md` | `instrumentista/`, `nsaudio_prompter.html` |
 | UI de cantante | `musicstate_cantante.md` | `cantante/`, `nsaudio_cantante.html` |
-| UI de Monitor Mix | `monitor_mix.md` | `monitor/`, `nsaudio_monitor.html` |
+| UI de Monitor Mix | `monitor_mix_ui.md`, `musicstate_shared_ui.md` | `monitor/`, `nsaudio_monitor.html` |
 | Módulo compartido (fila de sección, cabecera, sin señal) | `musicstate_shared_ui.md` y el de la UI | `shared/ms-*.js` |
 | Sync (posición, lookahead, tempo, playrate, polls) | `musicstate_sync.md`, `musicstate_client.md`, `musicstate_testing.md` | `core/music-state.js`, `shared/ms-tempo.js`, `shared/ms-beat.js`, `shared/ms-dispatch.js` |
-| Lógica y cableado de Monitor Mix | `monitor_mix.md` | `monitor/monitor.js`, `monitor/mm-fader.js`, `shared/ms-dispatch.js`, `config.js` |
+| Ruteo, filtro y datos de Monitor Mix | `monitor_mix.md`, `musicstate_sync.md` | `MonitorMix/*.lua`, `monitor/monitor.js`, `shared/ms-dispatch.js`, `config.js` |
 | Reutilizar la tira de acordes | `musicstate_instrumentista.md`, `musicstate_shared_ui.md`, `musicstate_sync.md`, `musicstate_client.md` | `instrumentista/`, `shared/ms-beat.js`, `shared/ms-section-row.js` (ejemplo de extracción) |
 | Key nueva publicada desde el Helper | `musicstate_data_model.md`, `musicstate_bridge.md`, `musicstate_helper.md` | `MusicState/*.lua` |
 | Letras (ingreso y publicación) | `musicstate_lyrics.md`, `musicstate_lyrics_helper.md` | `MusicState/Nik_MusicState_PublishLyrics.lua` |

@@ -351,14 +351,13 @@ campo `commit` de la versión más reciente de cada paquete afectado).
 
 ## Versiones publicadas (último deploy)
 
-Validado en PC destino y en sala vía rama temporal, luego squash a
-`main`:
+Versiones en `main`:
 
 | Paquete | Versión | Ancla |
 |---------|---------|-------|
 | RemoteControl (scripts) | 1.9 | `Nik_RemoteState_Poll.lua` |
 | MusicState (scripts) | 1.4 | `Nik_MusicState_Helper.lua` |
-| MonitorMix (scripts, nuevo) | 1.0 | `Nik_MonitorMix_Publish.lua` |
+| MonitorMix (scripts) | 1.0 | `Nik_MonitorMix_Publish.lua` |
 | Interfaz web (`.www`) | 1.8 | `web/Nik_RemoteControl_WebUI.www` |
 
 En destino se instalan los cuatro juntos y después se corre

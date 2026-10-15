@@ -1,32 +1,28 @@
-# Feature — Monitor Mix (mezcla de monitoreo por músico)
+# Feature — Monitor Mix: ruteo, filtro y datos
 
-Complementa `remote_control.md`, `musicstate_lyrics.md` y `01_CONVENCIONES.md`.
-Reemplaza en la práctica a la Línea C de `click_bus.md` (documento de
-investigación, no está en el repo; la Línea M, metrónomo nativo global,
-queda aparte).
+Mezcla de monitoreo por músico: bus propio con salida de hardware
+secundaria, sends por track, filtro de qué tracks se ofrecen y canal de
+datos hacia la UI. Lo lee quien toca el ruteo, el filtro, el config o el
+contrato de la lista. La interfaz web (shell, render, faders, slider):
+`monitor_mix_ui.md`.
 
-**Estado:** investigación de ruteo cerrada (pasos 1–3). Canal de datos
-(Lua y capa cliente `monitor.js`) verificado, paso 4.3. Interfaz
-web (4.4) en navegador y celular, con el segundo Web Control (ver 6.1). 
-El slider propio (`mm-slider.js`), que evita que el scroll mueva el volumen
-Verificado en dev/sala/celulares.
-
----
+Fuera de este doc: ganchos de `ms-dispatch.js`, polls y ciclo de proyecto
+(`musicstate_sync.md` §1, §8, §10, §11), patrón "disparar vs solo leer"
+(`musicstate_bridge.md` §5), protocolo del web control y tope de `EXTSTATE`
+(`musicstate_data_model.md` §3, §6), deploy (`05_REAPACK_DEPLOY.md`),
+convenciones (`01_CONVENCIONES.md`).
 
 ## 1. Objetivo
 
 Que el baterista (y a futuro otros músicos) ajuste su propia mezcla de
 monitoreo mientras toca, sin afectar la mezcla principal ni los renders.
 
-- Interfaz web separada, servida por un segundo Web Control (puerto propio
-  y página por defecto propia).
-- Sin controles de transporte: solo una lista filtrada de tracks, cada uno
-  con volumen y mute propios.
-- El click es un folder con hijos (beep, percusión, palillos...); el
-  baterista elige cuál escucha con el fader/mute de cada hijo.
+- Interfaz web separada, servida por un segundo Web Control (puerto y
+  página por defecto propios), sin controles de transporte.
+- Una lista filtrada de tracks, cada uno con volumen y mute propios.
+- El click es un folder con hijos (beep, percusión, palillos...): el
+  baterista elige cuál escucha con el fader y el mute de cada hijo.
 - La salida se resuelve dinámicamente según la placa de cada PC.
-
----
 
 ## 2. Arquitectura
 
@@ -36,81 +32,75 @@ Tracks filtrados ──send──▶ Monitor Bus - Batería ──hardware out�
 ```
 
 - Un track bus por músico, con `B_MAINSEND = 0` y su única salida de
-  hardware en el par secundario. El código maneja una **lista de buses**
-  desde el inicio, aunque hoy haya uno. En v1 hay un único bus por
-  músico, sin maestros (ver 6 y 8).
+  hardware en el par secundario. El código maneja una **lista de buses**,
+  aunque hoy haya uno, y sin maestros.
 - Los tracks elegidos le hacen sends de track normales.
 - El volumen del baterista es **volumen de send**, nunca del track (el
-  fader del track cambia la mezcla de todos).
-- El mute del baterista es **mute del send**, nunca del track.
+  fader del track cambia la mezcla de todos). Su mute es **mute del
+  send**, nunca del track.
 - El volumen del bus es el control general y el lugar del limitador de
-  seguridad. La salida "Hardware" del bus queda fija en 0 dB.
-- Los sends se crean por Lua (`MM.ensure_sends`, en el módulo común; lo
-  invoca `Nik_MonitorMix_Publish.lua`, y `Nik_MonitorMix_EnsureSends.lua`
-  es una cáscara para correrlo a mano), de forma idempotente: solo crea
-  los que faltan, con nivel inicial de -12 dB
-  (`defaults.send_db`) y `I_SENDMODE=3`, y nunca modifica un send
+  seguridad. La salida de hardware del bus queda fija en 0 dB.
+- Los sends los crea `MM.ensure_sends` (módulo común) de forma
+  idempotente: solo crea los que faltan, con nivel inicial
+  `defaults.send_db` (-12 dB) e `I_SENDMODE=3`, y nunca modifica un send
   existente. Seis stems más clicks a 0 dB suman fuerte en auriculares.
-- Persistencia "por sesión de ensayo": la mezcla del baterista vive en
-  los sends del proyecto abierto, en memoria. Mientras la pestaña siga
-  abierta se conserva al cambiar de tab y volver; si el coordinador cierra
-  sin guardar, se pierde (deseado). Reglas que lo sostienen: el script
-  nunca toca sends existentes, y la UI solo lee al cambiar de proyecto
-  (los defaults se aplican únicamente al crear el send). El script actúa
-  sobre el proyecto activo: lo dispara el cliente al cambiar de proyecto y
-  desde el botón Actualizar, antes de leer la lista (ver 3.5).
+  `Nik_MonitorMix_Publish.lua` lo invoca; `Nik_MonitorMix_EnsureSends.lua`
+  es una cáscara para correrlo a mano.
+- La mezcla del baterista vive en los sends del proyecto abierto, en
+  memoria: se conserva al cambiar de tab y volver; si el coordinador
+  cierra sin guardar, se pierde (deseado). La sostienen dos reglas: el
+  script nunca toca sends existentes y la UI solo lee al cambiar de
+  proyecto.
+- El script actúa sobre el proyecto activo: lo dispara el cliente al
+  cambiar de proyecto y desde el botón Actualizar, antes de leer la lista
+  (§5).
 - El count-in que se graba en el render conserva su send al master y es
   independiente de los clicks de monitoreo (un mismo track no mezcla ambos
   usos).
 
----
+## 3. Ruteo
 
-## 3. Hallazgos verificados
-
-Probado en REAPER 7.79, Windows 10, Fast Track Ultra 8r (dev).
-Scripts de prueba en `Tests-Debug/`: `Nik_MonitorMix_ProbeOutputs.lua` y
+Sondas en `Tests-Debug/`: `Nik_MonitorMix_ProbeOutputs.lua` y
 `Nik_MonitorMix_ProbeBus.lua`.
 
-### 3.1 Salidas de audio
+### 3.1. Salidas de audio
 
 - `GetNumAudioOutputs()` devuelve solo el rango habilitado en
-  Preferences > Audio > **Last output** (cambia sin reiniciar REAPER).
-  El "2 salidas" de `click_bus.md` era ese rango, no el límite de la placa.
-- Los nombres son genéricos (`Software Out N Fast Track Ultra`); la UI los
-  muestra tal cual.
-- La hardware output del master se lee con `GetTrackSendInfo_Value(master,
-  1, i, "I_DSTCHAN")`. Codificación: `0` = par 1/2, `1024 + i` = mono
-  salida `i`.
+  Preferences > Audio > **Last output** (cambia sin reiniciar REAPER), no
+  el límite de la placa.
+- Los nombres son genéricos (`Software Out N <placa>`); la UI los muestra
+  tal cual.
+- La hardware output del master se lee con
+  `GetTrackSendInfo_Value(master, 1, i, "I_DSTCHAN")`. Codificación: `0` =
+  par 1/2, `1024 + i` = mono salida `i`.
 
-### 3.2 Regla del par secundario
+### 3.2. Par secundario
 
 **Primer par alineado (índice par) cuyos dos canales no usa el master.**
-En dev resuelve a `I_DSTCHAN=2` (salidas 3/4, base 1) con 4, 6 y 8 salidas
-habilitadas. Pares no alineados (`3/4`, `5/6` base 0) se descartan.
+Con 4, 6 y 8 salidas habilitadas resuelve a `I_DSTCHAN=2` (salidas 3/4,
+base 1). Los pares no alineados (`3/4`, `5/6` base 0) se descartan.
 
-- El software no sabe a qué está conectada la bajada de auriculares:
-  hace falta una constante de override en código, y la UI muestra el par
+- El software no sabe a qué está conectada la bajada de auriculares: por
+  eso existe `pair_override` en el config, y la UI muestra el par
   resuelto para verificar a ojo.
-- Si no hay par disponible, la UI avisa. **Nunca cae al master.**
-- Si el master no tiene hardware output, no hay canales ocupados que
+- Sin par disponible, la UI avisa. **Nunca cae al master.**
+- Si el master no tiene hardware output no hay canales ocupados que
   descartar y la regla caería en 1/2: se trata como `no_pair`, salvo que
   el config defina `pair_override`.
 
-### 3.3 Bus de prueba
+### 3.3. Bus y sends
 
-- Bus con `B_MAINSEND=0` + hardware send al par resuelto: suena solo por
-  3/4, no toca el master ni el render.
+- Un bus con `B_MAINSEND=0` y hardware send al par resuelto suena solo por
+  ese par: no toca el master ni el render.
 - `CreateTrackSend(src, bus)` crea el send con `vol=1.0`, `mute=0`,
-  `I_SENDMODE=0` (post-fader).
+  `I_SENDMODE=0` (post-fader). Monitor Mix usa `I_SENDMODE=3` (post-FX,
+  pre-fader), constante `defaults.send_mode`.
 - Mute del send y mute del track son independientes en el estado, pero
   **mutear el track silencia sus sends incluso en pre-fader (post-FX)**.
   Bajar el fader del track no afecta a un send pre-fader.
-- Modo por defecto: `I_SENDMODE=3` (post-FX, pre-fader), constante en
-  código.
-- Undo: crear/borrar el bus deja una sola entrada. `dirty` no se pudo
-  concluir (el proyecto ya estaba modificado); baja prioridad.
+- Crear o borrar el bus deja una sola entrada de Undo.
 
-### 3.4 Feed nativo del Web Control
+## 4. Feed nativo del Web Control
 
 Línea `TRACK`: los tres contadores antes del color son `sendcnt`,
 `recvcnt`, `hwoutcnt`. Un bus de monitoreo se detecta con `recvcnt > 0` y
@@ -128,21 +118,22 @@ SEND  <track>  <idx>  <flags>  <vol lineal>  <pan>  <track destino>
 | Hardware output | destino `-1` (el cliente lo ignora en la lista) |
 | Mute del send | `flags & 8` (nunca `flags == 8`, es una máscara) |
 | Volumen, lectura | lineal |
-| Volumen, escritura | `SET/TRACK/x/SEND/y/VOL/<lineal>` (verificado: `VOL/0.5` y el `GET` devuelve `0.5`; el fader de sends del remoto también escribe lineal). Sin sufijo mientras se arrastra, con `e` al soltar |
+| Volumen, escritura | `SET/TRACK/x/SEND/y/VOL/<lineal>`; sin sufijo mientras se arrastra, con `e` al soltar |
 | Mute, escritura | `SET/TRACK/x/SEND/y/MUTE/-1` (alterna) |
 
-El índice de send es por origen: los receives no cuentan. El orden de
-índices cuando un mismo track tiene sends de track y de hardware no está
-verificado; no afecta al diseño (los hardware viven en el bus).
+- El índice de send es por origen: los receives no cuentan. El orden de
+  índices cuando un mismo track tiene sends de track y de hardware no está
+  verificado; no afecta al diseño (los hardware viven en el bus).
+- Volumen y mute van por comandos nativos, sin Lua, y el remoto principal
+  ya los usa (`trackSendSvg`).
+- La escritura **no valida el GUID** del track: decisión asumida (el
+  filtro es presentación, no seguridad; ver §6).
 
-El remoto principal ya usa estos comandos (`trackSendSvg`): volumen y mute
-del baterista pueden ir por comandos nativos, sin Lua.
-
-### 3.5 Contrato de datos (publicación a ExtState)
+## 5. Contrato de datos
 
 `Nik_MonitorMix_Publish.lua` (one-shot) corre `MM.ensure_sends`, aplica el
 filtro y publica en el ExtState global, namespace `NikMonitorMix`. Volumen
-y mute en vivo siguen por el feed nativo (3.4), sin pasar por ExtState.
+y mute en vivo siguen por el feed nativo (§4), sin pasar por ExtState.
 
 | Key | Contenido |
 |---|---|
@@ -161,63 +152,57 @@ evita datos viejos del proyecto anterior.
 - `track`: número del web control, base 1 (`idx + 1`; `0` sería el
   master). Coincide con `GET/TRACK/<track>/SEND/<send>`.
 - `send`: índice de send en el track origen hacia el bus, calculado por
-  GUID del bus (no depende del orden de índices sin verificar de 3.4).
+  GUID del bus (no depende del orden de índices sin verificar de §4).
 - `role`: `stems`, `click` o `null` (entró por `include`/GUID).
 - `pair`: `I_DSTCHAN` de la salida de hardware del bus (`2` = salidas
   3/4), o `null`.
 - `default_db`: `defaults.send_db` del config (número) o `null` si no está
-  definido. Se publica siempre, también en los estados sin bus. El cliente
-  lo usa como valor del doble tap; si falta usa `nikMmFader.DEFAULT_DB`
-  (-12).
+  definido. Se publica siempre, también sin bus. El cliente lo usa como
+  valor del doble tap; si falta usa `nikMmFader.DEFAULT_DB` (-12).
 
 | `status` | Significado | `pair` | `tracks` |
 |---|---|---|---|
 | `ok` | Bus y sends asegurados | Par del bus | Lista filtrada (vacía si el bus ya existe pero el filtro no admite ninguno) |
-| `no_tracks` | No existe el bus y el filtro no admite ningún track: no se crea nada | `null` | `[]` |
+| `no_tracks` | No existe el bus y el filtro no admite ningún track (p. ej. una tab nueva y vacía): no se crea nada | `null` | `[]` |
 | `no_pair` | No hay par secundario, o el master no tiene hardware output y no hay `pair_override`: no se crea nada | `null` | `[]` |
 | `no_bus_cfg` | El config no define ningún bus | `null` | `[]` |
 
-Capa cliente:
+**Capa cliente** (`web/musicstate-ui/monitor/monitor.js`, solo datos, sin
+DOM):
 
-- `web/musicstate-ui/monitor/monitor.js` (solo datos, sin DOM):
-  `nikMmRequestList()` DISPARA el script y pide `list` y `list_version`;
+- `nikMmRequestList()` DISPARA el script y pide `list` y `list_version`;
   `nikMmFetchList()` solo lee. Un cambio de `list_version` dispara
   únicamente el `GET`, nunca el script (cada ejecución incrementa la
-  versión: sería un bucle).
-- `ms-dispatch.js` tiene cuatro ganchos con guard `typeof`: EXTSTATE de
-  `NikMonitorMix`, `default:` del switch para las líneas `TRACK`/`SEND`,
-  disparo en `nikMsHandleProjectSwitch` y reset en
-  `nikMsResetProjectState`. Las UIs que no cargan `monitor.js` no cambian.
+  versión: sería un bucle; patrón en `musicstate_bridge.md` §5).
+- Los ganchos de `ms-dispatch.js` y el disparo al cambiar de proyecto:
+  `musicstate_sync.md` §1 y §11. Las UIs que no cargan `monitor.js` no
+  cambian.
 - El web control duplica las `\`: se des-escapa antes del `JSON.parse`
   (`musicstate_data_model.md` §3).
-- Verificado en dev: 9 tracks en 982 bytes, nombre con comillas y barras
-  intacto, recarga por versión sin bucle, tab vacía y master sin hardware
-  output. El tope de EXTSTATE sigue sin documentarse.
 
----
-
-## 4. Filtro de tracks (en código, sin UI)
+## 6. Filtro de tracks (en código, sin UI)
 
 Lo configura el coordinador editando Lua. El filtro es **presentación, no
 seguridad**: cualquiera con acceso HTTP puede disparar acciones. Por eso
-vive en Lua y el cliente recibe la lista ya filtrada. Volumen y mute van
-por comandos nativos (`SET/TRACK/x/SEND/y/...`) sin pasar por Lua, así que
-**no se valida el GUID** en la escritura: decisión asumida.
+vive en Lua y el cliente recibe la lista ya filtrada.
 
-### 4.1 Carpetas válidas
+### 6.1. Carpetas válidas
 
 El filtro distingue **qué folders son fuente de tracks**. Hoy:
 
-- Stem Bus (`role = "stems"`): se descubre con `StemBus_common_logic`.
+- Stem Bus (`role = "stems"`): sus alias salen de `BUS_ALIASES` de
+  `StemBus_common_logic` (`MM.stem_aliases`; el módulo no usa
+  `find_bus_track`).
 - Click (`role = "click"`): folder propio con los hijos de click.
 
-Cada entrada define alias de nombre (case-insensitive) y si toma solo
-hijos directos o todo el árbol (`recursive`, por defecto `true`: incluye
-subcarpetas). Un folder fuera de la lista no aporta tracks. El filtro
+Cada entrada define alias de nombre (case-insensitive) y si toma todo el
+árbol (`recursive`, por defecto `true`: incluye subcarpetas) o solo los
+hijos directos. Los folders mismos quedan fuera de la lista; solo aportan
+sus hijos. Un folder fuera de la configuración no aporta tracks. El filtro
 devuelve, para cada track admitido, el `role` de la carpeta que lo aportó
-(`stems`, `click`) o `nil` si entró por `include`/GUID.
+o `nil` si entró por `include`/GUID.
 
-### 4.2 Orden de decisión
+### 6.2. Orden de decisión
 
 1. `exclude` (palabra clave o GUID) **gana siempre**.
 2. `guid_include`: admite el track aunque sea un folder o un bus de
@@ -229,25 +214,26 @@ devuelve, para cada track admitido, el `role` de la carpeta que lo aportó
 5. Pertenencia a una carpeta válida.
 6. Si nada aplica, queda afuera.
 
-### 4.3 Comparación de nombres
+### 6.3. Comparación de nombres
 
-- Case-insensitive, **subcadena** (no patrón de Lua): `string.find(nombre,
-  kw, 1, true)`, así un `-` o `.` no se interpreta como comodín.
+- Case-insensitive, **subcadena** (no patrón de Lua):
+  `string.find(nombre, kw, 1, true)`, así un `-` o `.` no se interpreta
+  como comodín.
 - `string.lower` no convierte mayúsculas acentuadas UTF-8: el módulo
   normaliza `Á É Í Ó Ú Ñ` antes de comparar y las palabras clave van sin
   acentos.
 - Falsos positivos (`bass` coincide con `Bass Drum`): se resuelven con
   `exclude` o con un GUID puntual.
 
-### 4.4 Overrides por proyecto
+### 6.4. Overrides por proyecto
 
-Los proyectos se parecen mucho; el config tiene una base y una lista de
-overrides para las excepciones. Cada override se activa si su `match`
-(subcadena, case-insensitive) aparece en el nombre del proyecto. Las
-listas (`include`, `exclude`, GUIDs) se **suman** a la base; `folders`, si
-se define, **reemplaza** a la base.
+El config tiene una base y una lista de overrides para las excepciones.
+Cada override se activa si su `match` (subcadena, case-insensitive)
+aparece en el nombre del proyecto. Las listas (`include`, `exclude`,
+GUIDs) se **suman** a la base; `folders`, si se define, **reemplaza** a la
+base.
 
-### 4.5 Forma del config (`MonitorMix_config.lua`)
+### 6.5. Config (`MonitorMix_config.lua`)
 
 ```lua
 return {
@@ -255,8 +241,9 @@ return {
     { name = "Monitor Bus - Batería", pair_override = nil },
   },
   -- pair_override: I_DSTCHAN de un par estéreo (par, ej. 2 = salidas 3/4);
-  -- nil = regla automática de 3.2. Si el master no tiene hardware output
-  -- la regla no deduce el par (status no_pair): definir el override.
+  -- nil = regla automática del par secundario. Si el master no tiene
+  -- hardware output la regla no deduce el par (status no_pair): definir
+  -- el override.
   defaults = {
     send_db = -12,
     send_mode = 3,
@@ -275,208 +262,51 @@ return {
 }
 ```
 
----
+Una edición local del config en una PC de destino se pierde en cada
+update de ReaPack: `05_REAPACK_DEPLOY.md`, Pendientes.
 
-## 5. Riesgos anotados
+## 7. Riesgos
 
 - **Snapshots `SN_*`:** si mutean tracks, ese mute silencia también el
-  monitoreo (confirmado en 3.3). Por ejemplo `SN_Drums_Muted` dejaría al
-  baterista sin batería. Falta ver si los snapshots mutean o bajan
-  volúmenes. No urgente.
+  monitoreo (§3.3). Por ejemplo, `SN_Drums_Muted` dejaría al baterista sin
+  batería. Falta ver si los snapshots mutean o bajan volúmenes.
 - **Rango de salidas:** si Last output no llega a la 4, el script dirá
-  "ninguno disponible" aunque la placa lo tenga. Revisar primero en sala.
-- **Crear sends en runtime** ensucia Undo y marca el proyecto. Mitigación:
-  creación idempotente, en un único bloque de Undo, al abrir la UI o al
-  primer uso. Tampoco se crea el bus en proyectos sin tracks admitidos
-  (`no_tracks`, p. ej. una tab nueva y vacía), ni se deduce el par si el
-  master no tiene hardware output (`no_pair`).
+  "ninguno disponible" aunque la placa lo tenga.
+- **Crear sends en runtime** ensucia Undo y marca el proyecto.
+  Mitigación: creación idempotente en un único bloque de Undo, sin crear
+  el bus en proyectos sin tracks admitidos (`no_tracks`) ni deducir el par
+  si el master no tiene hardware output (`no_pair`).
 - **Render:** sin riesgo, el bus no va al master.
-- **Plantilla:** debe estar sin `METRONOMEOUT` (ver `click_bus.md` 2.3) si
-  se usa la Línea M.
 
----
+## 8. Archivos
 
-## 6. Interfaz web
+- `MonitorMix/Nik_MonitorMix_Publish.lua` — publicador one-shot (§5).
+- `MonitorMix/Nik_MonitorMix_EnsureSends.lua` — cáscara para correr
+  `MM.ensure_sends` a mano.
+- `MonitorMix/MonitorMix_common_logic.lua` — filtro, par secundario,
+  `MM.ensure_sends`.
+- `MonitorMix/MonitorMix_config.lua` — config en código (§6.5).
+- `Tests-Debug/Nik_MonitorMix_ProbeOutputs.lua`,
+  `Tests-Debug/Nik_MonitorMix_ProbeBus.lua` — sondas de ruteo (§3).
+- `web/musicstate-ui/monitor/monitor.js` — capa cliente de datos (§5).
+- Interfaz web: `monitor_mix_ui.md`.
 
-- Segundo Web Control, con puerto y página por defecto propios.
-- Reutiliza de lyrics el header (título, tonalidad + tempo), la fila de
-  secciones y el footer (cues), para que el baterista tenga referencia de
-  lo que pasa sin salir del mixer. El stage del mixer se calcula según
-  viewport y **scrollea solo él**; header y footer quedan fijos.
-- Botón "Actualizar": vuelve a disparar el publish, para cambios de
-  estructura dentro del mismo proyecto (tracks nuevos o reordenados).
-- Lista vertical con sliders horizontales (evita el conflicto
-  scroll/arrastre y da blancos táctiles grandes), mute por track y
-  etiqueta con el par de salida resuelto.
-- Solo se ve la lista filtrada; ningún control de playback.
-- Un solo bus por músico en v1, sin maestros. La lista se separa
-  visualmente en dos secciones según `role`: música/instrumentos y click.
-  Cada track tiene su propio fader y mute de send.
-- A futuro: dos volúmenes maestros (música y click), ver 8.
+## 9. Pendientes
 
-### 6.1 Implementación (pasos 2a–2d, verificada en dev)
-
-Archivos: `web/nsaudio_monitor.html` (shell) y, en
-`web/musicstate-ui/monitor/`, `monitor.js` (datos), `mm-fader.js` (curva),
-`monitor-app.js` (bootstrap, lista y faders), `mm-slider.js` (slider
-propio) y `monitor.css`. Carga `cantante.css` y `monitor.css` solo pisa lo
-que difiere (stage scrolleable, toolbar, filas). De `core/vertical-fader.js`
-reutiliza solo `nikVFaderCheckDoubleTap` (doble tap); el slider ya no es el
-`<input type="range">` de `nikCreateVerticalFader`. El nombre "vertical" es
-histórico: el slider de Monitor Mix es horizontal.
-
-- **Bootstrap:** `TRANSPORT` cada 100 ms, `MARKER` cada 500 ms y poll lento
-  de 1000 ms (`active_project_name`, `reapitch_semitone` y
-  `NikMonitorMix/list_version`). No activa `NIK_MS_LYRICS_ENABLED`. El
-  publish lo dispara `nikMsHandleProjectSwitch` al detectar el primer
-  `active_project_name` (arranca en `null`), así que `nikMonitorInit` no lo
-  pide.
-- **Dedupe:** `nikMmSetList` ignora un texto crudo idéntico al anterior;
-  `nikMmListRevision` solo sube con contenido nuevo (antes sumaba 3 o 4 por
-  cambio de tab, por lecturas redundantes de la misma lista).
-- **Render:** toolbar fija (par resuelto y bus, botón Actualizar
-  deshabilitado 1,5 s tras el toque) y stage con las secciones Música
-  (`role` distinto de `click`) y Click, más avisos por `status`. Se
-  redibuja solo si cambió `nikMmListRevision`.
-- **Lectura en vivo:** un `wwr_req_recur` de 200 ms con los
-  `GET/TRACK/x/SEND/y` encadenados de la lista. `nikMmRearmLive` cancela el
-  string viejo (por string exacto) y registra el nuevo al cambiar la lista,
-  y descarta `nikMmSendState`. Los pedidos no aparecen como entradas
-  propias en la pestaña de red del navegador (solo los `TRANSPORT`); REAPER
-  responde y los valores llegan.
-- **Curva** (tramos lineales en dB entre puntos, en `nikMmFader.POINTS`):
-
-| Slider | dB |
-|---|---|
-| 0 % | -60 |
-| 25 % | -40 |
-| 50 % | -24 |
-| 75 % | -12 |
-| 100 % | 0 |
-
-  Conversión de lectura: `dB = 20 × log10(vol)`; con `vol` 0 se toma el
-  piso. Una ganancia mayor a 0 dB (puesta a mano en REAPER) se muestra en el
-  tope.
-- **Escritura:** lineal a 4 decimales (`10^(dB/20)`), dB redondeado a pasos
-  de 0,5. Mientras se arrastra, `SET/.../VOL/<v>` sin sufijo con coalescing
-  (el primer valor inmediato y luego uno cada 60 ms como máximo, siempre el
-  último); al soltar (`change`) `.../VOL/<v>e`. El slider al 0 % escribe
-  0,001 (-60 dB): no es silencio, el silencio es el mute del send.
-- **Mute:** `SET/.../MUTE/-1` (alterna) con actualización optimista: al
-  tocar, la M y la fila se pintan al instante y la fila ignora el feed
-  500 ms (`NIK_MM_MUTE_LOCK_MS`); después el feed (`flags & 8`) confirma o
-  corrige. El evento es `click`, no `pointerdown`, para que un scroll que
-  arranca sobre el botón no mutee sin querer.
-- **Slider propio (`mm-slider.js`):** `div` con `touch-action: pan-y` y
-  `pointer events`; mismo contrato que `nikCreateVerticalFader` más
-  `isActive()`. El valor nunca se escribe en el down: solo al soltar un tap
-  o al confirmarse el eje horizontal.
-  - Sobre la línea: tap (hasta 350 ms, sin superar 8 px) salta al valor y
-    hace commit; un hold más largo sin mover no hace nada; movimiento
-    horizontal arrastra, y el thumb sigue al dedo.
-  - Sobre el thumb (zona táctil de ±22 px): arrastra desde el valor actual,
-    sin salto (umbral de eje de 4 px). Solo aquí aplica el doble tap.
-  - Movimiento vertical: se cede el gesto al scroll del stage y no se
-    escribe nada. Con el eje horizontal confirmado, un `touchmove` no
-    pasivo evita que una deriva vertical del dedo lo convierta en scroll.
-    Un `pointercancel` en pleno arrastre cierra con commit del valor
-    actual.
-  - Las constantes están arriba del archivo (`NIK_MM_SLIDER`) para
-    ajustarlas en sala.
-- **Doble tap:** sobre el thumb, vuelve a `default_db` (o -12 si falta).
-- **Guarda de arrastre:** tras cada escritura la fila ignora el feed
-  durante 400 ms, y mientras haya arrastre horizontal confirmado
-  (`isActive()`) no lo sigue, para que no pise el valor mientras se toca.
-- **Aspecto:** línea, relleno y thumb propios con las variables de
-  `monitor.css`. La sección Click usa otro color de acento
-  (`--mm-accent`, `#3fb37f`) para distinguirla de un vistazo. La fila
-  muteada se atenúa aplicando `opacity` al slider completo (aplicarla a
-  cada pieza dejaba ver el relleno a través del thumb).
-- **Cues:** el footer reserva su altura (`msCueBand`) pero no está
-  cableado.
-
-### 6.2 Problemas conocidos
-
-- **Resuelto — scroll vertical sobre un slider mueve el volumen (celular):** 
-  Con el `<input type="range">` nativo el gesto movía el fader antes de saber 
-  si era un scroll, y `touch-action: pan-y` no alcanzaba. Se reemplazó por un 
-  slider propio que decide la intención antes de escribir (ver 6.1).
-- **Cambio de tab entre pestañas sin guardar:** de la tab 3 (sin guardar,
-  con track del Stem Bus, un hijo y bus de monitoreo) a una tab vacía, la
-  UI queda mostrando la lista de la tab 3 hasta tocar Actualizar. Pasar de
-  la tab 1 a la tab 2 no lo reproduce, de la tab 2 a la 3 sí. Hipótesis sin
-  confirmar: dos pestañas sin guardar no se distinguen para el cliente
-  (mismo `active_project_name` y firma de markers, ver
-  `nikMsHandleProjectSwitch`). Para confirmarlo, leer `nikCurrentProjectName`
-  y `nikMsMarkersSig` en la consola de cada tab. No bloqueante.
-- **Sin probar:** un tercero moviendo el mismo send mientras el baterista
-  no lo toca (el fader debería seguirlo).
-
----
-
-## 7. Plan y estado
-
-| Paso | Contenido | Estado |
-|---|---|---|
-| 1 | Probe de salidas y par secundario | Cerrado |
-| 2 | Probe de bus, mute y modo de send | Cerrado |
-| 3 | Probe del feed nativo (`TRACK`/`SEND`) | Cerrado |
-| 4.1 | Config y módulo del filtro (Lua, testeable) | Verificado: carpetas, exclude, bus excluido por nombre; sin probar: recursive con subcarpetas, GUIDs, overrides, regla recv+hw aislada |
-| 4.2 | Creación idempotente de sends (`Nik_MonitorMix_EnsureSends.lua`) | Verificado (crea bus y sends, no pisa sends existentes, conserva valores al cambiar de pestaña) |
-| 4.3 | Canal de datos: ExtState publicado por `Nik_MonitorMix_Publish.lua` (one-shot disparado por el cliente) y feed nativo para volumen y mute. Incluye `MM.ensure_sends` en el módulo común y los estados `no_tracks` y `no_pair` | Verificado: lista, recarga por versión sin bucle, lectura de `SEND`, reset al cambiar de proyecto, tab vacía, master sin hardware output |
-| 4.4 | Segunda interfaz web | Verificado con el segundo Web Control (shell, lista, faders con slider propio, mute, escritura, ver 6.1). |
-
-Estructura: carpeta de dominio `MonitorMix/` en la raíz del repo
-(`Nik_MonitorMix_EnsureSends.lua` y `Nik_MonitorMix_Publish.lua`, módulos
-`MonitorMix_common_logic.lua` y `MonitorMix_config.lua`); ya figura en
-`01_CONVENCIONES.md`. La capa de datos del cliente vive en
-`web/musicstate-ui/monitor/monitor.js`; la UI (`mm-fader.js`,
-`mm-slider.js`, `monitor-app.js`, `monitor.css`) vive en la misma carpeta y el shell
-`nsaudio_monitor.html` en la raíz de `web/` (ver 6.1).
-
----
-
-## 8. Pendientes y decisiones abiertas
-
-- Resuelto: cada folder válido toma todo el árbol (`recursive = true` por
-  defecto), porque puede haber subcarpetas (voces, guitarras, etc.). Los
-  folders mismos quedan fuera de la lista; solo aportan sus hijos.
-- Futuro (fuera de v1): dos volúmenes maestros para el baterista
-  (música/instrumentos y click). Un send no tiene volumen de grupo, así
-  que requiere un bus por `role` y por músico (ej. `Monitor Bus - Batería
-  - Música` y `Monitor Bus - Batería - Click`), ambos con hardware output
-  al mismo par secundario y cada track mandando al bus de su `role`. El
-  limitador quedaría repetido en cada bus. En v1 el filtro ya devuelve el
-  `role` para separar la UI en secciones; `buses` en el config pasaría a
-  ser un bus por `role` y por músico.
-- Resuelto: el filtro corre en Lua y publica la lista por ExtState (3.5).
-  `MM.stem_aliases` lee `BUS_ALIASES` de `StemBus_common_logic` directo, así
-  que el módulo no usa `find_bus_track` ni necesita el parámetro de alias
-  planteado antes (verificar al tocar `StemBus_common_logic`).
-- Validar en sala (U-Phoria, pares 1/2, 2/3, 3/4): salidas listadas,
-  `I_DSTCHAN` del master y par resuelto.
-- Mute en la mezcla principal: mutear un track en el remoto del
-  coordinador también silencia su send al monitoreo (3/4), ver 3.3. A
-  futuro se quiere que el baterista lo siga recibiendo, con la "M" roja
-  visible solo en el remoto del coordinador. Sin investigar, baja
-  prioridad.
+- **Dos volúmenes maestros** (música y click) para el baterista. Un send
+  no tiene volumen de grupo, así que requiere un bus por `role` y por
+  músico (ej. `Monitor Bus - Batería - Música` y `Monitor Bus - Batería -
+  Click`), ambos con hardware output al mismo par secundario y cada track
+  mandando al bus de su `role`. El limitador quedaría repetido en cada
+  bus. `buses` en el config pasaría a ser un bus por `role` y por músico.
+- **Mute en la mezcla principal:** mutear un track en el remoto del
+  coordinador también silencia su send al monitoreo (§3.3). Se quiere que
+  el baterista lo siga recibiendo, con la "M" roja visible solo en el
+  remoto del coordinador. Sin investigar.
+- Validar en sala el ruteo con la U-Phoria (pares 1/2, 2/3, 3/4): salidas
+  listadas, `I_DSTCHAN` del master y par resuelto.
 - Probar `dirty` y Undo con el proyecto limpio.
-- Probar el filtro con subcarpetas (`recursive`), `guid_include`,
-  `guid_exclude` y overrides por proyecto.
-- Registro para deploy: entrada `monitorMixPublish` en el generador de
-  `config.local.js` (`RemoteControl/`, tabla `SCRIPTS`, con
-  `dir = "../MonitorMix/"`) y `Nik_MonitorMix_Publish.lua` en el
-  `@provides` de ReaPack (ver `05_REAPACK_DEPLOY.md`).
-- Actualizar la fila de Monitor Mix de `00_CONTEXTO_GENERAL.md` al cerrar
-  la UI.
-- Tope de `EXTSTATE`: sin documentar; la lista de 9 tracks mide 982
-  bytes. Probar con una lista grande.
-- Validar la UI en sala (celular del baterista, par de salida real).
-- Cablear los cues en el footer de la UI (`msCueBand`, hoy solo reserva
-  altura).
-- Resolver o aceptar el problema conocido de 6.2 (cambio entre pestañas
-  sin guardar) tras la prueba en sala.
-- Probar el slider propio en sala y ajustar las constantes de
-  `NIK_MM_SLIDER` (umbrales de eje, tiempo de tap, zona del thumb).
-- `monitor.css` depende de `cantante.css` (clases `cn-*`): al cerrar la UI
-  de cantante, evaluar extraer el layout común a un archivo compartido.
+- Probar el filtro: `recursive` con subcarpetas, `guid_include`,
+  `guid_exclude`, overrides por proyecto y la regla `recvcnt` + `hwoutcnt`
+  aislada.
+- Pendientes de la interfaz: `monitor_mix_ui.md`.

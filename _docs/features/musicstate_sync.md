@@ -9,7 +9,8 @@ Fuera de este doc: formato de keys y protocolo (`musicstate_data_model.md`),
 consultas y transposición (`musicstate_client.md`), módulos visuales
 compartidos (`musicstate_shared_ui.md`), pantalla de instrumentista
 (`musicstate_instrumentista.md`), pantalla de cantante
-(`musicstate_cantante.md`), pruebas (`musicstate_testing.md`).
+(`musicstate_cantante.md`), Monitor Mix (`monitor_mix.md`,
+`monitor_mix_ui.md`), pruebas (`musicstate_testing.md`).
 
 ## 1. Dispatchers
 
@@ -24,9 +25,12 @@ Opt-ins de `ms-dispatch.js` (cada UI activa lo suyo):
   en el cambio de proyecto. Lo activa `cantante.js`. Mecanismo y bucle de
   `lyrics_version`: `musicstate_bridge.md` §5; API: `musicstate_client.md`
   §1.6.
-- Ganchos de Monitor Mix (`nikMmOnExtState`, `nikMmOnLine`,
-  `nikMmRequestList`, `nikMmReset`), con guard `typeof`: no-op si la UI no
-  carga `monitor.js`. Detalle en `monitor_mix.md` 3.5.
+- Ganchos de Monitor Mix, con guard `typeof`: no-op si la UI no carga
+  `monitor.js`. `nikMmOnExtState` atiende el EXTSTATE de `NikMonitorMix`,
+  `nikMmOnLine` el `default:` del switch (líneas `TRACK` y `SEND`),
+  `nikMmRequestList` se dispara desde `nikMsHandleProjectSwitch` y
+  `nikMmReset` desde `nikMsResetProjectState` (§11). Contrato de la
+  lista: `monitor_mix.md` §5.
 
 `nikMusicState*` (consultas) no depende del dispatcher: usa las globales de
 §12; si una UI no define las de adelanto, el adelanto es 0.
@@ -163,8 +167,9 @@ falta tiempo absoluto para ordenar.
 |---|---|---|
 | `TRANSPORT` | 100 ms | posición y estado |
 | `MARKER` | 500 ms | markers de la timeline |
-| Slow | 1000 ms | instrumentista: script `statePoll`, `active_project_name`, `playrate`, `reapitch_semitone`, `publish_version`. Cantante: `active_project_name`, `reapitch_semitone`, `playrate`, `lyrics_version` (`nikCantanteBuildSlowPoll()`) |
-| On-demand | boot / cambio de proyecto | `tempo_map`, `timesig_map`, `NikMusicState/*`, letra (§10) |
+| Slow | 1000 ms | instrumentista: script `statePoll`, `active_project_name`, `playrate`, `reapitch_semitone`, `publish_version`. Cantante: `active_project_name`, `reapitch_semitone`, `playrate`, `lyrics_version` (`nikCantanteBuildSlowPoll()`). Monitor Mix: `active_project_name`, `reapitch_semitone`, `NikMonitorMix/list_version` |
+| Sends (Monitor Mix) | 200 ms | `GET/TRACK/x/SEND/y` de la lista (`monitor_mix_ui.md` §4) |
+| On-demand | boot / cambio de proyecto | `tempo_map`, `timesig_map`, `NikMusicState/*`, letra y lista de Monitor Mix (§10) |
 
 - `g_wwr_timer_freq = 20`: espera del loop de `main.js` cuando no hay nada
   vencido. Con `TRANSPORT` a 100 ms, todos los dispositivos consultan a
@@ -209,6 +214,7 @@ vive en el poll de fondo: `NikMusicState` es independiente de
 | Control remoto general | `core/wwr-dispatch.js` | al conectar y al cambiar de proyecto |
 | Instrumentista | `ms-dispatch.js` | al conectar, al cambiar de proyecto y cuando cambia `publish_version` |
 | Cantante | `ms-dispatch.js` + `cantante.js` | letra (`RequestLyrics`) al conectar y al cambiar de proyecto; solo `GET` (`FetchLyrics`) cuando cambia `lyrics_version` |
+| Monitor Mix | `ms-dispatch.js` + `monitor.js` | lista (`nikMmRequestList`, dispara el script) al conectar, al cambiar de proyecto y desde Actualizar; solo `GET` (`nikMmFetchList`) cuando cambia `list_version` |
 
 `tempo_map` y `timesig_map` se piden juntos: `nikMsRequestTempoAndTimesig()`
 (prompter), `nikPlayrateRequestTempoMap()` y `nikOpenPlayrateModal()`

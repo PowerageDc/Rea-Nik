@@ -1,19 +1,19 @@
 # Feature — MusicState: módulos visuales compartidos
 
-Módulos y CSS que consumen más de una UI de MusicState (instrumentista y
-cantante). Lo lee quien toca la fila de sección, la cabecera, el estado
-sin señal, o crea una UI nueva sobre estos bloques. Timing, polls y
+Módulos y CSS que consumen más de una UI de MusicState (instrumentista,
+cantante y Monitor Mix). Lo lee quien toca la fila de sección, la cabecera, el 
+estado sin señal, o crea una UI nueva sobre estos bloques. Timing, polls y
 posición efectiva: `musicstate_sync.md`. Pantallas: `musicstate_instrumentista.md`,
-`musicstate_cantante.md`.
+`musicstate_cantante.md`, `monitor_mix_ui.md`.
 
 ## 1. Inventario
 
 | Módulo | Aporta | Lo usan |
 |---|---|---|
-| `ms-base.css` | paleta, dividers, glifos de tonalidad, componentes de la fila de sección, `is-stale` | instrumentista, cantante |
-| `ms-header.js` | `nikMsHeaderRender()`: nombre de canción, tonalidad y tempo | instrumentista, cantante |
-| `ms-section-row.js` | `nikMsSectionRowRender(screenJumped)`: fila prev/actual/next con animación | instrumentista, cantante |
-| `ms-stale.js` | `nikMsUpdateStaleIndicator(screenEl)`; política en `musicstate_sync.md` §9 | instrumentista, cantante |
+| `ms-base.css` | paleta, dividers, glifos de tonalidad, componentes de la fila de sección, `is-stale` | instrumentista, cantante, Monitor Mix |
+| `ms-header.js` | `nikMsHeaderRender()`: nombre de canción, tonalidad y tempo | instrumentista, cantante, Monitor Mix |
+| `ms-section-row.js` | `nikMsSectionRowRender(screenJumped)`: fila prev/actual/next con animación | instrumentista, cantante, Monitor Mix |
+| `ms-stale.js` | `nikMsUpdateStaleIndicator(screenEl)`; política en `musicstate_sync.md` §9 | instrumentista, cantante, Monitor Mix |
 
 Dependen de `ms-section.js`, `ms-tempo.js` y `ms-dispatch.js`
 (`musicstate_sync.md`). `ms-beat.js` no es compartido: solo instrumentista.
@@ -99,3 +99,6 @@ acordes, reel) queda fuera del atenuado cuando su fade de salto usa
 
 Usar los ids de §2 y §3, cargar los módulos en el orden de
 `musicstate_sync.md` §3 y respetar §3 (orden de render y `screenJumped`).
+Ejemplo sin contenido principal: Monitor Mix llama a la cabecera y a la
+fila de sección en cada render, con `screenJumped` en `false`
+(`monitor_mix_ui.md` §1).

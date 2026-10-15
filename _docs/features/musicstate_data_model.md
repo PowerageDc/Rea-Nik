@@ -31,7 +31,9 @@ Cliente web:
 - `features/musicstate_instrumentista.md`: UI de instrumentista
   (prompter).
 - `features/musicstate_cantante.md`: UI de cantante (reel de letra).
-- `features/monitor_mix.md`: UI de Monitor Mix (mezcla de monitoreo).
+- `features/monitor_mix.md`: Monitor Mix, ruteo, filtro y datos (mezcla de
+  monitoreo).
+- `features/monitor_mix_ui.md`: UI de Monitor Mix.
 - `features/musicstate_testing.md`: pruebas de sincronización y UIs.
 
 Otros:
@@ -384,7 +386,8 @@ Sin bugs de protocolo ni de modelo de datos sin corregir. Falta verificar:
   `nikMusicStateSetCuesData`; hoy solo está verificado para `lyrics_data`.
 - **Tamaño máximo de `EXTSTATE`:** la documentación del web control solo
   menciona un tope de ~16k para `PROJEXTSTATE`; el de `EXTSTATE` no está
-  documentado. La prueba midió 318 bytes con 6 líneas de letra; medir con
-  una letra larga real.
+  documentado. Medido: 318 bytes con 6 líneas de letra y 982 bytes con la
+  `list` de Monitor Mix de 9 tracks (`monitor_mix.md` §5); medir con una
+  letra larga real o una lista grande.
 - **Emparejamiento lyric↔nota MIDI** (para duración o progreso por sílaba
   a futuro): no verificado, la prueba de lyrics se hizo sin notas.

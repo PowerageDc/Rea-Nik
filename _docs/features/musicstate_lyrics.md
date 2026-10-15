@@ -15,12 +15,12 @@ El contrato de datos (formato JSON, protocolo) vive en
 | Pieza | Estado |
 |---|---|
 | Contrato de datos (`lyrics_data`, `lyrics_version`) | Documentado en `data_model` §4.7 |
-| Publicador `Nik_MusicState_PublishLyrics.lua` | Implementado y verificado (ver §4) |
-| Ingreso de letras y tab Lyrics del Helper | Pasos 1–3c hechos y verificados; 3d (publicar desde la tab) pendiente. Detalle en `musicstate_lyrics_helper.md` §1 |
-| Capa cliente (setter, consultas, lead propio) | Implementada y verificada en dev (ver §4); detalle en `musicstate_client.md` §1.6 |
-| Cableado (`ms-dispatch.js`: pedidos, versión, reset, opt-in) | Implementado y verificado en dev |
-| UI de cantante (`musicstate-ui/cantante/`) | Validada en dev, Android, iPhone y sala; pendientes de afinado, cues y rol en `musicstate_cantante.md` §6 |
-| Registro (`NIK_LUA_COMMANDS`, generador de `config.local.js`, `@provides` del metapaquete, manifiesto `.www`) | Hecho y validado en PC de destino y sala |
+| Publicador `Nik_MusicState_PublishLyrics.lua` | Implementado (§4) |
+| Ingreso de letras y tab Lyrics del Helper | Implementado; falta publicar desde la tab. Detalle en `musicstate_lyrics_helper.md` §1 |
+| Capa cliente (setter, consultas, lead propio) | Implementada (§4); detalle en `musicstate_client.md` §1.6 |
+| Cableado (`ms-dispatch.js`: pedidos, versión, reset, opt-in) | Implementado |
+| UI de cantante (`musicstate-ui/cantante/`) | Implementada; pendientes de afinado, cues y rol en `musicstate_cantante.md` §6 |
+| Registro (`NIK_LUA_COMMANDS`, generador de `config.local.js`, `@provides` del metapaquete, manifiesto `.www`) | Hecho |
 
 ## 2. Decisiones tomadas
 
@@ -76,10 +76,9 @@ El contrato de datos (formato JSON, protocolo) vive en
   editor MIDI, edición de posición con `RowInputs`, línea en blanco como
   `·`): `musicstate_lyrics_helper.md` §2.
 
-## 4. Verificado empíricamente
+## 4. Comportamiento verificado
 
-Con un proyecto de prueba (`Tests-Debug/Nik_Test_LyricsProbe.lua` y
-`PublishLyrics`):
+Publicador y datos (`Tests-Debug/Nik_Test_LyricsProbe.lua`):
 
 - Los lyrics sin notas son válidos y se leen con `MIDI_GetTextSysexEvt`.
 - Acentos, `¿`, `ñ` llegan intactos como UTF-8 (con `fetch().text()`; la
@@ -87,25 +86,17 @@ Con un proyecto de prueba (`Tests-Debug/Nik_Test_LyricsProbe.lua` y
   problema de datos).
 - `TimeMap_QNToMeasures` devuelve el compás **1-indexed**, y un evento
   fuera de grilla conserva su posición (resolución real: 1/960 de negra).
-- Des-escape de barras (`data_model` §3): verificado con una línea con
-  comillas y otra con barra.
-- La versión sube en cada publicación (1, 2, 3).
+- `lyrics_version` sube en cada publicación.
 
-Capa cliente y cableado (con `nsaudio_cantante.html` y la consola del
-prompter):
+Cliente:
 
-- Consultas con el transporte detenido: intro, línea, marcador,
-  carry-over tras la última línea, marcador sin línea previa, línea y
-  marcador en la misma posición en ambos órdenes de emisión.
-- Des-escape de comillas y barras, y reset con `null` sin errores.
-- Lead con play real: la línea pasa a vigente ~1,4 s antes de su
-  posición con el valor por defecto (0,4 s de lookahead más 1,0 s extra),
-  ~0,4 s con `extraLeadSec = 0`.
-- Republicación: tras ejecutar `PublishLyrics`, el panel se actualiza en
-  ~1 s y `lyrics_version` queda estable (sin bucle).
-- Cambio de proyecto con y sin track de lyrics: la letra se vacía y se
-  recarga.
-- Instrumentista no dispara `PublishLyrics` y no cambia de comportamiento.
+- Con play real, la línea pasa a vigente ~1,4 s antes de su posición con
+  los valores por defecto (0,4 s de lookahead más 1,0 s extra), y ~0,4 s
+  con `extraLeadSec = 0`.
+- Tras ejecutar `PublishLyrics`, el panel se actualiza en ~1 s y
+  `lyrics_version` queda estable (sin bucle).
+- Casos de consulta y des-escape: `musicstate_client.md` §3. Cambio de
+  proyecto con y sin track de lyrics: `musicstate_sync.md` §11.
 
 ## 5. Control remoto general (mediano plazo)
 
@@ -126,7 +117,8 @@ de globales del prompter, el pedido de lyrics es propio (no entra en
   `musicstate_data_model.md` §6.
 - **UI de cantante:** `musicstate_cantante.md` §6. Nada incrementa
   `lyrics_version` al editar en el editor MIDI: hay que ejecutar la acción de
-  `PublishLyrics` (el paso 3d lo automatiza, `musicstate_lyrics_helper.md` §9).
+  `PublishLyrics` (publicar desde la tab lo automatiza,
+  `musicstate_lyrics_helper.md` §9).
 - Actualizar el SPEC original: `SPEC` §18 declara lyrics fuera de alcance.
 - A futuro, sin decidir: que "Guardar y Publicar" del Helper también
   guarde la letra (editar el track con el Helper abierto). Se define

@@ -8,16 +8,15 @@ pendientes generales: `musicstate_lyrics.md`; contrato de datos:
 Helper: `musicstate_helper.md`; atajos: `musicstate_keys.md`; patrones de
 ReaImGui: `08_REAIMGUI_PATTERNS.md`.
 
-## 1. Estado por paso
+## 1. Estado
 
-| Paso | Estado |
+| Pieza | Estado |
 |---|---|
-| Módulo `MusicStateLyrics_common_logic.lua` + `Nik_MusicState_LyricsInput.lua` (MVP con `GetUserInputs`: línea en cursor o selección, marcador `·` de fin, upsert, aviso ante eventos dentro de la selección) | Hecho, 6 pruebas verificadas |
-| Refactor: `PlanLine`/`ApplyLine` al módulo, script como capa de UI | Hecho |
-| 3a. Tab Lyrics del Helper, solo lectura | Hecho, 7 pruebas verificadas |
-| 3b. Cola de tap-to-sync (hold con gap mínimo) | Hecho (cola, tap, fin por hold) |
-| 3c. Edición (panel de la fila seleccionada: texto, nudge, mover al cursor, borrar; agregar línea) | Hecho; falta probar el alta con un fin pendiente de la cola (`musicstate_lyrics.md` §6) |
-| 3d. `Lyrics.Publish`, botón Publicar y auto-publicar | Pendiente (§9) |
+| Módulo `MusicStateLyrics_common_logic.lua` + `Nik_MusicState_LyricsInput.lua` (línea en cursor o selección con `GetUserInputs`, marcador `·` de fin, upsert, aviso ante eventos dentro de la selección) | Implementado |
+| Tab Lyrics del Helper: lectura (§6) | Implementado |
+| Cola de tap-to-sync (§7) | Implementado |
+| Edición de la fila seleccionada y alta de líneas (§8) | Implementado; sin probar: el alta con un fin pendiente de la cola (`musicstate_lyrics.md` §6) |
+| Publicar desde la tab (`Lyrics.Publish`, botón y auto-publicar) | Pendiente (§9) |
 
 ## 2. Decisiones
 
@@ -66,13 +65,13 @@ ReaImGui: `08_REAIMGUI_PATTERNS.md`.
   Helper (`M.draw(ctx, H, helpers)`).
 - `MusicState/MusicStateLyricsSync_common_logic.lua` — cola de tap-to-sync
   (`M.draw(ctx, S, H, helpers)`), vía `helpers.LyricsSync`. Expone también
-  `flush` y `onEdit`, el contrato con las ediciones de 3c (§8).
+  `flush` y `onEdit`, el contrato con las ediciones del panel (§8).
 - `MusicState/MusicStateLyricsEdit_common_logic.lua` — panel de edición de
   la fila seleccionada y alta de líneas (`M.draw(ctx, S, H, helpers)`;
   `M.drawAddOnly` dibuja solo la fila de alta cuando no hay track), vía
   `helpers.LyricsEdit`.
 - `Tests-Debug/Nik_Test_LyricsEditProbe.lua` — probe de la API MIDI para
-  3c (edición de texto en el lugar, PPQ fuera del item, `SetItemExtents`,
+  la edición (texto en el lugar, PPQ fuera del item, `SetItemExtents`,
   casos de `EnsureTake`). Crea pistas `PROBE_*` en un solo bloque de undo.
 - `Tests-Debug/Nik_Test_LyricsDecideAdd.lua` — test de consola de
   `DecideAdd` con eventos simulados (no toca el proyecto).
@@ -121,7 +120,7 @@ separación mínima entre eventos vecinos al mover).
   cada lectura.
 - `Resolve(list, key)`: índice del evento que coincide con la clave
   `{time, is_end}` (tolerancia `EPS_TIME`).
-- Edición (3c): `SetText`, `DeleteLine`, `DeleteEnd`, `MoveEvent`,
+- Edición: `SetText`, `DeleteLine`, `DeleteEnd`, `MoveEvent`,
   `AddEnd`. Reciben una clave `{time, is_end}`, nunca `take`/`idx`
   (caducan con cualquier edición), y releen el track al ejecutarse.
   Devuelven `true, change` (descriptor para `LyricsSync.onEdit`) o
@@ -154,7 +153,7 @@ separación mínima entre eventos vecinos al mover).
 - Lua: `a and b or c` cae en `c` cuando `b` es `nil` (bug real en
   `MoveEvent`, el tope del último par del track): usar `if/else`.
 
-## 6. Tab 3a: lectura
+## 6. Tab: lectura
 
 - Cache en `H._lyrics`: se relee solo cuando cambia
   `GetProjectStateChangeCount(0)` o `H.last_proj`. El botón "Recargar" es
@@ -171,7 +170,7 @@ separación mínima entre eventos vecinos al mover).
 - Registro en el contenedor del Helper: `dofile` del módulo y de la tab,
   `helpers.Lyrics` y un `BeginTabItem('Lyrics')`.
 
-## 7. Tab 3b: cola de tap-to-sync
+## 7. Tab: cola de tap-to-sync
 
 - **Dónde vive.** `MusicStateLyricsSync_common_logic.lua`
   (`helpers.LyricsSync`). La tab dibuja su panel colapsable ("Sincronizar
@@ -226,9 +225,9 @@ separación mínima entre eventos vecinos al mover).
   re-sincronizar desde cero se borra desde el panel de edición (§8) o a
   mano. (4) Un re-tap sobre una línea existente reemplaza el texto y
   "Deshacer" no lo restaura. (5) Ctrl+Z o Redo de REAPER sobre una edición
-  de 3c: ver §8.
+  del panel de edición: ver §8.
 
-## 8. Tab 3c: edición de la fila seleccionada y agregar línea
+## 8. Tab: edición de la fila seleccionada y agregar línea
 
 - **Dónde vive.** `MusicStateLyricsEdit_common_logic.lua`
   (`helpers.LyricsEdit`), dibujado por la tab entre el panel de sync y la
@@ -335,7 +334,7 @@ separación mínima entre eventos vecinos al mover).
   mismo caso. Reconocerla por posiciones previas se descartó por frágil:
   podía asignar un borrado o un movimiento a la entrada equivocada.
 
-## 9. Plan restante: 3d, publicación
+## 9. Publicar desde la tab (pendiente)
 
 - Extraer `Lyrics.Publish(proj)` de `Nik_MusicState_PublishLyrics.lua` (el
   script queda como cáscara de pocas líneas), que devuelva versión,
@@ -352,7 +351,7 @@ separación mínima entre eventos vecinos al mover).
   (≥ 1,5 s). Verificar que publicar (ExtState global) no incrementa ese
   contador.
 - Pendiente menor: revisar si la agrupación de undo (§8) vale la pena.
-- Al cerrar el paso 3: actualizar este doc y `musicstate_helper.md`.
+- Al implementarlo: actualizar este doc y `musicstate_helper.md`.
 
 ## 10. Para retomar en otra sesión
 
@@ -362,5 +361,5 @@ Adjuntar: este doc, `musicstate_helper.md`,
 `MusicStateLyricsEdit_common_logic.lua`, `08_REAIMGUI_PATTERNS.md` e
 `ImGuiInputCommit_common_logic.lua`. `Nik_MusicState_Helper.lua` solo si
 hace falta (archivo grande: alcanzan las líneas de `dofile`, `helpers` y
-el loop con los atajos globales). Para 3d, además
+el loop con los atajos globales). Para publicar desde la tab, además
 `Nik_MusicState_PublishLyrics.lua`.
