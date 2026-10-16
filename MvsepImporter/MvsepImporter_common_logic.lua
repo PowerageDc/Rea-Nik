@@ -375,4 +375,111 @@ function M.insert_audio_item(track, filepath, position)
   return item, length
 end
 
+-- Devuelve los nombres de archivo de los destinos que no se pueden
+-- sobrescribir porque otro proceso los tiene abiertos (por ejemplo,
+-- items del proyecto que los usan).
+function M.find_locked_files(jobs)
+  local locked = {}
+  for _, j in ipairs(jobs) do
+    if reaper.file_exists(j.dest) then
+      local f = io.open(j.dest, "r+b")
+      if f then
+        f:close()
+      else
+        table.insert(locked, j.dest:match("([^/\\]+)$"))
+      end
+    end
+  end
+  return locked
+end
+
+-- Inserta tracks nuevos justo debajo de ref_track, como hermanos. Si
+-- ref_track cierra un folder, el cierre pasa al último track nuevo para
+-- que queden dentro. Devuelve el array de tracks, o (nil, error).
+function M.insert_tracks_after(ref_track, names)
+  if #names == 0 then return {} end
+  local ref_depth = reaper.GetMediaTrackInfo_Value(ref_track, "I_FOLDERDEPTH")
+  if ref_depth > 0 then
+    return nil, "El track de referencia es un folder: los tracks nuevos quedarían dentro de él"
+  end
+  local first_idx = math.floor(reaper.GetMediaTrackInfo_Value(ref_track, "IP_TRACKNUMBER"))
+  local new_tracks = {}
+  for i, name in ipairs(names) do
+    reaper.InsertTrackAtIndex(first_idx + i - 1, true)
+    local tr = reaper.GetTrack(0, first_idx + i - 1)
+    reaper.GetSetMediaTrackInfo_String(tr, "P_NAME", name, true)
+    table.insert(new_tracks, tr)
+  end
+  if ref_depth < 0 then
+    reaper.SetMediaTrackInfo_Value(ref_track, "I_FOLDERDEPTH", 0)
+    reaper.SetMediaTrackInfo_Value(new_tracks[#new_tracks], "I_FOLDERDEPTH", ref_depth)
+  end
+  return new_tracks
+end
+
+-- Dónde cae el segundo 0 del source de los items del track en la línea
+-- de tiempo (D_POSITION - D_STARTOFFS), y el largo del source del primer
+-- item. consistent es false si los items no comparten origen (±1 ms) o
+-- alguno tiene playrate distinto de 1. Devuelve nil si no hay items.
+function M.get_source_info(track)
+  local info = nil
+  for i = 0, reaper.CountTrackMediaItems(track) - 1 do
+    local item = reaper.GetTrackMediaItem(track, i)
+    local take = reaper.GetActiveTake(item)
+    if take then
+      local origin = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+        - reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
+      local rate_ok = math.abs(reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE") - 1) < 1e-9
+      if not info then
+        local src = reaper.GetMediaItemTake_Source(take)
+        info = { origin = origin, length = reaper.GetMediaSourceLength(src), consistent = rate_ok }
+      elseif not rate_ok or math.abs(origin - info.origin) > 0.001 then
+        info.consistent = false
+      end
+    end
+  end
+  return info
+end
+
+-- Cantidad de FX del track cuyo nombre contiene el texto (sin distinguir
+-- mayúsculas)
+function M.count_fx_by_name(track, text)
+  local needle = text:lower()
+  local count = 0
+  for i = 0, reaper.TrackFX_GetCount(track) - 1 do
+    local _, name = reaper.TrackFX_GetFXName(track, i, "")
+    if name:lower():find(needle, 1, true) then count = count + 1 end
+  end
+  return count
+end
+
+function M.find_track_with_fx(tracks, text)
+  for _, tr in ipairs(tracks) do
+    if M.count_fx_by_name(tr, text) > 0 then return tr end
+  end
+  return nil
+end
+
+-- Copia (sin mover) al final de la cadena de dst los FX de src cuyo
+-- nombre contiene el texto. Devuelve cuántos copió.
+function M.copy_fx_by_name(src, dst, text)
+  local needle = text:lower()
+  local copied = 0
+  for i = 0, reaper.TrackFX_GetCount(src) - 1 do
+    local _, name = reaper.TrackFX_GetFXName(src, i, "")
+    if name:lower():find(needle, 1, true) then
+      reaper.TrackFX_CopyToTrack(src, i, dst, reaper.TrackFX_GetCount(dst), false)
+      copied = copied + 1
+    end
+  end
+  return copied
+end
+
+-- Genera los picos que falten de los items recién insertados y refresca
+-- el arrange.
+function M.build_missing_peaks()
+  reaper.Main_OnCommand(40047, 0) -- Peaks: Build any missing peaks
+  reaper.UpdateArrange()
+end
+
 return M

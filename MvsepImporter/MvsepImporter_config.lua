@@ -29,4 +29,17 @@ return {
   -- (ambos case-insensitive)
   click_folder_pattern = "click",
   click_track_pattern = "beep",
+
+  -- Zip de voz separada en lead y backing. Cada salida toma el primer
+  -- audio del zip cuyo nombre (en minúsculas) coincide con su pattern;
+  -- el resto de los audios del zip no se extrae.
+  vocal_split = {
+    outputs = {
+      { pattern = "vocals%-lead", file = "Vocals_Lead", track = "Vocals Lead" },
+      { pattern = "vocals%-back", file = "Vocals_Back", track = "Vocals Back" },
+    },
+    source_stem = "Vocals", -- familia de stems cuyo track se silencia y de donde se toman posición, color y FX
+    mute_source = true,
+    copy_fx = "reapitch", -- FX que se copia a los tracks nuevos (texto, sin distinguir mayúsculas)
+  },
 }

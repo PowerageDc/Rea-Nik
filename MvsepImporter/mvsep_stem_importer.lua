@@ -172,17 +172,7 @@ local function main()
     return
   end
 
-  local locked = {}
-  for _, j in ipairs(jobs) do
-    if reaper.file_exists(j.dest) then
-      local f = io.open(j.dest, "r+b")
-      if f then
-        f:close()
-      else
-        table.insert(locked, j.dest:match("([^/\\]+)$"))
-      end
-    end
-  end
+  local locked = Mvsep.find_locked_files(jobs)
   if #locked > 0 then
     reaper.ShowMessageBox(
       "Estos archivos de Media están en uso por items del proyecto y no se pueden reemplazar:\n\n" ..
@@ -228,8 +218,7 @@ local function main()
   end
 
   trimClickItem()
-  reaper.Main_OnCommand(40047, 0) -- Peaks: Build any missing peaks
-  reaper.UpdateArrange()
+  Mvsep.build_missing_peaks()
 
   if refItemLength then
     local timesig_num, timesig_denom = reaper.TimeMap_GetTimeSigAtTime(0, 0.0)
