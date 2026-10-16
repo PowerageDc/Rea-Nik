@@ -3,56 +3,24 @@
 -- Selecciona un .zip descargado de MVSEP, lee su contenido sin
 -- extraerlo y extrae solo los audios reconocidos a la carpeta Media
 -- del proyecto, ya con su nombre final. Cada stem se coloca en su
--- track dentro del folder configurado como STEM_BUS_TRACK_NAME.
+-- track dentro del folder Stem Bus.
 --
 -- Requiere en el sistema: PowerShell (Windows) o "unzip" (Mac/Linux,
 -- normalmente preinstalado).
 -- ============================================================
 
--- ================== CONFIG ==================
-local STEM_BUS_TRACK_NAME = "Stem Bus" -- debe matchear EXACTO el nombre de tu folder track
-local MEDIA_SUBFOLDER = "Media"        -- subcarpeta relativa a la carpeta del .rpp
-local INSTRUMENTAL_PATTERNS = {"instrum"} -- cubre "instrum" e "instrumental"
-local ZOOM_PADDING_BARS = 4 -- compases de aire a la derecha del zoom-fit, para desplazar luego (count-in, tempo mapping)
-local SAVE_SCREENSET_COMMAND_ID = 40464 -- "Screenset: Save track view #01" (pisa el screenset nombrado "ALL")
-
--- Familias reconocidas (ampliá/ajustá patterns si MVSEP nombra distinto)
-local STEMS = {
-  { name = "Vocals", patterns = {"vocal"} },
-  { name = "Drums",  patterns = {"drum"} },
-  { name = "Bass",   patterns = {"bass"} },
-  { name = "Guitar", patterns = {"guitar", "gtr", "%f[%a]gt%f[%A]"} },
-  { name = "Piano",  patterns = {"piano", "keys"} },
-  { name = "Other",  patterns = {"other"} },
-}
-
-local AUDIO_EXTENSIONS = {"wav", "mp3", "flac"} -- extensiones válidas a procesar
-local CLICK_FOLDER_PATTERN = "click" -- el padre directo del track de click debe contener esto (case-insensitive)
-local CLICK_TRACK_PATTERN = "beep"   -- el track cuyo item se recorta debe contener esto (case-insensitive)
--- ==============================================
-
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Mvsep = dofile(script_dir .. "MvsepImporter_common_logic.lua")
-
-local function detectStem(name)
-  local lname = name:lower()
-  for _, stem in ipairs(STEMS) do
-    for _, pat in ipairs(stem.patterns) do
-      if lname:find(pat) then
-        return stem
-      end
-    end
-  end
-  return nil
-end
-
-local function isInstrumental(name)
-  local lname = name:lower()
-  for _, pat in ipairs(INSTRUMENTAL_PATTERNS) do
-    if lname:find(pat) then return true end
-  end
-  return false
-end
+local CFG = Mvsep.config
+local MEDIA_SUBFOLDER = CFG.media_subfolder
+local AUDIO_EXTENSIONS = CFG.audio_extensions
+local ZOOM_PADDING_BARS = CFG.zoom_padding_bars
+local SAVE_SCREENSET_COMMAND_ID = CFG.save_screenset_command_id
+local CLICK_FOLDER_PATTERN = CFG.click_folder_pattern
+local CLICK_TRACK_PATTERN = CFG.click_track_pattern
+local detectStem = Mvsep.detect_stem
+local isInstrumental = Mvsep.is_instrumental
+local getStemBusChildren = Mvsep.get_stem_bus_children
 
 -- Busca, por patrón (isInstrumental), el track Instrumental en TODO
 -- el proyecto -- es un track hermano, no un hijo del folder Stem Bus
@@ -66,67 +34,15 @@ local function findInstrumentalTrack()
   return nil
 end
 
-local function getExtension(filename)
-  return filename:match("%.([%w]+)$") or "wav"
-end
-
-local function isAudioFile(filename)
-  local ext = filename:match("%.([%w]+)$")
-  if not ext then return false end
-  ext = ext:lower()
-  for _, allowed in ipairs(AUDIO_EXTENSIONS) do
-    if ext == allowed then return true end
-  end
-  return false
-end
-
--- Encuentra el track STEM_BUS_TRACK_NAME y devuelve sus hijos directos/anidados
-local function getStemBusChildren()
-  local count = reaper.CountTracks(0)
-  local busIdx = nil
-  for i = 0, count - 1 do
-    local track = reaper.GetTrack(0, i)
-    local _, name = reaper.GetTrackName(track)
-    if name == STEM_BUS_TRACK_NAME then
-      busIdx = i
-      break
-    end
-  end
-  if not busIdx then
-    return nil, "No se encontró el track '" .. STEM_BUS_TRACK_NAME .. "'"
-  end
-
-  local busTrack = reaper.GetTrack(0, busIdx)
-  local depth = reaper.GetMediaTrackInfo_Value(busTrack, "I_FOLDERDEPTH")
-  if depth <= 0 then
-    return nil, "'" .. STEM_BUS_TRACK_NAME .. "' no está configurado como folder (I_FOLDERDEPTH <= 0)"
-  end
-
-  local children = {}
-  local runningDepth = 0
-  for i = busIdx + 1, count - 1 do
-    local track = reaper.GetTrack(0, i)
-    table.insert(children, track)
-    runningDepth = runningDepth + reaper.GetMediaTrackInfo_Value(track, "I_FOLDERDEPTH")
-    if runningDepth <= -1 then break end
-  end
-  return children
-end
+local getExtension = Mvsep.get_extension
+local isAudioFile = Mvsep.is_audio_file
 
 local importedMaxEnd = 0 -- extremo derecho (posición + largo) mayor entre los items importados
 
 local function insertItemOnTrack(track, filepath)
-  local source = reaper.PCM_Source_CreateFromFile(filepath)
-  if not source then return false end
-  local item = reaper.AddMediaItemToTrack(track)
-  local take = reaper.AddTakeToMediaItem(item)
-  reaper.SetMediaItemTake_Source(take, source)
-  local length = reaper.GetMediaSourceLength(source)
-  reaper.SetMediaItemInfo_Value(item, "D_LENGTH", length)
-  reaper.SetMediaItemInfo_Value(item, "D_POSITION", 0)
-  if length > importedMaxEnd then importedMaxEnd = length end
-  reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", filepath:match("([^/\\]+)$"), true)
-  return true, length
+  local item, length = Mvsep.insert_audio_item(track, filepath)
+  if length and length > importedMaxEnd then importedMaxEnd = length end
+  return item, length
 end
 
 -- Confirma solo el diálogo de guardado de screenset (requiere JS_ReaScriptAPI).

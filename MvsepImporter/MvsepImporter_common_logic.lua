@@ -1,9 +1,15 @@
 -- MvsepImporter_common_logic.lua
--- Capa de sistema del importer de MVSEP: ejecución de PowerShell con
--- comandos codificados, ruta de Descargas, carpeta del proyecto y
--- carpeta Media. No conoce stems, tracks ni recetas.
+-- Lógica compartida de los scripts del importer de MVSEP: capa de
+-- sistema (PowerShell, rutas, zips), clasificación de archivos por
+-- familia de stem y colocación de items en el folder Stem Bus.
 
 local M = {}
+
+local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
+local CFG = dofile(script_dir .. "MvsepImporter_config.lua")
+local StemBus = dofile(script_dir .. "../_Shared/StemBus_common_logic.lua")
+
+M.config = CFG
 
 -- Decodifica un string UTF-8 a una tabla de codepoints Unicode
 local function utf8ToCodepoints(str)
@@ -305,6 +311,68 @@ try {
     reaper.ShowConsoleMsg("---- Salida de extracción ----\n" .. (output or "(sin salida)") .. "\n-------------------------------\n")
   end
   return ok, output
+end
+
+local function matchesAny(name, patterns)
+  local lname = name:lower()
+  for _, pat in ipairs(patterns) do
+    if lname:find(pat) then return true end
+  end
+  return false
+end
+
+-- Devuelve la entrada de CFG.stems cuyo patrón coincide con el nombre
+function M.detect_stem(name)
+  for _, stem in ipairs(CFG.stems) do
+    if matchesAny(name, stem.patterns) then return stem end
+  end
+  return nil
+end
+
+function M.is_instrumental(name)
+  return matchesAny(name, CFG.instrumental_patterns)
+end
+
+function M.get_extension(filename)
+  return filename:match("%.([%w]+)$") or "wav"
+end
+
+function M.is_audio_file(filename)
+  local ext = filename:match("%.([%w]+)$")
+  if not ext then return false end
+  ext = ext:lower()
+  for _, allowed in ipairs(CFG.audio_extensions) do
+    if ext == allowed then return true end
+  end
+  return false
+end
+
+-- Devuelve los hijos del folder Stem Bus, o (nil, mensaje de error)
+function M.get_stem_bus_children()
+  local bus = StemBus.find_bus_track()
+  if not bus then
+    return nil, "No se encontró el track 'Stem Bus'"
+  end
+  if reaper.GetMediaTrackInfo_Value(bus, "I_FOLDERDEPTH") <= 0 then
+    return nil, "'Stem Bus' no está configurado como folder (I_FOLDERDEPTH <= 0)"
+  end
+  return StemBus.get_folder_children(bus)
+end
+
+-- Inserta en el track un item con el archivo completo, en la posición
+-- dada (segundos, 0 por defecto). Devuelve (item, largo del source), o
+-- nil si no se pudo crear el source.
+function M.insert_audio_item(track, filepath, position)
+  local source = reaper.PCM_Source_CreateFromFile(filepath)
+  if not source then return nil end
+  local item = reaper.AddMediaItemToTrack(track)
+  local take = reaper.AddTakeToMediaItem(item)
+  reaper.SetMediaItemTake_Source(take, source)
+  local length = reaper.GetMediaSourceLength(source)
+  reaper.SetMediaItemInfo_Value(item, "D_LENGTH", length)
+  reaper.SetMediaItemInfo_Value(item, "D_POSITION", position or 0)
+  reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", filepath:match("([^/\\]+)$"), true)
+  return item, length
 end
 
 return M
