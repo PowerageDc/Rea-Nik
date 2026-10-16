@@ -195,4 +195,116 @@ function M.ensure_media_folder(project_dir, subfolder)
   return media_path
 end
 
+local function psQuote(s)
+  return "'" .. (s:gsub("'", "''")) .. "'"
+end
+
+local ZIP_PS_PREAMBLE = [==[
+$ProgressPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+]==]
+
+-- Lista los archivos del zip sin extraer nada. Devuelve un array de
+-- { full = ruta interna, name = nombre de archivo sin carpeta }, o
+-- (nil, mensaje de error).
+function M.list_zip_entries(zip_path, extensions)
+  local out
+  if M.is_windows() then
+    local quoted = {}
+    for _, ext in ipairs(extensions or {}) do table.insert(quoted, psQuote(ext)) end
+    local ps = ZIP_PS_PREAMBLE .. string.format([==[
+$exts = @(%s)
+$zip = [System.IO.Compression.ZipFile]::OpenRead(%s)
+try {
+  $count = 0
+  foreach ($e in $zip.Entries) {
+    if ($e.Name -eq '') { continue }
+    $ext = [System.IO.Path]::GetExtension($e.Name).TrimStart('.')
+    if ($exts.Count -gt 0 -and ($exts -notcontains $ext)) { continue }
+    Write-Output $e.FullName
+    $count++
+    if ($count -ge 200) { break }
+  }
+} catch {
+  Write-Output $_.Exception.Message
+  exit 1
+} finally {
+  $zip.Dispose()
+}
+]==], table.concat(quoted, ","), psQuote(zip_path))
+    local t0 = reaper.time_precise()
+    local code, text = M.run_powershell(ps, 30000)
+    if code ~= "0" then
+      return nil, string.format("código de salida: %s, tiempo: %.1f s\n%s",
+        tostring(code), reaper.time_precise() - t0, text or "(sin salida)")
+    end
+    out = text
+  else
+    local handle = io.popen(string.format('unzip -Z1 "%s" 2>&1', zip_path))
+    if not handle then return nil, "No se pudo ejecutar unzip" end
+    out = handle:read("*a")
+    if not handle:close() then return nil, out end
+  end
+
+  out = out:gsub("\239\187\191", "")
+  local entries = {}
+  for line in out:gmatch("[^\r\n]+") do
+    if not line:match("/$") then
+      table.insert(entries, { full = line, name = line:match("([^/\\]+)$") or line })
+    end
+  end
+  return entries
+end
+
+-- Extrae entradas puntuales del zip directo a su ruta final.
+-- jobs = array de { entry = ruta interna, dest = ruta de destino }.
+-- Devuelve (ok, salida); si falla, vuelca la salida a la consola.
+function M.extract_zip_entries(zip_path, jobs)
+  if #jobs == 0 then return true, "" end
+  local ok, output
+
+  if M.is_windows() then
+    local lines = {}
+    for _, j in ipairs(jobs) do
+      table.insert(lines, string.format("  %s = %s", psQuote(j.entry), psQuote(j.dest)))
+    end
+    local ps = ZIP_PS_PREAMBLE .. string.format([==[
+$jobs = @{
+%s
+}
+$zip = [System.IO.Compression.ZipFile]::OpenRead(%s)
+try {
+  foreach ($k in $jobs.Keys) {
+    $e = $zip.GetEntry($k)
+    if ($null -eq $e) { throw "Entrada no encontrada en el zip: $k" }
+    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($e, $jobs[$k], $true)
+  }
+} catch {
+  Write-Output $_.Exception.Message
+  exit 1
+} finally {
+  $zip.Dispose()
+}
+]==], table.concat(lines, "\n"), psQuote(zip_path))
+    local code, text = M.run_powershell(ps, 0)
+    ok, output = (code == "0"), text
+  else
+    ok, output = true, ""
+    for _, j in ipairs(jobs) do
+      local res = os.execute(string.format('unzip -p "%s" "%s" > "%s"', zip_path, j.entry, j.dest))
+      if res ~= true and res ~= 0 then
+        ok = false
+        output = output .. "Falló la extracción de: " .. j.entry .. "\n"
+      end
+    end
+  end
+
+  if not ok then
+    reaper.ShowConsoleMsg("---- Salida de extracción ----\n" .. (output or "(sin salida)") .. "\n-------------------------------\n")
+  end
+  return ok, output
+end
+
 return M

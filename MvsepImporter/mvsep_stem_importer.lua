@@ -1,12 +1,12 @@
 -- ============================================================
 -- MVSEP Stem Importer
--- Selecciona un .zip descargado de MVSEP, lo descomprime en la
--- carpeta Media del proyecto, normaliza los nombres de archivo
--- y coloca cada stem en su track correspondiente dentro del
--- folder configurado como STEM_BUS_TRACK_NAME.
+-- Selecciona un .zip descargado de MVSEP, lee su contenido sin
+-- extraerlo y extrae solo los audios reconocidos a la carpeta Media
+-- del proyecto, ya con su nombre final. Cada stem se coloca en su
+-- track dentro del folder configurado como STEM_BUS_TRACK_NAME.
 --
--- Requiere en el sistema: "tar" (Windows 10 1809+, incluido por
--- default) o "unzip" (Mac/Linux, normalmente preinstalado).
+-- Requiere en el sistema: PowerShell (Windows) o "unzip" (Mac/Linux,
+-- normalmente preinstalado).
 -- ============================================================
 
 -- ================== CONFIG ==================
@@ -33,54 +33,6 @@ local CLICK_TRACK_PATTERN = "beep"   -- el track cuyo item se recorta debe conte
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Mvsep = dofile(script_dir .. "MvsepImporter_common_logic.lua")
-local getOS = reaper.GetOS
-local toPowershellEncodedCommand = Mvsep.to_powershell_encoded_command
-
-local function extractZip(zipPath, destPath)
-  local os_str = getOS()
-  local cmd
-  if os_str:find("Win") then
-    -- Expand-Archive (.NET) maneja Unicode nativamente. El comando
-    -- viaja como -EncodedCommand (Base64/UTF-16LE) para que el string
-    -- con tildes/ñ nunca pase como argumento de línea de comandos
-    -- (evita la conversión a codepage ANSI de CreateProcess)
-    local psCmd = string.format(
-      '$ProgressPreference = "SilentlyContinue"; Expand-Archive -LiteralPath "%s" -DestinationPath "%s" -Force',
-      zipPath, destPath)
-    local encoded = toPowershellEncodedCommand(psCmd)
-    cmd = string.format(
-      'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand %s',
-      encoded)
-  else
-    cmd = string.format('unzip -o "%s" -d "%s" 2>&1', zipPath, destPath)
-  end
-
-  local output, closeOk
-  if os_str:find("Win") then
-    local ret = reaper.ExecProcess(cmd, 0) -- 0 = sin timeout (extracciones grandes)
-    if not ret then
-      reaper.ShowConsoleMsg("No se pudo ejecutar el comando de extracción\n")
-      return false, nil
-    end
-    local code, out = ret:match("^(%-?%d+)\r?\n?(.*)$")
-    closeOk = (code == "0")
-    output = out
-  else
-    local handle = io.popen(cmd)
-    if not handle then
-      reaper.ShowConsoleMsg("No se pudo ejecutar el comando de extracción\n")
-      return false, nil
-    end
-    output = handle:read("*a")
-    closeOk = handle:close()
-  end
-
-  if not closeOk then
-    reaper.ShowConsoleMsg("---- Salida de extracción ----\n" .. (output or "(sin salida)") .. "\n-------------------------------\n")
-  end
-
-  return closeOk, output
-end
 
 local function detectStem(name)
   local lname = name:lower()
@@ -261,7 +213,70 @@ local function main()
   end
   local mediaPath = Mvsep.ensure_media_folder(projDir, MEDIA_SUBFOLDER)
 
-  local extractOk, extractOutput = extractZip(zipPath, mediaPath)
+  local children, err = getStemBusChildren()
+  if not children then
+    reaper.ShowMessageBox(err, "Error", 0)
+    return
+  end
+
+  local entries, listErr = Mvsep.list_zip_entries(zipPath, AUDIO_EXTENSIONS)
+  if not entries then
+    reaper.ShowConsoleMsg("---- Error al leer el zip ----\n" .. (listErr or "(sin salida)") .. "\n------------------------------\n")
+    reaper.ShowMessageBox(
+      "No se pudo leer el zip. Abrí View > Show console output en REAPER para ver el error exacto.",
+      "Error", 0)
+    return
+  end
+
+  local plan, jobs, unmatched, seen = {}, {}, {}, {}
+  for _, e in ipairs(entries) do
+    if isAudioFile(e.name) then
+      local isInstr = isInstrumental(e.name)
+      local stem = (not isInstr) and detectStem(e.name) or nil
+      local label = isInstr and "Instrumental" or (stem and stem.name)
+      if not label then
+        table.insert(unmatched, e.name .. " (familia no reconocida, no se extrae)")
+      elseif seen[label] then
+        table.insert(unmatched, e.name .. " (duplicado de " .. label .. ", no se extrae)")
+      else
+        seen[label] = true
+        local newName = label .. "." .. getExtension(e.name)
+        local dest = mediaPath .. "/" .. newName
+        table.insert(jobs, { entry = e.full, dest = dest })
+        table.insert(plan, { label = label, stem = stem, newName = newName, dest = dest })
+      end
+    end
+  end
+
+  if #jobs == 0 then
+    reaper.ShowMessageBox(
+      "El zip no contiene audios reconocidos para importar." ..
+      (#unmatched > 0 and ("\n\nOmitidos: " .. table.concat(unmatched, ", ")) or ""),
+      "MVSEP Import", 0)
+    return
+  end
+
+  local locked = {}
+  for _, j in ipairs(jobs) do
+    if reaper.file_exists(j.dest) then
+      local f = io.open(j.dest, "r+b")
+      if f then
+        f:close()
+      else
+        table.insert(locked, j.dest:match("([^/\\]+)$"))
+      end
+    end
+  end
+  if #locked > 0 then
+    reaper.ShowMessageBox(
+      "Estos archivos de Media están en uso por items del proyecto y no se pueden reemplazar:\n\n" ..
+      table.concat(locked, "\n") ..
+      "\n\nBorrá esos items (o ponelos offline) y volvé a ejecutar. No se extrajo nada.",
+      "MVSEP Import", 0)
+    return
+  end
+
+  local extractOk = Mvsep.extract_zip_entries(zipPath, jobs)
   if not extractOk then
     reaper.ShowMessageBox(
       "Falló la descompresión. Abrí View > Show console output en REAPER para ver el error exacto.",
@@ -269,73 +284,30 @@ local function main()
     return
   end
 
-  local children, err = getStemBusChildren()
-  if not children then
-    reaper.ShowMessageBox(err, "Error", 0)
-    return
-  end
-
-  local placed, unmatched = {}, {}
+  local placed = {}
   local refItemLength = nil
-  local i = 0
-  while true do
-    local fn = reaper.EnumerateFiles(mediaPath, i)
-    if not fn then break end
-    i = i + 1
-
-    if isAudioFile(fn) then
-      if isInstrumental(fn) then
-        local ext = getExtension(fn)
-        local newName = "Instrumental." .. ext
-        local oldFull = mediaPath .. "/" .. fn
-        local newFull = mediaPath .. "/" .. newName
-
-        if oldFull ~= newFull then
-          os.remove(newFull)
-          os.rename(oldFull, newFull)
-        end
-
-        local targetTrack = findInstrumentalTrack()
-        if targetTrack then
-          local _, length = insertItemOnTrack(targetTrack, newFull)
-          refItemLength = refItemLength or length
-          table.insert(placed, "Instrumental")
-        else
-          table.insert(unmatched, newName .. " (sin track destino: ningún track matchea patrón 'instrum')")
-        end
-      else
-        local stem = detectStem(fn)
-        if stem then
-          local ext = getExtension(fn)
-          local newName = stem.name .. "." .. ext
-          local oldFull = mediaPath .. "/" .. fn
-          local newFull = mediaPath .. "/" .. newName
-
-          if oldFull ~= newFull then
-            os.remove(newFull)
-            os.rename(oldFull, newFull)
-          end
-
-          local targetTrack = nil
-          for _, track in ipairs(children) do
-            local _, tname = reaper.GetTrackName(track)
-            if detectStem(tname) == stem then
-              targetTrack = track
-              break
-            end
-          end
-
-          if targetTrack then
-            local _, length = insertItemOnTrack(targetTrack, newFull)
-            refItemLength = refItemLength or length
-            table.insert(placed, stem.name)
-          else
-            table.insert(unmatched, newName .. " (sin track destino)")
-          end
-        else
-          table.insert(unmatched, fn .. " (familia no reconocida)")
+  for _, p in ipairs(plan) do
+    local targetTrack, noTrackMsg
+    if p.stem then
+      for _, track in ipairs(children) do
+        local _, tname = reaper.GetTrackName(track)
+        if detectStem(tname) == p.stem then
+          targetTrack = track
+          break
         end
       end
+      noTrackMsg = " (sin track destino)"
+    else
+      targetTrack = findInstrumentalTrack()
+      noTrackMsg = " (sin track destino: ningún track matchea patrón 'instrum')"
+    end
+
+    if targetTrack then
+      local _, length = insertItemOnTrack(targetTrack, p.dest)
+      refItemLength = refItemLength or length
+      table.insert(placed, p.label)
+    else
+      table.insert(unmatched, p.newName .. noTrackMsg)
     end
   end
 
@@ -361,9 +333,9 @@ local function main()
 
   local msg = "Importados: " .. (#placed > 0 and table.concat(placed, ", ") or "ninguno")
   if #unmatched > 0 then
-    msg = msg .. "\n\nSin track correspondiente: " .. table.concat(unmatched, ", ")
+    msg = msg .. "\n\nOmitidos: " .. table.concat(unmatched, ", ")
   end
-  --reaper.ShowMessageBox(msg, "MVSEP Import", 0)
+  if #unmatched > 0 then reaper.ShowConsoleMsg("[MVSEP] " .. msg .. "\n") end
 end
 
 reaper.Undo_BeginBlock()
