@@ -1,7 +1,7 @@
 -- Nik_Test_CloseDialogProbe.lua
 -- Sonda para confirmar/cerrar un diálogo de REAPER desde ReaScript con
 -- JS_ReaScriptAPI. Referencia de uso real: autoConfirmScreensetDialog en
--- MvsepImporter/mvsep_stem_importer.lua.
+-- el importer de stems de MVSEP.
 --
 -- USO: ajustar las constantes de abajo y ejecutar. Con LAUNCH_ACTION = false,
 -- abrir el diálogo a mano antes de 30 s. El resultado se imprime en la
