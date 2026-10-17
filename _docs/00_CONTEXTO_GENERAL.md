@@ -124,7 +124,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Funcionalidad           | Estado                                        |
 |--------------------------|------------------------------------------------|
 | Auto-color system        | Confirmado funcionando                         |
-| MVSEP stem importer      | En progreso (caso borde "instrum" pendiente)   |
+| MVSEP stem importer      | Importer base y script de voces separadas (lead/back) implementados, con módulo y config compartidos. Pendientes en `features/mvsep_importer.md` |
 | Sistema de Snapshots      | Implementado (script custom, prefijo SN_)      |
 | Render Workflow           | Regiones, count-in y preset implementados; batch render pendiente |
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |

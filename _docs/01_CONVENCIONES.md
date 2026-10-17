@@ -14,6 +14,12 @@ Other
 Vocals
 ```
 
+## Tracks de voz separada (importer de MVSEP)
+Nombres: `Vocals Lead` y `Vocals Back`, hijos del Stem Bus, debajo de `Vocals`
+(que queda silenciado al crearlos). Los define la receta `vocal_split` de
+`MvsepImporter_config.lua`. No son stems de la tabla siguiente: no tienen
+snapshots `SN_*` propios (pendiente en `features/mvsep_importer.md`).
+
 ## Correspondencia: Track (inglés) ↔ Instrumento (español, usado en render) ↔ Snapshot
 
 | Track (inglés) | Instrumento (español) | Snapshot protagonista | Snapshot "muted" (sin instrumento) |
@@ -110,7 +116,8 @@ quedan separados alfabéticamente de los ejecutables.
 **Config en código** (valores que el coordinador edita a mano, sin UI):
 `<Dominio>_config.lua`, también **sin** prefijo `Nik_`. Devuelve una
 tabla (`return { ... }`), se carga con `dofile` y no contiene lógica.
-Casos: `MonitorMix_config.lua` y `MusicStateKeys_config.lua` (atajos de
+Casos: `MonitorMix_config.lua`, `MvsepImporter_config.lua` (patrones de nombres de
+MVSEP y recetas de import; ver `features/mvsep_importer.md`) y `MusicStateKeys_config.lua` (atajos de
 teclado del Helper, con los ids de binding como `<área>.<acción>`; ver
 `features/musicstate_keys.md`).
 
@@ -180,15 +187,16 @@ Action List (no contiene scripts ejecutables, solo módulos).
 
 Un módulo entra a `_Shared/` cuando lo consume más de un dominio (ejemplos,
 no inventario: el inventario es la carpeta; hoy: `StemBus_common_logic.lua` y 
-`ReaPitchBus_common_logic.lua`, usados por `RemoteControl/` y por `ReaPitchBus/`), o 
-cuando es genérico y está pensado para reusarse entre UIs de dominios distintos 
-aunque hoy lo consuma uno solo (`ImGuiInputCommit_common_logic.lua`, patrones de 
-input; `ImGuiHostFocus_common_logic.lua`, foco del teclado entre una ventana
-ReaImGui y REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un
-modal de confirmación: patrones de ReaImGui, hoy solo en el Helper de
-`MusicState/`; `ImGuiButtonStyle_common_logic.lua`, estilo semántico de
-botones por tipo, hoy en las tabs del Helper). Un módulo usado por un solo dominio
-se queda dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`,
+`ReaPitchBus_common_logic.lua`, usados por `RemoteControl/` y por `ReaPitchBus/`; 
+`StemBus_common_logic.lua` también por `MvsepImporter/`), o cuando es genérico y 
+está pensado para reusarse entre UIs de dominios distintos aunque hoy lo consuma 
+uno solo (`ImGuiInputCommit_common_logic.lua`, patrones de input; 
+`ImGuiHostFocus_common_logic.lua`, foco del teclado entre una ventana ReaImGui y 
+REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un modal de 
+confirmación: patrones de ReaImGui, hoy solo en el Helper de `MusicState/`; 
+`ImGuiButtonStyle_common_logic.lua`, estilo semántico de botones por tipo, hoy en 
+las tabs del Helper). Un módulo usado por un solo dominio se queda dentro de la 
+carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
 `ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de
 `RemoteControl/`, y `MusicStateBridge_common_logic.lua` y
 `MusicStateRowInputs_common_logic.lua` dentro de `MusicState/`, no en
