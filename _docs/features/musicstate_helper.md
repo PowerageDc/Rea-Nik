@@ -58,9 +58,10 @@ tab): funciones de conversión (`rowToTime`, `rowToQN`, `qnToRow`,
 `getMaxBeats`), acceso a `RowInputs`/`InputCommit` (módulos compartidos,
 uno en `MusicState/`, el otro en `_Shared/` por ser genérico de ReaImGui,
 ver `01_CONVENCIONES.md`), `Keys` (`Keys.consume`, `Keys.held`,
-`Keys.modal`, `Keys.input`, `Keys.ring_*`: `musicstate_keys.md` §4.6 y
-§4.7), `Modal` (modal de confirmación de `_Shared/`), `ButtonStyle`
-(estilo de botones, §10), captura de cursor y `getSections()`.
+`Keys.modal`, `Keys.input`, `Keys.ring_*`: `musicstate_keys.md` y
+`musicstate_keys_inputs.md` §2 y §3), `Modal` (modal de confirmación 
+de `_Shared/`), `ButtonStyle` (estilo de botones, §10), captura de cursor 
+y `getSections()`.
 
 ## 2. Estado (`H`) y conversión de coordenadas
 
@@ -100,7 +101,7 @@ cada evento rompe el patrón simple de `harmony_data`.
 
 - **Modo:** dos `RadioButtonEx` exclusivos (Mayor, Menor) sobre
   `H.key.mode_idx` (0 = major, 1 = minor). Pierden el teclado hasta el
-  anillo de foco de Armonía y Cues (`musicstate_keys.md` §9, 6d).
+  anillo de foco de Armonía y Cues (`musicstate_keys_inputs.md` §9).
 - **Tónica:** `KeyCombo` con las 12 tónicas del modo vigente
   (`TONICS_BY_MODE`). `H.key.tonic_idx` es el pitch class (0-11, 0 = C) y
   vale igual en las dos listas, así que cambiar de modo conserva la nota
@@ -185,7 +186,7 @@ lo que no sea el propio input). Acá se aplica así:
   haciendo falta: cambiar de grupo cambia el ID del widget, porque el
   `PushID` del grupo es parte del ID stack.
 - Con las flechas, los campos de posición cambian de valor con el campo
-  activo (`08_REAIMGUI_PATTERNS.md` §3, `musicstate_keys.md` §4.7):
+  activo (`08_REAIMGUI_PATTERNS.md` §3, `musicstate_keys_inputs.md` §3):
   `drawPositionInputs` sigue devolviendo la fila como activa mientras un
   refoco (`Keys.ring_holds`) está pendiente, así que no se reordena ni se
   regrupa hasta salir del trío de posición.
@@ -223,7 +224,7 @@ input, sin auto-normalización/rollover al compás siguiente.
 
 Había un glitch preexistente de Enter en la tab Roles (ya ocurría antes del
 refactor de modularización). Tras el despacho central de teclas y
-`Keys.input` (`musicstate_keys.md` §4.6) no se reprodujo: Enter, tocado o
+`Keys.input` (`musicstate_keys_inputs.md` §2) no se reprodujo: Enter, tocado o
 mantenido, no dispara Play/Pause. Si reaparece, reabrir desde acá.
 
 ## 8. Cómo testear
@@ -255,11 +256,26 @@ juntas.
 - `drawPositionInputs` en Cues todavía usa la firma vieja (sin
   `get_max_beats`, `ring` ni `arrow_values`): compatible hacia atrás, pero
   sin tope de Beat, sin Tab entre campos y sin flechas hasta actualizar ese
-  call site (`musicstate_keys.md` §4.7).
+  call site (`musicstate_keys_inputs.md` §3).
 - Extraer un módulo compartido de "lista posicionada" (Armonía + Cues) a
   `_Shared/`, recién cuando Cues tenga su propia versión de agrupado/
   auto-scroll/selección/copiar-pegar — para generalizar sobre dos
-  implementaciones reales, no adivinar la abstracción de antemano.
+  implementaciones reales, no adivinar la abstracción de antemano. Qué se
+  reutilizaría de la tab Lyrics y qué no:
+  - Se reutiliza: cache con recarga por `GetProjectStateChangeCount` o cambio
+    de proyecto; lista con fila vigente, highlight y auto-scroll (la regla de
+    seguimiento de Cues probablemente cambie); selección por clave `{time}` en
+    vez de índice; click que mueve el cursor y la selección de tiempo
+    (toggle).
+  - Parcial: el panel de edición (nudge, al cursor, borrar, agregar con
+    confirmación) sirve en la UI pero no en la persistencia; de la cola de
+    tap sirven el gesto y la compensación, y el fin por hold quizá no.
+  - Nuevo en Cues: filtro por rol (dropdown).
+  - Datos: Lyrics lee del proyecto; Armonía y Cues mutan `H` y se publican con
+    "Guardar y Publicar", así que una abstracción común necesita un adaptador
+    de almacenamiento (`insert`, `delete`, `move`, `find_near`, `list`).
+  - Teclas: Cues consumirá el helper de modal, los holds y el anillo de foco
+    (`musicstate_keys.md`, `musicstate_keys_inputs.md`).
 - En Cues, botón "Usar selección de tiempo" para `duration_qn` (vía
   `GetSet_LoopTimeRange`).
 - Calibración cosmética del highlight de fila activa (colores hardcodeados

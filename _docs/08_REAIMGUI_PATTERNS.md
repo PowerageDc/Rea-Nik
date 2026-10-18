@@ -164,7 +164,7 @@ row._ver_measure = ver + 1
 Keys.ring_request(row, 'measure', true)  -- hold: la fila sigue activa
 ```
 
-Implementación completa: `musicstate_keys.md` §4.7.
+Implementación completa: `musicstate_keys_inputs.md` §3.
 
 ## 4. Botón o tecla de "mantener": flancos, layout estable y widgets que cambian
 
@@ -292,16 +292,14 @@ una sola vez, `BeginPopupModal`, `EndPopup` solo si devolvió `true`).
   del modal (flag `armed` en el pendiente) y se leen con `repeat = false`:
   el Enter que abre el modal desde un campo no tiene que confirmarlo.
 - **Con un popup abierto, ningún atajo global actúa.** Los guards del
-  despacho de teclas (antes `globalKeyPressed`, ya eliminada; hoy
-  `Keys.dispatch`, ver `musicstate_keys.md` §3: ningún item activo, ventana
-  con foco incluyendo
-  `ChildWindows`) no detectan el modal: un popup cuenta como hijo de la
-  raíz y sus botones no están activos, así que Espacio, Enter y las flechas
-  seguían llegando a REAPER. Se agrega
-  `IsPopupOpen(ctx, '', PopupFlags_AnyPopupId())` al guard (efecto
-  colateral buscado: también bloquea con un combo desplegado). Todo control
-  que lea teclas por su cuenta (`IsKeyDown`, como `readHeld` de la tecla de
-  tap) necesita el mismo guard.
+  despacho de teclas (`Keys.dispatch`, ver `musicstate_keys.md` §3: ningún
+  item activo, ventana con foco incluyendo `ChildWindows`) no detectan el 
+  modal: un popup cuenta como hijo de la raíz y sus botones no están activos, 
+  así que Espacio, Enter y las flechas seguían llegando a REAPER. Se agrega
+  `IsPopupOpen(ctx, '', PopupFlags_AnyPopupId())` al guard (efecto colateral 
+  buscado: también bloquea con un combo desplegado). Todo control que lea 
+  teclas por su cuenta (`IsKeyDown`, como `readHeld` de la tecla de tap) necesita 
+  el mismo guard. 
 - **Campo que agrega con Enter.** Usar `IsItemDeactivated` más
   `IsKeyPressed(Enter, false)`, no `IsItemDeactivatedAfterEdit` (§5 es para
   editar un valor existente): tras cancelar un modal el texto sigue ahí sin
@@ -333,9 +331,8 @@ y `WindowFlags_NoNav` en la raíz.
   con `SetKeyboardFocusHere` mueve el foco entre inputs, incluso dentro de
   un `BeginChild` con scroll. Con offset `0` **antes** del widget enfoca el
   campo de texto de cualquier input; con `-1` **después** funciona en un
-  `InputText` pero no en un `InputInt` (el foco no llegaba al campo; causa
-  probable, inferida: el último item es un botón del stepper). El anillo, sus
-  perfiles y las reglas de orden están en `musicstate_keys.md` §4.7.
+  `InputText` pero no en un `InputInt` (el foco no llegaba al campo). El anillo, 
+  sus perfiles y las reglas de orden están en `musicstate_keys_inputs.md` §3.
 - **Teclas de un input activo.** ↑/↓ con un input de una línea activo se
   leen con `IsKeyPressed` (ImGui no las usa en ese caso), igual que Tab y
   Shift+Tab. Enter y Esc cierran el campo por su cuenta.

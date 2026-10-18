@@ -23,7 +23,7 @@ fechas ni narrativa.
   `08_REAIMGUI_PATTERNS.md`, en otro commit; (3) en este archivo, borrar la
   fila de la etapa, su mini-spec y las decisiones de §3 ya absorbidas, y
   reescribir la línea "Próximo" de §2. No se agrega nada más.
-- Subir siempre: este archivo, `musicstate_keys.md` y
+- Subir siempre: este archivo, `musicstate_keys.md`, `musicstate_keys_inputs.md` y
   `MusicStateKeys_common_logic.lua`, más los de la etapa (tabla de §4). El
   Proyecto trae `00` y `01` como copias de solo lectura: resubirlos si
   cambiaron en el repo.
@@ -31,8 +31,8 @@ fechas ni narrativa.
 ## 2. Estado de partida
 
 Pasos 1 a 6c del refactor de atajos hechos y documentados
-(`musicstate_keys.md` §4.6, §4.7, §9). Sonda de teclas en
-`Tests-Debug/Nik_Test_KeyProbe.lua`.
+(`musicstate_keys.md` y `musicstate_keys_inputs.md` §2, §3, §9). Sonda de teclas 
+en `Tests-Debug/Nik_Test_KeyProbe.lua`.
 
 **Próximo:** etapa 4.
 
@@ -40,7 +40,7 @@ Pasos 1 a 6c del refactor de atajos hechos y documentados
 
 Solo lo decidido que todavía no está en un doc de feature. Lo ya documentado
 (anillo de foco, perfiles, `SetKeyboardFocusHere`, `InputInt` activo) vive en
-`musicstate_keys.md` §4.7 y en `08`, y no se repite acá. Al absorberse, la
+`musicstate_keys_inputs.md` §3 y en `08`, y no se repite acá. Al absorberse, la
 fila se borra.
 
 | Tema | Decisión |
@@ -104,9 +104,9 @@ Spec propio, `SPEC-MusicState_Cues.md`, como salida de la 5a.
 ## 7. Pendientes sueltos
 
 - Entrar al anillo por la fila del cursor, no por la primera
-  (`musicstate_keys.md` §9.5).
-- Bugs conocidos del mouse en `updateMouseGesture` (`musicstate_keys.md`
-  §9.3).
+  (`musicstate_keys_inputs.md` §9).
+- Bugs conocidos del mouse en `updateMouseGesture`
+  (`musicstate_keys_inputs.md` §9).
 - Tonalidad "sin definir" como valor real, sin publicar `project_key`
   (`musicstate_helper.md` §9).
 - Lyrics refresca datos cuando una tab vacía carga proyecto. Las demás
@@ -121,7 +121,7 @@ Spec propio, `SPEC-MusicState_Cues.md`, como salida de la 5a.
 
 ```
 Retomo MusicState. Leé primero WIP-MusicState_Siguientes.md y
-musicstate_keys.md (§4.7 y §9). Hoy: etapa <N>, sub-paso <x>.
+musicstate_keys_inputs.md (§3 y §9). Hoy: etapa <N>, sub-paso <x>.
 ```
 
 **Cierre de conversación:** no hay registro, la historia es git. Se sigue

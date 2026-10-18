@@ -16,6 +16,7 @@ Datos y publicación (lado REAPER):
   desde el Helper, `publish_version`.
 - `features/musicstate_helper.md`: el panel ReaImGui de carga.
 - `features/musicstate_keys.md`: atajos de teclado del Helper.
+- `features/musicstate_keys_inputs.md`: teclas de inputs y combo del Helper.
 - `features/musicstate_lyrics.md`: estado y decisiones de la feature de
   lyrics, y el publicador. El contrato de datos está en §4.7 de este doc.
 - `features/musicstate_lyrics_helper.md`: ingreso de letras y tab Lyrics
