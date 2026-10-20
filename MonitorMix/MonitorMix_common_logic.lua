@@ -164,6 +164,8 @@ function M.filter(base)
 end
 
 function M.resolve_pair(override)
+  -- con el dispositivo cerrado, GetNumAudioOutputs() devuelve 0
+  if reaper.Audio_Init then reaper.Audio_Init() end
   local n = reaper.GetNumAudioOutputs()
   if override then
     if override + 1 < n then return override end
