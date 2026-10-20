@@ -121,8 +121,7 @@ Mecánica: `SetKeyboardFocusHere(ctx, -1)` justo después de dibujar el
 `InputText` (el `-1` apunta al widget anterior). Con Enter mantenido el
 sistema repite la tecla y ImGui desactiva el input en cada repetición: el
 refoco lee Enter **con repeat** y el commit **sin repeat**, así no se
-duplican roles. Enter en Roles, tocado o mantenido, no dispara Play/Pause
-(`musicstate_helper.md` §7).
+duplican roles. Enter en Roles, tocado o mantenido, no dispara Play/Pause.
 
 ## 7. Hallazgos de las sondas
 
@@ -158,7 +157,7 @@ Sondas: `Tests-Debug/Nik_Test_KeysFocusProbe.lua` y
   propio, con recuadro dibujado por nosotros, y Space o Enter para
   accionarlos.
 - **Entrada al anillo:** entrar por la fila del cursor y no por la primera.
-- **Cues sobre el mismo anillo:** `musicstate_helper.md` §9.
+- **Cues sobre el mismo anillo:** `musicstate_helper.md` §8.
 - **Bugs conocidos del combo** (todos en `updateMouseGesture`):
   - Cualquier delta del mouse, incluso fuera del popup o un temblor, apaga
     el recuadro de foco que acaba de prender una flecha.

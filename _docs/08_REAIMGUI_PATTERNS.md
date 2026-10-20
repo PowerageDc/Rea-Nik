@@ -359,7 +359,7 @@ y `WindowFlags_NoNav` en la raíz.
 ## 8. Estilo de botones: pila de push/pop y tipos semánticos
 
 Primer caso: `_Shared/ImGuiButtonStyle_common_logic.lua` (estado por tab en
-`musicstate_helper.md` §10).
+`musicstate_helper.md` §9).
 
 - **Un solo camino de dibujo.** Color y redondeo de un botón salen de un
   módulo con tipos semánticos (primario, neutro, peligro, sutil), no de

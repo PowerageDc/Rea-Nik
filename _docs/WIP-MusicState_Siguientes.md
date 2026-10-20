@@ -108,12 +108,12 @@ Spec propio, `SPEC-MusicState_Cues.md`, como salida de la 5a.
 - Bugs conocidos del mouse en `updateMouseGesture`
   (`musicstate_keys_inputs.md` §9).
 - Tonalidad "sin definir" como valor real, sin publicar `project_key`
-  (`musicstate_helper.md` §9).
+  (`musicstate_helper.md` §8).
 - Lyrics refresca datos cuando una tab vacía carga proyecto. Las demás
   no lo hacen hasta reabrir helper, o cambiar de tab y volver.
 - Teclas globales ´ y ç: habilitar la repetición, como ←|→
 - Fuente centralizada del color de secciones (opciones A y B en
-  `musicstate_helper.md` §9).
+  `musicstate_helper.md` §8).
 
 ## 8. Cierres y sync
 

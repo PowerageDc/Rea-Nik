@@ -42,7 +42,7 @@ Del módulo solo usa `M.BRIDGE_NAMESPACE`, para escribir y borrar
 `lyrics_data` y `lyrics_version` en el mismo namespace global que el
 resto, sin duplicar el nombre. Por esa dependencia
 `MusicStateBridge_common_logic.lua` tiene que seguir en el `@provides`
-del metapaquete de MusicState (`musicstate_helper.md` §9): sin él,
+del metapaquete de MusicState (`Nik_MusicState_Helper.lua`): sin él,
 `PublishLyrics` no carga en una PC instalada vía ReaPack.
 
 ## 2. `Nik_MusicState_PublishAll.lua`
@@ -166,8 +166,4 @@ cuando un dato no llega a ninguna UI: `musicstate_data_model.md` §5.
 
 ## 7. Pendientes
 
-Sin pendientes propios de esta capa hoy. El header `@provides` del
-Helper, que afecta al empaquetado de `MusicStateBridge_common_logic.lua`
-y `MusicStateRowInputs_common_logic.lua` vía ReaPack, está anotado en
-`musicstate_helper.md` §9 (es el header del script del Helper, aunque el
-bug afecte a estos dos módulos).
+Sin pendientes propios de esta capa.
