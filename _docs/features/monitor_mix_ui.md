@@ -152,6 +152,11 @@ del thumb.
   No bloqueante; resolverlo o aceptarlo tras la prueba en sala.
 - **Validar en sala:** la UI en el celular del baterista con el par de
   salida real, y ajustar las constantes de `NIK_MM_SLIDER`.
+- **Mensaje de `no_pair`:** la UI muestra el mismo aviso ("no hay par
+  adicional") para las tres causas de `no_pair`: dispositivo sin salidas,
+  master sin hardware output y falta de un par alineado libre. Depende de
+  que el publish informe el motivo (`monitor_mix.md` §9). Con el motivo
+  disponible, mostrar un texto distinto por causa.
 - **Sin probar:** un tercero moviendo el mismo send mientras el baterista
   no lo toca (el fader debería seguirlo).
 - `monitor.css` depende de `cantante.css` (clases `cn-*`): evaluar

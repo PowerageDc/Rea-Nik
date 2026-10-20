@@ -68,6 +68,12 @@ Sondas en `Tests-Debug/`: `Nik_MonitorMix_ProbeOutputs.lua` y
 - `GetNumAudioOutputs()` devuelve solo el rango habilitado en
   Preferences > Audio > **Last output** (cambia sin reiniciar REAPER), no
   el límite de la placa.
+- Con *Close audio device when stopped and application is inactive*
+  (Preferences > Audio), el dispositivo se cierra cuando REAPER pierde el
+  foco (p. ej. al abrir la UI en Chrome) y `GetNumAudioOutputs()` devuelve
+  `0`. `M.resolve_pair` llama `reaper.Audio_Init()` antes de contar, lo que
+  reabre el dispositivo; con el guard `if reaper.Audio_Init`, una versión
+  sin esa API no rompe.
 - Los nombres son genéricos (`Software Out N <placa>`); la UI los muestra
   tal cual.
 - La hardware output del master se lee con
@@ -83,6 +89,9 @@ base 1). Los pares no alineados (`3/4`, `5/6` base 0) se descartan.
 - El software no sabe a qué está conectada la bajada de auriculares: por
   eso existe `pair_override` en el config, y la UI muestra el par
   resuelto para verificar a ojo.
+- El cálculo abre antes el dispositivo (`Audio_Init`, §3.1), así que el
+  resultado no depende de si REAPER tiene el foco. `pair_override` también
+  se valida contra las salidas habilitadas.
 - Sin par disponible, la UI avisa. **Nunca cae al master.**
 - Si el master no tiene hardware output no hay canales ocupados que
   descartar y la regla caería en 1/2: se trata como `no_pair`, salvo que
@@ -144,6 +153,13 @@ Primero se escribe `list` y después `list_version`: un cliente que ve la
 versión nueva siempre encuentra los datos nuevos. El script **siempre
 publica**, incluso sin bus o sin tracks: el `status` explica el motivo y
 evita datos viejos del proyecto anterior.
+
+Cada corrida escribe en la consola de REAPER, con hora, el log de
+`ensure_sends` y una línea final con `status`, cantidad de tracks y
+versión. Cuando hay que crear el hardware output agrega una línea `Par:`
+con salidas habilitadas, hardware outputs del master, override y par
+resuelto (sirve para diagnosticar `no_pair`). Se apaga con `debug = false`
+en el config (§6.5); `Nik_MonitorMix_EnsureSends.lua` imprime siempre.
 
 ```json
 {"status":"ok","bus":"Monitor Bus - Batería","pair":2,"default_db":-12,"tracks":[{"track":3,"guid":"{...}","name":"Drums","role":"stems","send":0}]}
@@ -237,6 +253,8 @@ base.
 
 ```lua
 return {
+  -- false = Publish.lua no escribe en la consola de REAPER.
+  debug = true,
   buses = {
     { name = "Monitor Bus - Batería", pair_override = nil },
   },
@@ -270,6 +288,11 @@ update de ReaPack: `05_REAPACK_DEPLOY.md`, Pendientes.
 - **Snapshots `SN_*`:** si mutean tracks, ese mute silencia también el
   monitoreo (§3.3). Por ejemplo, `SN_Drums_Muted` dejaría al baterista sin
   batería. Falta ver si los snapshots mutean o bajan volúmenes.
+- **Dispositivo cerrado:** con la opción de cerrar el dispositivo por
+  inactividad, la API informa 0 salidas y el publish aborta con `no_pair`
+  (síntoma: proyecto abierto y después la UI falla, y la UI abierta antes
+  funciona). Mitigado con `Audio_Init` (§3.1). Sin verificar: qué pasa si
+  otro programa tiene tomado el driver de la placa.
 - **Rango de salidas:** si Last output no llega a la 4, el script dirá
   "ninguno disponible" aunque la placa lo tenga.
 - **Crear sends en runtime** ensucia Undo y marca el proyecto.
@@ -309,4 +332,9 @@ update de ReaPack: `05_REAPACK_DEPLOY.md`, Pendientes.
 - Probar el filtro: `recursive` con subcarpetas, `guid_include`,
   `guid_exclude`, overrides por proyecto y la regla `recvcnt` + `hwoutcnt`
   aislada.
+- **Distinguir el motivo de `no_pair`:** hoy el publish informa solo
+  `status`, y `no_pair` cubre tres causas: dispositivo sin salidas
+  (`GetNumAudioOutputs() == 0`), master sin hardware output y falta de un
+  par alineado libre. La UI no puede explicar cuál ocurrió. Agregar un
+  campo de motivo al JSON (§5) y documentarlo en la tabla de `status`.
 - Pendientes de la interfaz: `monitor_mix_ui.md`.
