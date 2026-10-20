@@ -20,7 +20,7 @@
 -- conectar / cambiar de proyecto / botón Actualizar, nunca en respuesta
 -- a un cambio de versión (mismo criterio que PublishLyrics).
 
-local DEBUG = true -- false = sin mensajes en consola
+local DEBUG = true
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local MM = dofile(script_dir .. "MonitorMix_common_logic.lua")
@@ -30,7 +30,9 @@ local KEY_DATA = "list"
 local KEY_VERSION = "list_version"
 
 local function log(msg)
-  if DEBUG then reaper.ShowConsoleMsg("[MonitorMix.Publish] " .. msg .. "\n") end
+  if DEBUG then
+    reaper.ShowConsoleMsg("[MonitorMix.Publish " .. os.date("%H:%M:%S") .. "] " .. msg .. "\n")
+  end
 end
 
 local function jsonString(s)
@@ -67,6 +69,7 @@ end
 
 local function main()
   local cfg = MM.load_config()
+  DEBUG = cfg.debug ~= false
   local res = MM.ensure_sends(cfg)
   for _, line in ipairs(res.log) do log(line) end
 

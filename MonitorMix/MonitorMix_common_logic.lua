@@ -244,6 +244,12 @@ function M.ensure_sends(cfg)
   end
 
   local pair = M.resolve_pair(bus_cfg.pair_override)
+  if need_hw then
+    log(string.format("Par: salidas habilitadas=%d, master hw outputs=%d, override=%s, resuelto=%s",
+      reaper.GetNumAudioOutputs(),
+      reaper.GetTrackNumSends(reaper.GetMasterTrack(0), 1),
+      tostring(bus_cfg.pair_override), tostring(pair)))
+  end
   if need_hw and not bus_cfg.pair_override
       and reaper.GetTrackNumSends(reaper.GetMasterTrack(0), 1) == 0 then
     res.status = "no_pair"

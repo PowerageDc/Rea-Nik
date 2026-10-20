@@ -1,4 +1,6 @@
 return {
+  -- false = Publish.lua no escribe en la consola de REAPER.
+  debug = false,
   buses = {
     { name = "Monitor Bus - Batería", pair_override = nil },
   },
