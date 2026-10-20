@@ -2,6 +2,7 @@
    El stage del mixer scrollea solo él; header y footer quedan fijos. */
 
 .mm-stage {
+  scroll-snap-type: y mandatory;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -49,6 +50,58 @@
   opacity: 0.5;
 }
 
+/* --- dock de Click: hermano fijo del stage, con scroll propio ---
+   Alto máximo = título + --mm-click-rows filas, y nunca más que 35 % del
+   alto visible (celular horizontal). Las constantes 6.6 y 20.6 son el alto
+   del título y de una fila en unidades --u. */
+
+.mm-click-dock {
+  --mm-accent: #3fb37f;
+  --mm-area-gap: var(--cn-gap);
+  margin-bottom: var(--mm-area-gap);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  border-bottom: 2px solid var(--mm-accent);
+}
+
+.mm-click-dock .mm-section-title {
+  color: var(--mm-accent);
+}
+
+/* El alto máximo lo fija monitor-app.js midiendo las filas reales. */
+.mm-area-body {
+  scroll-snap-type: y mandatory;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* --- fade de borde: indica que hay más contenido en esa dirección ---
+   Máscara sobre el propio scroller: el borde se funde con el fondo real.
+   Las clases las pone monitor-app.js según scrollTop/scrollHeight. */
+
+.mm-stage,
+.mm-area-body {
+  --mm-fade-size: calc(var(--u) * 6);
+  --mm-fade-top: 0px;
+  --mm-fade-bot: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mm-fade-top), #000 calc(100% - var(--mm-fade-bot)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mm-fade-top), #000 calc(100% - var(--mm-fade-bot)), transparent 100%);
+}
+
+.has-more-up {
+  --mm-fade-top: var(--mm-fade-size);
+}
+
+.has-more-down {
+  --mm-fade-bot: var(--mm-fade-size);
+}
+
 /* --- avisos y lista --- */
 
 .mm-notice {
@@ -59,6 +112,10 @@
 }
 
 .mm-section-title {
+  flex: none;
+  text-align: left;
+  border-bottom: 1px solid var(--ms-divider-color);
+  line-height: 1.2;
   padding: calc(var(--u) * 2) calc(var(--u) * 1.5) calc(var(--u) * 1);
   font-size: calc(var(--u) * 3);
   letter-spacing: 0.08em;
@@ -69,21 +126,53 @@
 .mm-row {
   padding: calc(var(--u) * 2.5) calc(var(--u) * 1.5);
   border-top: 1px solid var(--ms-divider-color);
+  scroll-snap-align: start;
 }
 
-/* Más aire entre el divider del título de rol y la primera fila. */
-.mm-section-title + .mm-row {
-  padding-top: calc(var(--u) * 4);
+/* El divider visible de la primera fila es el del título (fijo). El borde
+   se conserva transparente para que todas las filas midan igual. */
+.mm-row:first-child {
+  border-top-color: transparent;
 }
 
 .mm-row-name {
-  margin-bottom: calc(var(--u) * 1.5);
+  flex: 1 1 0;
+  min-width: 0;
+  line-height: 1.2;
   font-size: calc(var(--u) * 4.2);
   font-weight: 500;
   color: var(--ms-song-name-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mm-row-head {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 3);
+  margin-bottom: calc(var(--u) * 1.5);
+}
+
+.mm-pan-chip {
+  flex: none;
+  min-width: calc(var(--u) * 14);
+  min-height: calc(var(--u) * 8);
+  padding: 0 calc(var(--u) * 2.5);
+  font: inherit;
+  font-size: calc(var(--u) * 3.4);
+  font-variant-numeric: tabular-nums;
+  color: var(--ms-fg-dim);
+  background: transparent;
+  border: 1px solid var(--ms-divider-color);
+  border-radius: calc(var(--u) * 1.5);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mm-pan-chip.is-off-center {
+  color: var(--mm-accent, var(--ms-chord-color));
+  border-color: var(--mm-accent, var(--ms-chord-color));
 }
 
 .mm-row-ctl {
@@ -167,11 +256,6 @@
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
 }
 
-/* Faders de la sección Click: otro color para distinguirlos de un vistazo. */
-.mm-section-click {
-  --mm-accent: #3fb37f;
-}
-
 .mm-row.is-muted .mm-slider {
   opacity: 0.5;
 }
@@ -187,4 +271,67 @@
 
 .mm-row.is-muted .mm-row-name {
   opacity: 0.5;
+}
+
+/* --- marca fija del origen en sliders bipolares --- */
+
+.mm-sl-mark {
+  position: absolute;
+  pointer-events: none;
+  top: 50%;
+  width: 2px;
+  height: calc(var(--u) * 3);
+  margin-top: calc(var(--u) * -1.5);
+  background: var(--ms-fg-dim);
+  transform: translateX(-50%);
+}
+
+/* --- popup de paneo: un solo panel centrado --- */
+
+.mm-pan-backdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.mm-pan-backdrop.is-open {
+  display: flex;
+}
+
+.mm-pan-panel {
+  box-sizing: border-box;
+  width: min(88%, calc(var(--u) * 90));
+  padding: calc(var(--u) * 4);
+  text-align: left;
+  background: var(--ms-bg);
+  border: 1px solid var(--ms-divider-color);
+  border-radius: calc(var(--u) * 3);
+}
+
+.mm-pan-name {
+  font-size: calc(var(--u) * 4.2);
+  font-weight: 500;
+  color: var(--ms-song-name-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mm-pan-value {
+  margin-top: calc(var(--u) * 1.5);
+  font-size: calc(var(--u) * 5);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--mm-accent, var(--ms-chord-color));
+}
+
+.mm-pan-panel .mm-slider {
+  margin-top: calc(var(--u) * 3);
 }

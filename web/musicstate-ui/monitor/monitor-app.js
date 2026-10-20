@@ -21,6 +21,12 @@ function nikMonitorBuildSlowPoll() {
 function nikMonitorInit() {
     nikMonitorApplyTopOffset();
     nikMonitorBindRefresh();
+    nikMonitorBindFade();
+    nikMonitorPanBind();
+    window.addEventListener("resize", function () {
+        nikMonitorDockFit();
+        nikMonitorFadeAll();
+    });
 
     g_wwr_timer_freq = 20;
     wwr_req_recur("TRANSPORT", 100);
@@ -51,13 +57,8 @@ function nikMonitorPairLabel(pair) {
     return (pair + 1) + "/" + (pair + 2);
 }
 
-function nikMonitorSectionBuild(title, tracks, role) {
-    var sec = document.createElement("div");
-    sec.className = "mm-section" + (role === "click" ? " mm-section-click" : "");
-    var h = document.createElement("div");
-    h.className = "mm-section-title";
-    h.textContent = title;
-    sec.appendChild(h);
+function nikMonitorRowsBuild(tracks) {
+    var sec = document.createDocumentFragment();
     for (var i = 0; i < tracks.length; i++) {
         var t = tracks[i];
         var row = document.createElement("div");
@@ -82,7 +83,11 @@ function nikMonitorSectionBuild(title, tracks, role) {
         ctl.appendChild(mute);
         ctl.appendChild(slider);
         ctl.appendChild(db);
-        row.appendChild(name);
+        var head = document.createElement("div");
+        head.className = "mm-row-head";
+        head.appendChild(name);
+        if (nikMonitorPanVisible()) head.appendChild(nikMonitorPanChipBuild());
+        row.appendChild(head);
         row.appendChild(ctl);
         sec.appendChild(row);
     }
@@ -96,8 +101,16 @@ function nikMonitorListRender() {
     var listEl = document.getElementById("mmList");
     var noticeEl = document.getElementById("mmNotice");
     var pairEl = document.getElementById("mmPair");
-    if (!listEl || !noticeEl || !pairEl) return;
+    var dockEl = document.getElementById("mmClickDock");
+    var dockBody = document.getElementById("mmClickBody");
+    var musicTitle = document.getElementById("mmMusicTitle");
+    if (!listEl || !noticeEl || !pairEl || !dockEl || !dockBody || !musicTitle) return;
     listEl.textContent = "";
+    dockBody.textContent = "";
+    dockBody.style.maxHeight = "";
+    dockEl.style.display = "none";
+    musicTitle.style.display = "none";
+    nikMonitorPanClose();
     nikMonitorFaders = {};
 
     var L = nikMmList;
@@ -112,16 +125,27 @@ function nikMonitorListRender() {
     else if (!L.tracks.length) notice = "El filtro no admite ningún track en este proyecto.";
     noticeEl.textContent = notice;
     noticeEl.style.display = notice ? "" : "none";
-    if (notice) return;
+    if (notice) {
+        nikMonitorFadeAll();
+        return;
+    }
 
     var music = [];
     var click = [];
     for (var i = 0; i < L.tracks.length; i++) {
         (L.tracks[i].role === "click" ? click : music).push(L.tracks[i]);
     }
-    if (music.length) listEl.appendChild(nikMonitorSectionBuild("Música", music));
-    if (click.length) listEl.appendChild(nikMonitorSectionBuild("Click", click, "click"));
+    if (music.length) {
+        listEl.appendChild(nikMonitorRowsBuild(music));
+        musicTitle.style.display = "";
+    }
+    if (click.length) {
+        dockBody.appendChild(nikMonitorRowsBuild(click));
+        dockEl.style.display = "";
+    }
     nikMonitorFadersBuild(L.tracks);
+    nikMonitorDockFit();
+    nikMonitorFadeAll();
 }
 
 // --- Faders y valores en vivo (2c-1: solo lectura) ---
@@ -176,7 +200,12 @@ function nikMonitorFaderCreate(t, defDb) {
         sig: null,
         pendingDb: null,
         timer: null,
-        lockUntil: 0
+        lockUntil: 0,
+        chipEl: rowEl.querySelector(".mm-pan-chip"),
+        panSig: null,
+        panPending: null,
+        panTimer: null,
+        panLockUntil: 0
     };
     F.handle = nikMmCreateSlider({
         key: "mm:" + id,
@@ -196,6 +225,11 @@ function nikMonitorFaderCreate(t, defDb) {
             nikMonitorCommitWrite(F, nikMmFader.snapDb(nikMmFader.sliderToDb(v)));
         }
     });
+    if (F.chipEl) {
+        F.chipEl.addEventListener("click", function () {
+            nikMonitorPanOpen(F);
+        }, false);
+    }
     if (F.muteEl) {
         F.muteEl.addEventListener("click", function () {
             var muted = !F.rowEl.classList.contains("is-muted");
@@ -228,6 +262,14 @@ function nikMonitorLiveRender() {
         var F = nikMonitorFaders[k];
         var s = nikMmSendState[k];
         if (!s) continue;
+        if ((nikMonitorPanF !== F || !nikMonitorPanHandle.isActive()) &&
+            performance.now() >= F.panLockUntil) {
+            var panSig = String(s.pan);
+            if (F.panSig !== panSig) {
+                F.panSig = panSig;
+                nikMonitorPanShow(F, s.pan);
+            }
+        }
         if (F.handle.isActive()) continue;
         if (performance.now() < F.lockUntil) continue;
         var sig = s.vol + ":" + s.muted;
@@ -237,6 +279,180 @@ function nikMonitorLiveRender() {
         F.muteEl.classList.toggle("is-muted", s.muted);
         F.rowEl.classList.toggle("is-muted", s.muted);
     }
+}
+
+var NIK_MM_CLICK_VISIBLE_ROWS = 2;   // filas de Click visibles sin scrollear
+
+// Alto del cuerpo del dock = alto real de las primeras N filas. Con N o
+// menos filas no hay tope. No se resetea el max-height antes de medir: el
+// rect de las filas no depende del contenedor y así el scroll no se pierde.
+function nikMonitorDockFit() {
+    var body = document.getElementById("mmClickBody");
+    if (!body) return;
+    var rows = body.querySelectorAll(".mm-row");
+    var n = NIK_MM_CLICK_VISIBLE_ROWS;
+    if (rows.length <= n) {
+        body.style.maxHeight = "";
+        return;
+    }
+    var top = rows[0].getBoundingClientRect().top;
+    var bottom = rows[n - 1].getBoundingClientRect().bottom;
+    body.style.maxHeight = (bottom - top) + "px";
+}
+
+// Fade de borde: marca cada scroller según haya más contenido arriba o abajo.
+function nikMonitorFadeUpdate(el) {
+    if (!el) return;
+    var up = el.scrollTop > 1;
+    var down = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+    el.classList.toggle("has-more-up", up);
+    el.classList.toggle("has-more-down", down);
+}
+
+function nikMonitorFadeAll() {
+    nikMonitorFadeUpdate(document.getElementById("mmStage"));
+    nikMonitorFadeUpdate(document.getElementById("mmClickBody"));
+}
+
+function nikMonitorBindFade() {
+    var ids = ["mmStage", "mmClickBody"];
+    for (var i = 0; i < ids.length; i++) {
+        var el = document.getElementById(ids[i]);
+        if (el) {
+            el.addEventListener("scroll", function (e) {
+                nikMonitorFadeUpdate(e.currentTarget);
+            }, { passive: true });
+        }
+    }
+}
+
+// --- Paneo por track: chip en la fila y un único popup reutilizado ---
+
+var NIK_MM_PAN_ENABLED = true;
+
+var nikMonitorPanF = null;        // fila (F) con el popup abierto
+var nikMonitorPanHandle = null;   // slider del popup
+var nikMonitorPanCfg = null;
+
+// Con salida a una sola salida física (pair >= 1024) el paneo no se oye.
+function nikMonitorPanVisible() {
+    return NIK_MM_PAN_ENABLED && nikMmList && !(nikMmList.pair >= 1024);
+}
+
+function nikMonitorPanChipBuild() {
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "mm-pan-chip";
+    chip.textContent = "—";
+    return chip;
+}
+
+// Paneo del feed (-1..1, REAPER no lo acota) -> porcentaje entero con signo.
+function nikMonitorPanPct(pan) {
+    return Math.round(Math.max(-1, Math.min(1, pan)) * 100);
+}
+
+function nikMonitorPanChipText(pct) {
+    if (pct === 0) return "C";
+    return (pct < 0 ? "L " : "R ") + Math.abs(pct);
+}
+
+// Refleja un paneo en el chip y, si el popup está abierto en esa fila, en el slider.
+function nikMonitorPanShow(F, pan) {
+    if (!isFinite(pan)) return;
+    var pct = nikMonitorPanPct(pan);
+    if (F.chipEl) {
+        F.chipEl.textContent = nikMonitorPanChipText(pct);
+        F.chipEl.classList.toggle("is-off-center", pct !== 0);
+    }
+    if (nikMonitorPanF === F && nikMonitorPanHandle) {
+        nikMonitorPanHandle.setValue(pct, { silent: true });
+    }
+}
+
+function nikMonitorPanWriteTick(F) {
+    if (F.panPending === null) {
+        F.panTimer = null;
+        return;
+    }
+    var p = F.panPending;
+    F.panPending = null;
+    nikMmSetSendPan(F.t.track, F.t.send, p);
+    F.panTimer = window.setTimeout(function () { nikMonitorPanWriteTick(F); }, NIK_MM_WRITE_MS);
+}
+
+function nikMonitorPanQueue(F, p) {
+    F.panLockUntil = performance.now() + NIK_MM_LOCK_MS;
+    F.panPending = p;
+    if (F.panTimer === null) nikMonitorPanWriteTick(F);
+}
+
+// Valor final: cancela lo pendiente y manda el último.
+function nikMonitorPanCommit(F, p) {
+    if (F.panTimer !== null) {
+        window.clearTimeout(F.panTimer);
+        F.panTimer = null;
+    }
+    F.panPending = null;
+    F.panLockUntil = performance.now() + NIK_MM_LOCK_MS;
+    F.panSig = null; // al vencer la guarda, la fila se resincroniza con el feed
+    nikMmSetSendPan(F.t.track, F.t.send, p);
+}
+
+function nikMonitorPanOpen(F) {
+    var popup = document.getElementById("mmPanPopup");
+    var nameEl = document.getElementById("mmPanName");
+    if (!popup || !nameEl || !nikMonitorPanHandle) return;
+    var s = nikMmSendState[F.t.track + ":" + F.t.send];
+    nikMonitorPanF = F;
+    nikMonitorPanCfg.key = "mm:pan:" + F.t.track + "_" + F.t.send;
+    nameEl.textContent = F.t.name;
+    var accent = window.getComputedStyle(F.rowEl).getPropertyValue("--mm-accent");
+    if (accent && accent.trim()) popup.style.setProperty("--mm-accent", accent.trim());
+    else popup.style.removeProperty("--mm-accent");
+    nikMonitorPanHandle.setValue((s && isFinite(s.pan)) ? nikMonitorPanPct(s.pan) : 0, { silent: true });
+    popup.classList.add("is-open");
+}
+
+// Cierra el popup y envía lo que haya quedado pendiente del coalescing.
+function nikMonitorPanClose() {
+    var F = nikMonitorPanF;
+    if (F && F.panPending !== null) {
+        nikMmSetSendPan(F.t.track, F.t.send, F.panPending);
+        F.panPending = null;
+    }
+    nikMonitorPanF = null;
+    var popup = document.getElementById("mmPanPopup");
+    if (popup) popup.classList.remove("is-open");
+}
+
+function nikMonitorPanBind() {
+    var popup = document.getElementById("mmPanPopup");
+    if (!NIK_MM_PAN_ENABLED || !popup) return;
+    nikMonitorPanCfg = {
+        key: "mm:pan",
+        sliderId: "mmPanSlider",
+        displayId: "mmPanValue",
+        min: -100,
+        max: 100,
+        step: 5,
+        defaultValue: 0,
+        initialValue: 0,
+        fillFrom: 0,
+        formatDisplay: function (v) {
+            return v === 0 ? "Centro" : Math.abs(v) + "% " + (v < 0 ? "L" : "R");
+        },
+        onDragChange: function (v) {
+            if (nikMonitorPanF) nikMonitorPanQueue(nikMonitorPanF, v / 100);
+        },
+        onCommit: function (v) {
+            if (nikMonitorPanF) nikMonitorPanCommit(nikMonitorPanF, v / 100);
+        }
+    };
+    nikMonitorPanHandle = nikMmCreateSlider(nikMonitorPanCfg);
+    popup.addEventListener("click", function (e) {
+        if (e.target === popup) nikMonitorPanClose();
+    }, false);
 }
 
 function nikMonitorBindRefresh() {

@@ -40,6 +40,14 @@
     <button type="button" class="mm-refresh" id="mmRefresh">Actualizar</button>
   </div>
 
+  <!-- Dock de Click: fijo, alto propio con tope, scroll propio. -->
+  <div class="mm-click-dock" id="mmClickDock" style="display:none">
+    <div class="mm-section-title">Click</div>
+    <div class="mm-area-body" id="mmClickBody"></div>
+  </div>
+
+  <div class="mm-section-title mm-music-title" id="mmMusicTitle" style="display:none">Música</div>
+
   <!-- Stage del mixer: ocupa todo lo que sobra y scrollea solo él. -->
   <div class="cn-stage mm-stage" id="mmStage">
     <div class="mm-notice" id="mmNotice"></div>
@@ -50,6 +58,15 @@
 
   <!-- Banda de cues: altura reservada, sin cablear todavía. -->
   <div class="cn-cue-band" id="msCueBand"></div>
+</div>
+
+<!-- Popup de paneo: un solo panel reutilizado por todas las filas. -->
+<div class="mm-pan-backdrop" id="mmPanPopup">
+  <div class="mm-pan-panel">
+    <div class="mm-pan-name" id="mmPanName"></div>
+    <div class="mm-pan-value" id="mmPanValue">Centro</div>
+    <div class="mm-slider" id="mmPanSlider"></div>
+  </div>
 </div>
 
 <script src="main.js"></script>

@@ -23,6 +23,8 @@ function nikMmCreateSlider(config) {
 
     var K = NIK_MM_SLIDER;
     var min = config.min, max = config.max, step = config.step;
+    // Valor desde el que parte el relleno (slider bipolar). Sin él, parte del extremo izquierdo.
+    var origin = (config.fillFrom != null) ? Number(config.fillFrom) : null;
 
     var line = document.createElement("div");
     line.className = "mm-sl-line";
@@ -33,6 +35,12 @@ function nikMmCreateSlider(config) {
     thumb.style.width = K.THUMB_PX + "px";
     thumb.style.height = K.THUMB_PX + "px";
     el.appendChild(line);
+    if (origin !== null) {
+        var mark = document.createElement("div");
+        mark.className = "mm-sl-mark";
+        mark.style.left = "calc(" + (K.THUMB_PX / 2) + "px + (100% - " + K.THUMB_PX + "px) * " + fracOf(origin) + ")";
+        el.appendChild(mark);
+    }
     el.appendChild(fill);
     el.appendChild(thumb);
 
@@ -52,7 +60,14 @@ function nikMmCreateSlider(config) {
         var f = fracOf(value);
         var usable = "(100% - " + K.THUMB_PX + "px) * " + f;
         thumb.style.left = "calc(" + usable + ")";
-        fill.style.width = "calc(" + (K.THUMB_PX / 2) + "px + " + usable + ")";
+        if (origin === null) {
+            fill.style.width = "calc(" + (K.THUMB_PX / 2) + "px + " + usable + ")";
+        } else {
+            var f0 = fracOf(origin);
+            var span = "(100% - " + K.THUMB_PX + "px) * ";
+            fill.style.left = "calc(" + (K.THUMB_PX / 2) + "px + " + span + Math.min(f, f0) + ")";
+            fill.style.width = "calc(" + span + Math.abs(f - f0) + ")";
+        }
         if (display) display.textContent = config.formatDisplay(value);
     }
 

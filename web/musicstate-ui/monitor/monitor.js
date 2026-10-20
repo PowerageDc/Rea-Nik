@@ -113,6 +113,15 @@ function nikMmSetSendVol(track, send, db, final) {
     wwr_req("SET/TRACK/" + track + "/SEND/" + send + "/VOL/" + lin + (final ? "e" : ""));
 }
 
+// Escritura de paneo de send: -1 (izquierda) a 1 (derecha). Sin sufijo "e":
+// REAPER lo ignora en el paneo. REAPER tampoco acota por su cuenta (acepta
+// 2 = 200 %R), así que el tope se aplica acá.
+function nikMmSetSendPan(track, send, pan) {
+    if (!isFinite(pan)) return;
+    var p = Math.round(Math.max(-1, Math.min(1, pan)) * 100) / 100;
+    wwr_req("SET/TRACK/" + track + "/SEND/" + send + "/PAN/" + p);
+}
+
 // Alterna el mute del send (el feed informa el estado resultante).
 function nikMmToggleSendMute(track, send) {
     wwr_req("SET/TRACK/" + track + "/SEND/" + send + "/MUTE/-1");
