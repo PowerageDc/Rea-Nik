@@ -226,6 +226,8 @@ function M.ensure_sends(cfg)
   local send_db = d.send_db or -12
   local send_mode = d.send_mode or 3
   local gain = 10 ^ (send_db / 20)
+  local mute_click = d.mute_click_on_create == true
+  local mute_music = d.mute_music_on_create == true
 
   local bus = M.find_track_by_name(bus_cfg.name)
   local need_hw = (not bus) or reaper.GetTrackNumSends(bus, 1) == 0
@@ -305,8 +307,11 @@ function M.ensure_sends(cfg)
     local s = reaper.CreateTrackSend(tr, bus)
     reaper.SetTrackSendInfo_Value(tr, 0, s, "D_VOL", gain)
     reaper.SetTrackSendInfo_Value(tr, 0, s, "I_SENDMODE", send_mode)
-    reaper.SetTrackSendInfo_Value(tr, 0, s, "B_MUTE", 0)
-    log(string.format("  send creado: [%d] %s (%s, %g dB)", r.idx + 1, r.name, r.role or "-", send_db))
+    local muted = res.created_bus
+      and ((r.role == "click" and mute_click) or (r.role ~= "click" and mute_music))
+    reaper.SetTrackSendInfo_Value(tr, 0, s, "B_MUTE", muted and 1 or 0)
+    log(string.format("  send creado: [%d] %s (%s, %g dB%s)", r.idx + 1, r.name, r.role or "-", send_db,
+      muted and ", muteado" or ""))
   end
 
   reaper.PreventUIRefresh(-1)
