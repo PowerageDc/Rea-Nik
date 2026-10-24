@@ -64,6 +64,7 @@ listando **todos** los archivos del grupo:
 -- @author Nik
 -- @metapackage
 -- @provides
+--   [main] .
 --   [main] OtroScript_1.lua
 --   [main] OtroScript_2.lua
 --   Modulo_common_logic.lua
@@ -72,6 +73,10 @@ listando **todos** los archivos del grupo:
 
 - `[main]` en los ejecutables (se registran en Action List); sin tag en
   los módulos (solo se instalan como archivo, no como acción).
+- **El ancla se lista a sí misma con `[main] .`** (primera línea del
+  `@provides`). Con `@provides` explícito, sin esa línea ReaPack instala los
+  demás archivos pero no el ancla, y no aparece en el Action List. Caso real:
+  el Helper de MusicState.
 - **Ningún otro script del grupo lleva header propio** — un archivo target
   solo puede pertenecer a un paquete. Vale también para un script nuevo
   creado dentro del dominio (un one-shot): alcanza con su línea `[main]` en
@@ -360,7 +365,7 @@ Versiones en `main`:
 | Paquete | Versión | Ancla |
 |---------|---------|-------|
 | RemoteControl (scripts) | 1.10 | `Nik_RemoteState_Poll.lua` |
-| MusicState (scripts) | 1.5 | `Nik_MusicState_Helper.lua` |
+| MusicState (scripts) | 1.6 | `Nik_MusicState_Helper.lua` |
 | MonitorMix (scripts) | 1.1 | `Nik_MonitorMix_Publish.lua` |
 | Interfaz web (`.www`) | 1.9 | `web/Nik_RemoteControl_WebUI.www` |
 
@@ -385,10 +390,6 @@ En destino se instalan los cuatro juntos y después se corre
   teclado entre el Helper y REAPER necesita SWS o `js_ReaScriptAPI` en la PC
   de destino; sin ninguna de las dos, F4 avisa una vez por consola y el
   resto de los atajos funciona igual.
-- `Nik_MusicState_Helper.lua` no tiene `[main] .` en su propio
-  `@provides` (RemoteControl sí): hoy funciona en destino, pero si el
-  Helper no aparece en el Action List tras una instalación limpia,
-  agregar esa línea.
 - Alternativa a correr el generador de `config.local.js` a mano por PC
   (ver sección de mecanismo arriba).
 - Decidir si los `commandId` hardcodeados como fallback en `config.js`
