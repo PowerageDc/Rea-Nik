@@ -1,5 +1,5 @@
 -- @description Nik MonitorMix - Suite completa (monitoreo por musico)
--- @version 1.0
+-- @version 1.1
 -- @author Nik
 -- @metapackage
 -- @provides

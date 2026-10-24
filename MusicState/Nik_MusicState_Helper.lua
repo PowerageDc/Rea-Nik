@@ -1,5 +1,5 @@
 -- @description Nik MusicState — Suite completa (metadata musical + publish)
--- @version 1.4
+-- @version 1.5
 -- @author Nik
 -- @metapackage
 -- @provides
