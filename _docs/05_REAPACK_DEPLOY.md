@@ -75,9 +75,10 @@ listando **todos** los archivos del grupo:
 - **Ningún otro script del grupo lleva header propio** — un archivo target
   solo puede pertenecer a un paquete. Vale también para un script nuevo
   creado dentro del dominio (un one-shot): alcanza con su línea `[main]` en
-  el `@provides` del ancla. Caso real: `Nik_MusicState_FocusHelper.lua` nació
-  con header propio y, listado a la vez en el `@provides` del Helper, habría
-  dado ese mismo conflicto.
+  el `@provides` del ancla. Nunca se comitea con header propio: con un solo
+  commit que lo tenga, `reapack-index` lo registra como paquete suelto, y
+  ese paquete sigue en el índice aunque el header se saque después (ver
+  "scripts legacy", abajo). Caso real: `Nik_MusicState_FocusHelper.lua`.
 - **Dependencia de un módulo que ya es de otro paquete:** no se lista en
   el `@provides` (conflicto de target) y ReaPack no tiene declaración de
   dependencias entre paquetes. Se documenta en el `@about` y hay que
@@ -98,7 +99,10 @@ aborta el rebuild completo, solo esa entrada).
 historial de git:** si un path viejo (pre-metapaquete) sigue apareciendo
 como paquete suelto en el rebuild, agregarlo a `.reapack-index.conf`
 (`--ignore <path>`, uno por línea) — se comitea, es config del proceso de
-indexado. No confundir con archivos de config local de cada PC
+indexado. Si ese path además está en el `@provides` de un metapaquete, el
+síntoma es `'X' conflicts with 'X'` y el metapaquete pierde las versiones
+afectadas del índice; `--rebuild` no lo resuelve (relee todo el historial),
+solo el `--ignore`. No confundir con archivos de config local de cada PC
 (`config.local.js`), que sí son gitignoreados.
 
 ## Paquete `.www` — interfaces web (`web/`)
@@ -355,10 +359,10 @@ Versiones en `main`:
 
 | Paquete | Versión | Ancla |
 |---------|---------|-------|
-| RemoteControl (scripts) | 1.9 | `Nik_RemoteState_Poll.lua` |
-| MusicState (scripts) | 1.4 | `Nik_MusicState_Helper.lua` |
-| MonitorMix (scripts) | 1.0 | `Nik_MonitorMix_Publish.lua` |
-| Interfaz web (`.www`) | 1.8 | `web/Nik_RemoteControl_WebUI.www` |
+| RemoteControl (scripts) | 1.10 | `Nik_RemoteState_Poll.lua` |
+| MusicState (scripts) | 1.5 | `Nik_MusicState_Helper.lua` |
+| MonitorMix (scripts) | 1.1 | `Nik_MonitorMix_Publish.lua` |
+| Interfaz web (`.www`) | 1.9 | `web/Nik_RemoteControl_WebUI.www` |
 
 En destino se instalan los cuatro juntos y después se corre
 `Nik_RemoteControl_GenerateConfig.lua` una vez.
@@ -381,14 +385,6 @@ En destino se instalan los cuatro juntos y después se corre
   teclado entre el Helper y REAPER necesita SWS o `js_ReaScriptAPI` en la PC
   de destino; sin ninguna de las dos, F4 avisa una vez por consola y el
   resto de los atajos funciona igual.
-- Deploy de los atajos de teclado del Helper: bump de `@version` del Helper
-  (publicado: 1.4) y `@provides` con `../_Shared/ImGuiHostFocus_common_logic.lua`,
-  `../_Shared/ImGuiConfirmModal_common_logic.lua`,
-  `MusicStateKeys_common_logic.lua`, `MusicStateKeys_config.lua` y
-  `[main] Nik_MusicState_FocusHelper.lua`. Los dos módulos de `_Shared/` solo
-  los consume MusicState (comprobar con `git grep` antes de deployar, ver
-  "Auditar alcance"). Sin cambios en el `.www` ni en
-  `Nik_RemoteControl_GenerateConfig.lua`.
 - `Nik_MusicState_Helper.lua` no tiene `[main] .` en su propio
   `@provides` (RemoteControl sí): hoy funciona en destino, pero si el
   Helper no aparece en el Action List tras una instalación limpia,
