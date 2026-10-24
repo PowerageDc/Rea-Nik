@@ -16,12 +16,14 @@ proyecto: `musicstate_sync.md`.
   render; el flag de salto es `false` porque no hay contenido principal
   que renderizar antes.
 - Toolbar fija: par de salida resuelto, bus y botón Actualizar.
-- Stage con la lista: sliders horizontales (sin conflicto scroll/arrastre
-  y con blancos táctiles grandes), mute por track. Se separa en dos
-  secciones según `role`: Música (todo lo que no es `click`) y Click. Más
-  avisos según el `status` de la lista (`monitor_mix.md` §5).
-- El stage se dimensiona según el viewport y **scrollea solo él**; header
-  y footer quedan fijos.
+- Dos áreas según `role`: Click (todo lo que tiene `role` `click`), en un
+  **dock fijo** bajo la toolbar, y Música (el resto), en el stage. Filas
+  con sliders horizontales (sin conflicto scroll/arrastre y con blancos
+  táctiles grandes), mute y chip de paneo por track. Cada área tiene
+  título y divider fijos y scrollea solo su lista (§11, §12). Los avisos
+  según el `status` de la lista (`monitor_mix.md` §5) van en el stage.
+- El stage se dimensiona según el viewport y **scrollea solo él**; header,
+  toolbar, dock de Click y footer quedan fijos.
 - Footer: reserva su altura (`msCueBand`) para las cues, pero no está
   cableado (§9).
 - Solo se ve la lista filtrada; ningún control de playback.
@@ -42,12 +44,16 @@ Shell: `web/nsaudio_monitor.html`. En `web/musicstate-ui/monitor/`:
 | `monitor.css` | estilos propios |
 
 Carga `ms-base.css` y `cantante.css` (clases `cn-*`); `monitor.css` solo
-pisa lo que difiere (stage scrolleable, toolbar, filas). Orden de scripts:
-el de `musicstate_sync.md` §3, y después `monitor.js`, `mm-fader.js`,
-`core/vertical-fader.js`, `mm-slider.js` y `monitor-app.js`. De
-`vertical-fader.js` solo se usa `nikVFaderCheckDoubleTap`; el slider no es
-el de `nikCreateVerticalFader` (el nombre "vertical" es histórico: el de
-Monitor Mix es horizontal).
+pisa lo que difiere (dock, stage scrolleable, toolbar, filas, fade, popup
+de paneo). El layout vertical depende de `cantante.css`: `.cn-screen` es
+una columna flex de `100dvh` y `.cn-stage` ocupa lo que sobra
+(`flex: 1 1 0; min-height: 0`). El shell suma `#mmClickDock`,
+`#mmMusicTitle` y `#mmPanPopup` (este último fuera de `.ms-screen`).
+Orden de scripts: el de `musicstate_sync.md` §3, y después `monitor.js`, 
+`mm-fader.js`, `core/vertical-fader.js`, `mm-slider.js` y `monitor-app.js`. 
+De `vertical-fader.js` solo se usa `nikVFaderCheckDoubleTap`; el slider 
+no es el de `nikCreateVerticalFader` (el nombre "vertical" es histórico: el 
+de Monitor Mix es horizontal).
 
 ## 3. Bootstrap
 
@@ -58,7 +64,9 @@ Monitor Mix es horizontal).
   lo pide.
 - **Dedupe:** `nikMmSetList` ignora un texto crudo idéntico al anterior;
   `nikMmListRevision` solo sube con contenido nuevo.
-- **Render:** solo si cambió `nikMmListRevision`.
+- **Render:** solo si cambió `nikMmListRevision`. Cada render cierra el
+  popup de paneo, vacía el dock y la lista, los reconstruye y recalcula
+  el alto del dock y los fades (§11).
 
 ## 4. Lectura en vivo
 
@@ -123,6 +131,10 @@ down: solo al soltar un tap o al confirmarse el eje horizontal.
   actual.
 - Las constantes están arriba del archivo (`NIK_MM_SLIDER`): umbrales de
   eje, tiempo de tap, zona del thumb.
+- **`fillFrom`** (opcional): valor desde el que parte el relleno, para
+  sliders bipolares. Con él el relleno va del origen al thumb y se dibuja
+  una marca fija en el origen (`.mm-sl-mark`). Sin él, el relleno parte
+  del extremo izquierdo: los sliders de volumen no cambian.
 
 **Guarda de arrastre:** tras cada escritura la fila ignora el feed durante
 400 ms, y mientras haya arrastre horizontal confirmado (`isActive()`) no
@@ -130,11 +142,11 @@ lo sigue, para que no pise el valor mientras se toca.
 
 ## 8. Aspecto
 
-Línea, relleno y thumb propios con las variables de `monitor.css`. La
-sección Click usa otro color de acento (`--mm-accent`, `#3fb37f`) para
-distinguirla de un vistazo. La fila muteada se atenúa aplicando `opacity`
-al slider completo: aplicarla a cada pieza dejaba ver el relleno a través
-del thumb.
+Línea, relleno y thumb propios con las variables de `monitor.css`. El dock
+de Click define su propio acento (`--mm-accent`, `#3fb37f`): título, borde
+inferior de 2 px, relleno y thumb, para distinguirlo de un vistazo de la
+música. La fila muteada se atenúa aplicando `opacity` al slider 
+completo: aplicarla a cada pieza dejaba ver el relleno a través del thumb.
 
 ## 9. Pendientes
 
@@ -161,13 +173,124 @@ del thumb.
   no lo toca (el fader debería seguirlo).
 - `monitor.css` depende de `cantante.css` (clases `cn-*`): evaluar
   extraer el layout común a un archivo compartido.
+- **Vista horizontal (celular apaisado):** queda poco alto; el título y
+  la primera fila del stage ocupan casi todo. Diseño acordado: tiras de
+  canal con fader vertical y scroll horizontal, y el Click en una columna
+  lateral con faders horizontales compactos. Requiere un eje configurable
+  en `mm-slider.js` (pintado, cálculo de fracción, umbrales y
+  `touch-action`), resuelto al empezar cada gesto leyendo la media query
+  `min-aspect-ratio: 1/1` de `cantante.css`, sin reconstruir al rotar.
+- **Fade en iOS Safari:** verificar que la máscara (§11) no parpadee con
+  el scroll por inercia.
+- **Indicador de "hay más" (pill con contador):** no implementado; evaluar
+  solo si fade y snap no alcanzan.
+- **Paneo con salida mono:** el chip se oculta si `pair >= 1024` (§12).
+  Probar con un par mono real y decidir si la regla se queda.
 
 ## 10. Para retomar en otra sesión
 
 Adjuntar: este doc, `monitor_mix.md`, `musicstate_shared_ui.md`,
 `musicstate_sync.md`, `nsaudio_monitor.html` y los de `monitor/`
 (`monitor.js`, `mm-fader.js`, `mm-slider.js`, `monitor-app.js`,
-`monitor.css`). Para tocar la lógica de datos, además `ms-dispatch.js` y
+`monitor.css`), más `cantante.css` y `ms-base.css` (layout y variables de
+las que depende). Para tocar la lógica de datos, además `ms-dispatch.js` y
 `config.js`. Para las cues del footer, `musicstate_client.md` y
 `musicstate_instrumentista.md` o `musicstate_cantante.md`, según cuál se
 tome de modelo.
+
+## 11. Dock de Click y listas con scroll
+
+Click y Música son áreas separadas, cada una con título fijo y su propia
+lista con scroll: al bajar por la música el click no desaparece.
+
+```
+header (canción, tonalidad, tempo)
+fila de sección
+toolbar (salida · Actualizar)
+┌ CLICK ─────────────────────┐  dock: título fijo, cuerpo con scroll
+│ filas (se ven 2 completas) │
+└────────────────────────────┘  borde inferior de 2 px, acento
+MÚSICA                            título fijo, hermano del stage
+  stage: scrollea solo él
+footer (cues)
+```
+
+**Estructura.** `#mmClickDock` (título + `#mmClickBody`) y `#mmMusicTitle`
+son hermanos de `#mmStage` en el shell, no hijos de su scroll ni
+`position: sticky`. Toolbar y dock son `flex: none` y el stage sigue
+siendo `flex: 1 1 0`: se queda con lo que sobra, así que no hay cálculo
+manual de alturas. `nikMonitorRowsBuild(tracks)` arma solo filas (mismos
+ids `mmSl_*` / `mmDb_*` en ambas áreas). Sin tracks click el dock se oculta
+del todo; sin tracks de música, su título; con un aviso (`status` distinto
+de `ok`) quedan ocultos los dos títulos y el dock, y el aviso va en el
+stage.
+
+**Alto del dock.** `nikMonitorDockFit` mide el alto real de las primeras
+`NIK_MM_CLICK_VISIBLE_ROWS` filas (2) y lo fija como `max-height` del
+cuerpo, de modo que se ven exactamente esas filas completas. Con ese
+número de filas o menos no hay tope. Se recalcula al renderizar y en
+`resize` (cubre la rotación). No hay alturas estimadas: todas las filas
+miden igual porque la primera conserva su `border-top` transparente (el
+divider visible es el del título).
+
+**Títulos y gap.** `.mm-section-title` es `flex: none`, alineado a la
+izquierda, con su divider como `border-bottom`. El gap entre el dock y el
+título de Música es `--mm-area-gap` (= `--cn-gap`, escala con el viewport)
+como `margin-bottom` del dock: sin dock no queda gap huérfano.
+
+**Snap.** `scroll-snap-type: y mandatory` en el cuerpo del dock y en el
+stage; cada `.mm-row` es `scroll-snap-align: start`. En reposo siempre
+queda una fila completa bajo el título. Límite conocido, aceptado: al
+llegar al final de la lista de música, la primera fila visible puede
+quedar cerca del divider (no hay más recorrido para alinear; corregirlo
+exigiría espacio vacío al final o recortar el stage a filas enteras).
+
+**Fade de borde.** Indica que hay más contenido en esa dirección, ya que
+las scrollbars de móvil no se ven en reposo. Es una `mask-image` sobre el
+propio scroller (`.mm-stage`, `.mm-area-body`): el borde se funde con el
+fondo real y no intercepta toques. `nikMonitorFadeUpdate` pone
+`has-more-up` / `has-more-down` según `scrollTop` y `scrollHeight`, al
+scrollear (pasivo), al renderizar y en `resize`. Tamaño: `--mm-fade-size`.
+
+## 12. Paneo por track
+
+Escritura y lectura del paneo del send (escala, signo y sufijo
+verificados): `monitor_mix.md` §4.
+
+- **Flag:** `NIK_MM_PAN_ENABLED` (`monitor-app.js`, encendido). Apagado no
+  hay chips ni popup.
+- **Chip:** `.mm-pan-chip` en la cabecera de cada fila (`.mm-row-head`), a
+  la derecha del nombre, Click incluido. Muestra `C`, `L 30` o `R 30`
+  (porcentaje entero, acotado a ±100 aunque REAPER tenga más) y toma el
+  acento si no está centrado. Se oculta si el par de salida es una sola
+  salida física (`pair >= 1024`, `nikMonitorPanVisible`).
+- **Popup:** un único panel centrado (`#mmPanPopup`, fondo
+  `.mm-pan-backdrop`) reutilizado por todas las filas: nombre del track,
+  valor (`Centro` o `50% L`) y un `mm-slider` bipolar (-100 a 100, paso 5,
+  `fillFrom: 0`, marca fija en el centro). Toma el acento de la fila, así
+  que el de Click sale verde. Se cierra tocando afuera o al redibujar la
+  lista, y al cerrar envía lo que haya quedado pendiente.
+- **Doble toque:** sobre el thumb centra y escribe `PAN/0`
+  (`defaultValue: 0`). La `key` del doble tap incluye el track
+  (`mm:pan:<track>_<send>`) y se actualiza al abrir: un toque en un track y
+  otro en otro no cuentan como doble tap.
+- **Escritura:** `nikMmSetSendPan` (`monitor.js`): `valor / 100`, tope ±1,
+  sin sufijo `e` (REAPER lo ignora). Mismo coalescing que el volumen
+  (`NIK_MM_WRITE_MS`); el commit cancela lo pendiente y manda el último.
+- **Lectura:** en `nikMonitorLiveRender`, con firma propia por fila
+  (`panSig`) y guarda propia (`panLockUntil`, `NIK_MM_LOCK_MS`), que no
+  actúa mientras se arrastra el popup de esa fila. Corre antes de las
+  guardas del volumen: el chip sigue al feed aunque la fila esté muteada.
+  Si el popup está abierto en esa fila, mueve también el slider.
+
+## 13. Constantes ajustables
+
+| Constante | Dónde | Qué controla |
+|---|---|---|
+| `NIK_MM_CLICK_VISIBLE_ROWS` | `monitor-app.js` | Filas de Click visibles sin scrollear (§11) |
+| `--mm-fade-size` | `monitor.css` | Tamaño del fade de borde (§11) |
+| `--mm-area-gap` | `monitor.css` (`.mm-click-dock`) | Gap entre el dock y Música (§11) |
+| `NIK_MM_PAN_ENABLED` | `monitor-app.js` | Enciende o apaga el paneo (§12) |
+| `NIK_MM_WRITE_MS`, `NIK_MM_LOCK_MS`, `NIK_MM_MUTE_LOCK_MS` | `monitor-app.js` | Coalescing y guardas de volumen, paneo y mute (§5, §6, §12) |
+| `NIK_MM_SLIDER` | `mm-slider.js` | Umbrales de eje, tap y zona del thumb (§7) |
+| `--mm-accent` | `monitor.css` | Color de acento del dock y de los sliders (§8) |

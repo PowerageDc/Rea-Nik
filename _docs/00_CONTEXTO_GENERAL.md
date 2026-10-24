@@ -108,7 +108,7 @@ render, pero conviven en el mismo proyecto/entorno):
   "Qué adjuntar según la tarea (MusicState)", al final de este doc.
 - **Monitor Mix (monitoreo por músico)**: mezcla personal del baterista
   (a futuro, de otros músicos) por un bus con `B_MAINSEND=0` hacia el par
-  de salidas secundario de la placa, con volumen y mute a nivel de send.
+  de salidas secundario de la placa, con volumen, mute y paneo a nivel de send.
   Filtro de tracks configurable en código, publicado por ExtState con un
   script one-shot que dispara el cliente, y una interfaz web separada
   (segundo Web Control) sin controles de transporte, con el mismo header,
@@ -132,7 +132,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
 | MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra) implementados. Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante) y MonitorMix, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
-| Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo) y UI web del baterista implementados y deployados. Validación en sala a medias. Pendientes en sus docs. Ver `features/monitor_mix.md` y `features/monitor_mix_ui.md` |
+| Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo) y UI web del baterista implementados. Pendientes en sus docs. Ver `features/monitor_mix.md` y `features/monitor_mix_ui.md` |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma

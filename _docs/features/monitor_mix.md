@@ -44,6 +44,8 @@ Tracks filtrados ──send──▶ Monitor Bus - Batería ──hardware out�
   idempotente: solo crea los que faltan, con nivel inicial
   `defaults.send_db` (-12 dB) e `I_SENDMODE=3`, y nunca modifica un send
   existente. Seis stems más clicks a 0 dB suman fuerte en auriculares.
+  Opcionalmente los sends nacen muteados, por rol y solo al crear el bus
+  (`defaults.mute_*_on_create`, §6.5).
   `Nik_MonitorMix_Publish.lua` lo invoca; `Nik_MonitorMix_EnsureSends.lua`
   es una cáscara para correrlo a mano.
 - La mezcla del baterista vive en los sends del proyecto abierto, en
@@ -129,12 +131,15 @@ SEND  <track>  <idx>  <flags>  <vol lineal>  <pan>  <track destino>
 | Volumen, lectura | lineal |
 | Volumen, escritura | `SET/TRACK/x/SEND/y/VOL/<lineal>`; sin sufijo mientras se arrastra, con `e` al soltar |
 | Mute, escritura | `SET/TRACK/x/SEND/y/MUTE/-1` (alterna) |
+| Paneo, lectura | `<pan>` de la línea `SEND`: -1 izquierda, 0 centro, 1 derecha. REAPER no lo acota (un tercero puede dejarlo en 2) |
+| Paneo, escritura | `SET/TRACK/x/SEND/y/PAN/<-1..1>`. **Sin sufijo `e`**: REAPER lo ignora en el paneo. REAPER acepta valores fuera de rango (2 = 200 %R), así que el cliente acota a ±1 |
 
 - El índice de send es por origen: los receives no cuentan. El orden de
   índices cuando un mismo track tiene sends de track y de hardware no está
   verificado; no afecta al diseño (los hardware viven en el bus).
-- Volumen y mute van por comandos nativos, sin Lua, y el remoto principal
-  ya los usa (`trackSendSvg`).
+- Volumen, mute y paneo van por comandos nativos, sin Lua. El remoto
+  principal ya usa volumen y mute (`trackSendSvg`); el paneo lo escribe
+  solo esta UI (`nikMmSetSendPan`, `monitor.js`).
 - La escritura **no valida el GUID** del track: decisión asumida (el
   filtro es presentación, no seguridad; ver §6).
 
@@ -265,6 +270,9 @@ return {
   defaults = {
     send_db = -12,
     send_mode = 3,
+    -- true = los sends nacen muteados, solo al crear el bus.
+    mute_click_on_create = false,
+    mute_music_on_create = false,
   },
   folders = {
     { role = "stems", aliases = nil, recursive = true },  -- nil = BUS_ALIASES
@@ -279,6 +287,22 @@ return {
   },
 }
 ```
+
+**Mute al crear** (`mute_click_on_create`, `mute_music_on_create`, ambas
+`false` por defecto):
+
+- Los sends nacen con `B_MUTE=1` según su rol, solo en la corrida que
+  crea el bus (`res.created_bus` en `MM.ensure_sends`). Con el bus
+  existente no modifican ningún mute, ni de sends actuales ni de tracks
+  agregados después (nacen sin mutear).
+- Click es `role = "click"`; música es todo lo demás, incluido `role = nil`
+  (mismo criterio que usa la UI para armar sus dos áreas).
+- Es mute a nivel de send, el mismo que alterna la UI (§4); el feed lo
+  refleja y la M se pinta sola.
+- Viven en `defaults`, así que los `overrides` no las pisan: valen para
+  todos los proyectos.
+- Si se borra el bus a mano, la próxima corrida lo recrea y vuelve a
+  aplicarlas. Un config sin las claves se comporta como antes.
 
 Una edición local del config en una PC de destino se pierde en cada
 update de ReaPack: `05_REAPACK_DEPLOY.md`, Pendientes.
