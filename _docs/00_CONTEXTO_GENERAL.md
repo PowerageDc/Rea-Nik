@@ -116,7 +116,7 @@ render, pero conviven en el mismo proyecto/entorno):
   cableada). Ver `features/monitor_mix.md` (ruteo, filtro y datos) y
   `features/monitor_mix_ui.md` (interfaz).
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
-  scripts (hoy: Control remoto + Auto-color + MusicState + MonitorMix) a PCs de ensayo
+  scripts (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
   `05_REAPACK_DEPLOY.md`.
 
@@ -131,7 +131,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
 | MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra) implementados. Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
-| Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante) y MonitorMix, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
+| Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
 | Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo) y UI web del baterista implementados. Pendientes en sus docs. Ver `features/monitor_mix.md` y `features/monitor_mix_ui.md` |
 
 ## Pendientes generales (horizonte, no bloqueantes)

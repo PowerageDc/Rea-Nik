@@ -8,14 +8,14 @@ setup de git (`04_GIT_TOOLING.md`).
 ## Alcance: qué se deploya y qué no
 
 Solo un subconjunto del repo: hoy, `AutoColor/` (script suelto),
-`RemoteControl/` (metapaquete + `.www`, ver abajo), `MusicState/` y
-`MonitorMix/` (metapaquetes de scripts; el `.www` de MusicState/prompter
-y el de MonitorMix comparten manifiesto con el de RemoteControl, que
-también cubre la UI de cantante y la de monitor, ver abajo). El resto
-(`RenderWorkflow/`, `TempoTools/`, `MvsepImporter/`, `StemFragment/`,
-`Tests-Debug/`) es uso local: no necesita exclusión explícita, porque
-`reapack-index` solo indexa lo que tiene header de metadata — sin header,
-no hay paquete, sin tener que listarlo en ningún lado.
+`RemoteControl/` (metapaquete + `.www`, ver abajo), `MusicState/`,
+`MonitorMix/` y `ProjectFolder/` (metapaquetes de scripts; el `.www` de
+MusicState/prompter y el de MonitorMix comparten manifiesto con el de
+RemoteControl, que también cubre la UI de cantante y la de monitor, ver 
+abajo). El resto (`RenderWorkflow/`, `TempoTools/`, `MvsepImporter/`, 
+`StemFragment/`, `Tests-Debug/`) es uso local: no necesita exclusión 
+explícita, porque `reapack-index` solo indexa lo que tiene header de 
+metadata — sin header, no hay paquete, sin tener que listarlo en ningún lado.
 
 `_docs/` se excluye siempre del escaneo (ver `.reapack-index.conf` más
 abajo) — no tiene sentido como paquete.
@@ -368,9 +368,11 @@ Versiones en `main`:
 | MusicState (scripts) | 1.6 | `Nik_MusicState_Helper.lua` |
 | MonitorMix (scripts) | 1.1 | `Nik_MonitorMix_Publish.lua` |
 | Interfaz web (`.www`) | 1.9 | `web/Nik_RemoteControl_WebUI.www` |
+| ProjectFolder (scripts) | 1.0 | `Nik_ProjectFolder_OpenRoot.lua` |
 
-En destino se instalan los cuatro juntos y después se corre
-`Nik_RemoteControl_GenerateConfig.lua` una vez.
+En destino se instalan juntos los cuatro primeros y después se corre
+`Nik_RemoteControl_GenerateConfig.lua` una vez. ProjectFolder es
+independiente: no depende de otros paquetes ni usa el generador.
 
 ## Pendientes
 
@@ -383,7 +385,8 @@ En destino se instalan los cuatro juntos y después se corre
   `features/musicstate_keys.md`) va en el `@provides` de MusicState y tiene
   el mismo problema: ReaPack lo pisa en cada update. Si un atajo se ajusta a
   mano en una PC de destino (la repetición de ←/→, por ejemplo), se pierde;
-  la decisión de arriba aplica a los dos configs.
+  la decisión de arriba aplica a los tres configs (el tercero es
+  `ProjectFolder_config.lua`, con `render_default`).
 - Teclas de foco del Helper en destino: `Nik_MusicState_FocusHelper.lua` es
   `[main]` y queda en el Action List al instalar, pero **sin tecla**:
   asignarle F4 a mano en la sección Main (y F5 al propio Helper). El foco del
