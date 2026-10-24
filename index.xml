@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="Rea-Nik" commit="1536be4ce46f84f77a702a34062dbe32d8f4f63b">
+<index version="1" name="Rea-Nik" commit="23854b8049a13f17abf9ec9db144240d00f146f6">
   <category name="AutoColor">
     <reapack name="reaper_autocolor_live.lua" type="script" desc="REAPER Auto Color por instrumento — VERSIÓN LIVE (background)">
       <metadata>
@@ -128,6 +128,30 @@
         <source file="MusicStateLyricsEdit_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/1536be4ce46f84f77a702a34062dbe32d8f4f63b/MusicState/MusicStateLyricsEdit_common_logic.lua</source>
         <source file="MusicStateKeys_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/1536be4ce46f84f77a702a34062dbe32d8f4f63b/MusicState/MusicStateKeys_common_logic.lua</source>
         <source file="MusicStateKeys_config.lua">https://github.com/PowerageDc/Rea-Nik/raw/1536be4ce46f84f77a702a34062dbe32d8f4f63b/MusicState/MusicStateKeys_config.lua</source>
+      </version>
+      <version name="1.6" author="Nik" time="2026-10-24T04:21:52Z">
+        <source main="main">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/Nik_MusicState_Helper.lua</source>
+        <source main="main" file="Nik_MusicState_PublishAll.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/Nik_MusicState_PublishAll.lua</source>
+        <source main="main" file="Nik_MusicState_PublishLyrics.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/Nik_MusicState_PublishLyrics.lua</source>
+        <source main="main" file="Nik_MusicState_LyricsInput.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/Nik_MusicState_LyricsInput.lua</source>
+        <source main="main" file="Nik_MusicState_FocusHelper.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/Nik_MusicState_FocusHelper.lua</source>
+        <source file="../_Shared/ImGuiInputCommit_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/_Shared/ImGuiInputCommit_common_logic.lua</source>
+        <source file="../_Shared/ImGuiHostFocus_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/_Shared/ImGuiHostFocus_common_logic.lua</source>
+        <source file="../_Shared/ImGuiConfirmModal_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/_Shared/ImGuiConfirmModal_common_logic.lua</source>
+        <source file="../_Shared/ImGuiKeyCombo_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/_Shared/ImGuiKeyCombo_common_logic.lua</source>
+        <source file="../_Shared/ImGuiButtonStyle_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/_Shared/ImGuiButtonStyle_common_logic.lua</source>
+        <source file="MusicStateBridge_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateBridge_common_logic.lua</source>
+        <source file="MusicStateRowInputs_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateRowInputs_common_logic.lua</source>
+        <source file="MusicStateTonalidad_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateTonalidad_common_logic.lua</source>
+        <source file="MusicStateRoles_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateRoles_common_logic.lua</source>
+        <source file="MusicStateArmonia_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateArmonia_common_logic.lua</source>
+        <source file="MusicStateCues_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateCues_common_logic.lua</source>
+        <source file="MusicStateLyrics_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateLyrics_common_logic.lua</source>
+        <source file="MusicStateLyricsTab_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateLyricsTab_common_logic.lua</source>
+        <source file="MusicStateLyricsSync_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateLyricsSync_common_logic.lua</source>
+        <source file="MusicStateLyricsEdit_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateLyricsEdit_common_logic.lua</source>
+        <source file="MusicStateKeys_common_logic.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateKeys_common_logic.lua</source>
+        <source file="MusicStateKeys_config.lua">https://github.com/PowerageDc/Rea-Nik/raw/23854b8049a13f17abf9ec9db144240d00f146f6/MusicState/MusicStateKeys_config.lua</source>
       </version>
     </reapack>
   </category>
