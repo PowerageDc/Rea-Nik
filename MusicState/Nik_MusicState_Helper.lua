@@ -1,8 +1,9 @@
 -- @description Nik MusicState — Suite completa (metadata musical + publish)
--- @version 1.5
+-- @version 1.6
 -- @author Nik
 -- @metapackage
 -- @provides
+--   [main] .
 --   [main] Nik_MusicState_PublishAll.lua
 --   [main] Nik_MusicState_PublishLyrics.lua
 --   [main] Nik_MusicState_LyricsInput.lua
