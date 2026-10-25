@@ -1,11 +1,13 @@
 -- @description Nik MonitorMix - Suite completa (monitoreo por musico)
--- @version 1.1
+-- @version 1.2
 -- @author Nik
 -- @metapackage
 -- @provides
 --   [main] .
 --   [main] Nik_MonitorMix_EnsureSends.lua
+--   [main] Nik_MonitorMix_PaRoute.lua
 --   MonitorMix_common_logic.lua
+--   MonitorMixPa_common_logic.lua
 --   MonitorMix_config.lua
 -- @about
 --   Mezcla de monitoreo por musico: asegura el bus y los sends de
@@ -24,6 +26,7 @@ local DEBUG = true
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local MM = dofile(script_dir .. "MonitorMix_common_logic.lua")
+local PA = dofile(script_dir .. "MonitorMixPa_common_logic.lua")
 
 local NS = "NikMonitorMix"
 local KEY_DATA = "list"
@@ -98,6 +101,10 @@ local function main()
   -- nueva siempre encuentra los datos nuevos.
   reaper.SetExtState(NS, KEY_DATA, json, false)
   reaper.SetExtState(NS, KEY_VERSION, string.format("%d", version), false)
+
+  -- Un fallo del estado PA no debe tumbar la lista de Monitor Mix.
+  local ok, err = pcall(PA.publish_state, cfg)
+  if not ok then log("pa_state: " .. tostring(err)) end
 
   log(("status=%s, %d tracks (%d sin send, omitidos), %d bytes, versión %d."):format(
     res.status, #tracks, skipped, #json, version))

@@ -18,6 +18,7 @@ local SCRIPTS = {
   { key = "musicStatePublishAll",        file = "Nik_MusicState_PublishAll.lua", dir = "../MusicState/" },
   { key = "musicStatePublishLyrics",     file = "Nik_MusicState_PublishLyrics.lua", dir = "../MusicState/" },
   { key = "monitorMixPublish",           file = "Nik_MonitorMix_Publish.lua", dir = "../MonitorMix/" },
+  { key = "monitorMixPaRoute",           file = "Nik_MonitorMix_PaRoute.lua", dir = "../MonitorMix/" },
 }
 
 local lines = {

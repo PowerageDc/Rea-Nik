@@ -87,6 +87,14 @@ var NIK_LUA_COMMANDS = {
         luaFile: "Nik_MonitorMix_Publish.lua",
         commandId: "_RSd336b02e41c2c4a81dcf5117d2ea70bf823fe957"
     },
+    // Corta o activa el PA (send al master/padre) de las hojas del filtro de
+    // Monitor Mix, sin tocar los sends de monitoreo. La orden viaja en
+    // NikMonitorMix/pa_cmd ("toggle:3", "solo:3", "cut:3", "on:3", "clear");
+    // el estado vuelve en NikMonitorMix/pa_state.
+    monitorMixPaRoute: {
+        luaFile: "Nik_MonitorMix_PaRoute.lua",
+        commandId: "_RS6213b743ba88aa839bc7d1bdcb2ddcb02c879d2a"
+    },
     // Botones ⏮/⏭ del nikTabBar — van encadenados con la acción nativa 40667
     // (no forman parte del objeto, van hardcodeados junto a este Command ID
     // en el propio onclick). 
