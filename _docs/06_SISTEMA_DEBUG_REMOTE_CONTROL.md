@@ -7,11 +7,11 @@ categoría y sin costo cuando está apagado.
 
 **Origen:** sesión de debug del bug de memoria de UI por tab
 (`core/tab-ui-memory.js` + colisión de `id` en templates clonados,
-`core/wwr-dispatch.js`) — ver `remote_control.md`. El proceso manual
-funcionó pero no escala: cada sesión de debug repite el mismo ciclo
-(agregar logs → testear → transcribir logs a mano → cazar cada línea para
-sacarla antes de commitear). Este doc formaliza un reemplazo, a implementar
-en fases separadas (una por sesión).
+`core/wwr-dispatch.js`) — ver `remote_control_projects.md` §1 y
+`remote_control_ui.md` §3. El proceso manual funcionó pero no escala: cada 
+sesión de debug repite el mismo ciclo (agregar logs → testear → transcribir 
+logs a mano → cazar cada línea para sacarla antes de commitear). Este doc 
+formaliza un reemplazo, a implementar en fases separadas (una por sesión).
 
 Alcance: específico de `RemoteControl/` (control remoto web, HTML/JS/Lua
 de soporte). No aplica a paneles nativos ReaImGui (`ReaPitchBus/`,
@@ -35,7 +35,7 @@ bloqueante hoy.
   en el celular corriendo Fully Kiosk Browser, donde no hay consola a
   mano.
 - **No romper el patrón de scripts clásicos** (`window.nikAlgo`, sin
-  `type="module"` — ver `remote_control.md` § Arquitectura de archivos).
+  `type="module"` — ver `remote_control.md` §2).
 
 ---
 
@@ -171,8 +171,8 @@ exacto depende de la versión instalada). Si está disponible:
 ### Entregable de esta fase
 - Confirmar disponibilidad en la versión de Fully Kiosk instalada.
 - Si está disponible: documentar el paso a paso exacto (nombres de menú
-  reales, no genéricos) en `remote_control.md`, sección nueva "Debug
-  remoto en mobile".
+  reales, no genéricos) en este doc, sección nueva "Debug remoto en
+  mobile".
 - Si NO está disponible: descartar esta fase y quedarse con el overlay
   (Fase 2) como único mecanismo mobile — documentar igual la
   investigación para no repetirla en el futuro.
@@ -218,7 +218,7 @@ celular en el momento del evento.
 - `Nik_RemoteDebug_Sink.lua`.
 - Sumar la `ExtState` correspondiente a `NIK_SLOW_POLL` en `config.js`
   (recordar el gotcha ya documentado: sumar la key en Lua NO alcanza, hay
-  que sumarla también al poll — ver `remote_control.md` § Gotchas).
+  que sumarla también al poll — ver `remote_control_protocol.md` §3).
 - Definir y documentar la política de qué se persiste (no todo el log).
 
 ---

@@ -257,8 +257,7 @@ ahí, cualquier código que siga buscando la plantilla por
 que ese clon tenga en ese momento), de forma silenciosa y sin error en
 consola. Bug real encontrado por esta causa: control remoto web,
 `core/wwr-dispatch.js`, templates `trackRow1Svg`/`trackRow2Svg`/
-`trackSendSvg` (ver `features/remote_control.md`, sección "Memoria de UI
-por proyecto" → gotchas).
+`trackSendSvg` (ver `features/remote_control_ui.md` §3).
 
 Aplica a cualquier patrón de clonado de templates por instancia (tracks,
 sends, o UI repetida en otros paneles) — no solo al caso ya resuelto.

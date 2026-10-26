@@ -1,13 +1,12 @@
 # Sub-feature — Playrate & ReaPitch (Control Remoto Web)
 
-Doc de dominio, referenciado desde `remote_control.md` (tabla de
-funcionalidades). Cubre: fader vertical modular, knob SVG calcado,
-Playrate (mapa de tempo variable, BPM bidireccional, readout principal),
-ReaPitch (semitonos, Stem Bus). Gotchas de CSS transversales (input range
-rotado, centrado de thumb, ids de gradiente, tap-highlight) viven en el
-doc master — acá solo lo específico de este dominio.
+Doc de dominio, referenciado desde `remote_control.md`. Cubre: fader
+vertical modular, knob SVG calcado, Playrate (mapa de tempo variable, BPM
+bidireccional, readout principal), ReaPitch (semitonos, Stem Bus).
+Gotchas de CSS generales (ids de gradiente, tap-highlight):
+`remote_control_ui.md` §3. Paleta de popups: `remote_control_ui.md` §1.
 
-## Fader vertical modular (`core/vertical-fader.js`)
+## 1. Fader vertical modular (`core/vertical-fader.js`)
 
 Componente `nikCreateVerticalFader(config)`, reutilizado por
 `reapitch.js` (caso simple, sin BPM) y `playrate.js` (suma traducción
@@ -22,10 +21,21 @@ bidireccional playrate% ↔ BPM).
   `core/faders.js` (`faderCheckDoubleTap`/`faderLastTapAr`), con key
   string en vez de track id.
 - Botones de step (+/−) junto al fader, `config.step`.
-- Gotchas de CSS del `<input>` rotado (appearance del thumb, fórmula de
-  centrado, desalineo no necesariamente bug) — ver `remote_control.md`.
+- **`<input type="range">` rotado con `transform:rotate(-90deg)`:** el
+  thumb custom necesita `-webkit-appearance:none` tanto en el
+  pseudo-elemento como en el `<input>` base. Si falta en el base, Chrome
+  acepta el color y el background del thumb pero ignora su `width` y
+  `height`.
+- **Centrado del thumb contra el runnable-track:** `margin-top =
+  (trackHeight - thumbHeight) / 2`. Se recalcula cada vez que cambia
+  cualquiera de los dos valores; no se auto-ajustan entre sí.
+- **Desalineo visual entre el slider y los controles fijos de alrededor:**
+  no es necesariamente un bug de CSS. Si el valor actual no coincide con
+  el punto medio matemático del rango (`(min+max)/2`), el thumb se ve
+  corrido de ese centro por diseño. Antes de sospechar de la rotación o
+  del CSS, confirmar el rango y el default.
 
-## Knob SVG calcado (`core/fader-knob-svg.js`)
+## 2. Knob SVG calcado (`core/fader-knob-svg.js`)
 
 Módulo reutilizable, calco del `<g class="fader">` de `trackRow2Svg` (fila
 de volumen nativa de la UI principal) — reemplaza visualmente al thumb
@@ -48,9 +58,8 @@ largo del recorrido).
   visual dentro de cada shape, sin la matriz.
 - **IDs de gradiente con sufijo único por instancia** (`nikFaderKnobSvgSeq`,
   contador incremental) — mismo motivo que `nikUniquifyGradientIds()` en
-  `wwr-dispatch.js` (ver gotcha general en `remote_control.md`): más de
-  un fader knob en la misma página duplicaría `<linearGradient id>` si no
-  se sufija.
+  `wwr-dispatch.js` (ver `remote_control_ui.md` §3): más de un fader knob en
+  la misma página duplicaría `<linearGradient id>` si no se sufija.
 - **Track del knob**: color sólido `#262626` (mismo gris que
   `.nikVFaderStepBtn`/reset) — el original usa `#1A1A1A` con opacidad 0.5
   sobre fondo `#333333` (fila de track), valor casi invisible sobre el
@@ -79,7 +88,7 @@ visual). El knob se resincroniza en tres puntos: init, listener
 de servidor como por `stepBy`/`reset`, que llaman a `setValue`
 internamente).
 
-## Layout de los popups
+## 3. Layout de los popups
 
 Patrón aplicado en ambos (Playrate y ReaPitch): **sacar el elemento
 acompañante del flujo normal (`position:absolute`) para que el elemento
@@ -98,24 +107,40 @@ vez de centrar el bloque conjunto.
   `position:relative` alrededor del `<input>`, que queda como único
   elemento centrado por el contenedor flex.
 
-## Legibilidad / paleta
+## 4. Paleta
 
-- Readouts numéricos grandes (`#nikPlayrateBpm`, `#nikReaPitchValue`):
-  `#00D0FF` → `#FFFFFF`.
-- Título del popup y línea inferior: `#00D0FF` → `#D0D0D0` (texto) /
-  `#4A4A4A` (línea) — misma paleta neutra que el resto del proyecto (ver
-  "Paleta de popups" en `remote_control.md`).
-- Dejado afuera a propósito: el cyan de `#nikReaPitchEnableToggle` en
-  estado ON — indicador de estado que se mira de refilón, no un readout
-  que se sostiene la mirada.
+Los readouts numéricos grandes (`#nikPlayrateBpm`, `#nikReaPitchValue`),
+el título del popup y la línea inferior siguen la paleta de popups de
+`remote_control_ui.md` §1, incluido el cyan que se conserva en
+`#nikReaPitchEnableToggle`.
 
-## Rango y comportamiento del fader de Playrate
+### Color por desviación de los readouts principales
+
+`#nikPlayrateReadout` y `#nikReaPitchReadout` (fuera de los popups) se
+colorean según cuánto se aleja el valor de su default.
+
+- `nikDeviationColor(value, defaultVal, minVal, maxVal)` (`core/utils.js`):
+  gris `#A8A8A8` en el default; hacia arriba interpola a verde `#00FF99` y
+  hacia abajo a naranja `#FF9500`. La intensidad es la distancia al default
+  normalizada contra el extremo del rango, así que el color es pleno en el
+  extremo.
+- `nikLerpColor(hexA, hexB, t)` (`core/utils.js`): interpolación entre dos
+  colores `#rrggbb`, con `t` acotado a 0..1. También la usa
+  `nikResolveMarkerDisplay` para aclarar las cadenas `xN`
+  (`remote_control_markers.md` §2).
+- **Playrate:** `nikPlayrateRefreshMainReadout(percent)` llama con
+  `(100, 50, 150)`, el mismo rango de §5.
+- **ReaPitch:** `nikRefreshReaPitchReadoutColor()` llama con `(0, -12, 12)`
+  solo si el efecto está activo (`"on"`) y el semitono es numérico. Efecto
+  apagado (`"off"`): `#5A5A5A`. Cualquier otro caso (estado distinto de
+  `"on"`, semitono `null`, `"none"` o `"mixed"`): `#A8A8A8`.
+
+## 5. Rango y comportamiento del fader de Playrate
 
 - **Rango 50–150%** (no 40–150 del slider original) — el punto medio
   matemático (100%) coincide con el `defaultValue`, evitando el
-  desalineo visual círculo/botones-de-step (ver gotcha general
-  "desalineo no es necesariamente bug de CSS"). Confirmado que no se usa
-  playrate por debajo de 50% en la práctica.
+  desalineo visual círculo/botones-de-step (ver §1, "Desalineo visual").
+  Confirmado que no se usa playrate por debajo de 50% en la práctica.
 - **Clamp visual**: flash breve de color/fondo (`.nikVFaderClampFlash`)
   cuando el BPM tipeado excede el rango y se corrige.
 - **Campo BPM**: confirmación por `onchange` (blur/Enter) — no botón
@@ -126,7 +151,7 @@ vez de centrar el bloque conjunto.
   secundario (chico, gris) — invertido respecto al diseño original donde
   el % era protagonista.
 
-## Playrate → Tempo: mapa de tempo variable (no un BPM fijo)
+## 6. Playrate → Tempo: mapa de tempo variable (no un BPM fijo)
 
 **Problema resuelto**: el BPM equivalente mostrado "desviaba" en
 proyectos con mapa de tempo variable (correcciones de tempo a lo largo de
@@ -196,7 +221,7 @@ campos que **ya llegan** en el poll rápido existente (acá,
 `playPosSeconds` de `TRANSPORT`) — evita agregar polls o scripts Lua
 nuevos al loop de 10ms.
 
-## Readout principal de Playrate (fuera del popup)
+## 7. Readout principal de Playrate (fuera del popup)
 
 `#nikPlayrateReadout` mostraba `%` de playrate — ahora muestra el tempo
 equivalente en BPM, redondeado sin decimales, reusando el cálculo del
@@ -224,11 +249,11 @@ popup (no duplicado).
   ReaPitch / posición / Playrate / menú): `#nikReaPitchReadout` `left:16%`
   → `left:20%`; `#nikPlayrateReadout` `right:16%` → `right:18%`. El ancho
   de "posición" (centro del bloque) varía según el formato mostrado
-  (`measures.beats` vs `min:seg`, ver toggle de posición en
-  `remote_control.md`) — estos porcentajes son un punto medio razonable
-  contra el peor caso, no un centrado matemático exacto.
+  (`measures.beats` vs `min:seg`, ver `remote_control_ui.md` §5) — estos
+  porcentajes son un punto medio razonable contra el peor caso, no un 
+  centrado matemático exacto.
 
-## Pendiente
+## 8. Pendiente
 
 - **Precisión del cálculo Playrate→BPM**: reportada como "a veces no muy
   precisa" *antes* del fix del mapa de tempo variable — a re-observar si
@@ -236,10 +261,9 @@ popup (no duplicado).
   en una sola función, así que cualquier corrección futura aplica a
   ambos displays sin tocar dos lugares.
 - **Limpieza**: borrar `Nik_Playrate_ReadBaseTempo.lua` del repo si sigue
-  físicamente ahí, y `playrateBaseTempoRead` de `config.js` si quedó (ver
-  también `remote_control.md` → Limpieza pendiente).
+  físicamente ahí, y `playrateBaseTempoRead` de `config.js` si quedó.
 
-## Archivos de este dominio
+## 9. Archivos de este dominio
 
 ```
 core/vertical-fader.js

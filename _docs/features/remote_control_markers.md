@@ -1,13 +1,12 @@
 # Sub-feature — Markers (Control Remoto Web)
 
-Doc de dominio, referenciado desde `remote_control.md` (tabla de
-funcionalidades). Cubre: seeker de markers sobre el transporte, popup de
-markers completo, colores/traducción de nombres, compases por sección,
-seek relativo "N compases antes". Gotchas transversales (CSS de listas
-scrolleables, `scrollTop` oculto, etc.) viven en el doc master — acá solo
-lo específico de este dominio.
+Doc de dominio, referenciado desde `remote_control.md`. Cubre: seeker de
+markers sobre el transporte, popup de markers completo, colores/traducción
+de nombres, compases por sección, seek relativo "N compases antes".
+Gotchas generales de CSS de listas scrolleables: `remote_control_ui.md`
+§3. `scrollTop` de un elemento oculto: `remote_control_projects.md` §1.
 
-## Seeker de markers (`#nextPrev`)
+## 1. Seeker de markers (`#nextPrev`)
 
 Rediseño cerrado: `viewBox` `0 0 318.9 87.8` → `0 0 266 36` — sin
 regiones, alto comprimido a padding + texto + badge + padding
@@ -24,7 +23,7 @@ regiones, alto comprimido a padding + texto + badge + padding
   **relleno** (`fill="#1A1A1A"`), no del `shadow` (el shadow sobresale
   más abajo por el offset de sombra e infla el bbox). El contra-escalado
   de íconos dentro de estos botones sigue el patrón general documentado
-  en `remote_control.md` (gotchas → grupo SVG con `scale` no-uniforme).
+  en `remote_control_ui.md` §3 (grupo SVG con `scale` no-uniforme).
 - Markers extremos (prev/next) separados simétricamente del centro
   (antes ±56.85, ahora ±62) + área de texto ensanchada (56.8→62 cada una)
   para nombres largos.
@@ -49,7 +48,7 @@ resolvedColor}`. prev/this/next consultan ese mapa en vez de llamar a
 bug** — ya recorre `g_markers` completo en orden al armar la lista.
 `markers.js`/`config.js` no se tocaron.
 
-## Colores y traducción de markers (`NIK_MARKER_COLOR_MAP`, en `config.js`)
+## 2. Colores y traducción de markers (`NIK_MARKER_COLOR_MAP`, en `config.js`)
 
 Diccionario editable — fuente de verdad de colores por sección (ver
 `01_CONVENCIONES.md` para nombres de sección). Cada categoría define
@@ -73,16 +72,20 @@ diccionario pero con `chainState` propio e independiente por redibujo
 (no comparte estado con el popup). Colorea tanto el fondo del badge como
 el texto. Casos HOME/END resetean el `fill` a gris explícitamente.
 
-## Compases por sección
+## 3. Compases por sección
 
 `MarkerBars_common_logic.lua` calcula, para cada marker, cuántos compases
 hay hasta el siguiente — vía `TimeMap2_timeToQN` + `TimeMap_QNToMeasures`
-(ver gotcha de precisión del épsilon en `remote_control.md`). Escribe
-`NikRemote/marker_bars`, agregado al poll consolidado. Mismo módulo
-expone `find_marker_pos(proj, markerId)` (agregado para el seek relativo,
-ver abajo).
+(ver la precisión del épsilon abajo). Escribe `NikRemote/marker_bars`,
+agregado al poll consolidado (`remote_control_protocol.md` §3). Mismo
+módulo expone `find_marker_pos(proj, markerId)`, usado por el seek
+relativo (§4).
 
-## Popup de markers (`modals/marker-browser/marker-browser.js`)
+**Precisión:** `TimeMap_QNToMeasures` puede resolver al compás anterior en
+markers que caen una fracción de float antes del downbeat real. Se suma un
+épsilon chico (`+1e-6` QN) antes de convertir.
+
+## 4. Popup de markers (`modals/marker-browser/marker-browser.js`)
 
 ### Diseño visual
 
@@ -90,15 +93,13 @@ ver abajo).
   weight 600), metadata (tiempo + compases) abajo, más chica y en gris.
 - **Separadores**: `#3A3A3A` (antes `#262626`, sin contraste suficiente
   sobre `#1a1a1a`).
-- **Paleta**: alineada a la neutra general del proyecto (ver
-  `remote_control.md` → "Paleta de popups") — `#D0D0D0` (título/label),
-  `#4A4A4A` (línea/borde). El cyan del indicador de "parado en marker"
-  (borde izquierdo + fondo) y el de la barra de long-press quedaron sin
-  tocar a propósito.
+- **Paleta**: la neutra de popups (`remote_control_ui.md` §1). El cyan
+  del indicador de "parado en marker" (borde izquierdo + fondo) y el de la
+  barra de long-press se conservan a propósito.
 - **Metadata tiempo + compases**: anchos fijos + `text-align:right` en
   los valores numéricos (`min-width` no alcanza para alinear texto
-  left-aligned entre filas — ver gotcha general). Formato cambiado de
-  `"Nc"` a `"Compases: N"` (label `#9A9A9A`, número `#C4C4C4` negrita).
+  left-aligned entre filas, ver `remote_control_ui.md` §3). Formato
+  `"Compases: N"` (label `#9A9A9A`, número `#C4C4C4` negrita).
   Separador `|` como **span propio** dentro del flex de `posSpan` (no
   texto concatenado — rompía centrado/baseline/color), color `#5A5A5A`.
 - **Fades de scroll** (`#nikMarkerScrollFade` / `#nikMarkerScrollFadeTop`):
@@ -141,21 +142,18 @@ falta a futuro un open "silencioso".
 ### Scroll persistente por proyecto (tab)
 
 Integrado a `core/tab-ui-memory.js` con la key `markerScrollTop` (mismo
-mecanismo genérico que `scrollTop` de tracks, `expandedTracks`, etc. —
-ver `remote_control.md`).
+mecanismo que el resto de las keys, ver `remote_control_projects.md` §1).
 
 - **Save**: `nikMarkerBrowserSaveScroll()`, llamada tanto al cerrar el
   popup (`nikCloseMarkerBrowser()`) como en el snapshot de cambio de tab
   — hace falta en ambos puntos, cerrar/reabrir en la misma tab también
   necesita persistir.
-- **Root cause del bug de snapshot en cambio de tab**: `scrollTop` de un
-  elemento oculto siempre lee `0` (ver gotcha general en
-  `remote_control.md`) — el popup casi siempre está cerrado en el
-  momento del cambio de tab, así que el snapshot pisaba sistemáticamente
-  el valor bueno con `0`. Fix: en `nikTabMemorySnapshot()`, solo leer
-  `scrollTop` en vivo si `nikMarkerBrowserOverlay.style.display ==
-  "flex"` (visible); si no, conservar el valor ya persistido para ese
-  proyecto en vez de asumir `0`.
+- **Snapshot en cambio de tab**: `scrollTop` de un elemento oculto
+  siempre lee `0` (`remote_control_projects.md` §1) y el popup casi
+  siempre está cerrado en ese momento. Por eso `nikTabMemorySnapshot()`
+  solo lee `scrollTop` en vivo si `nikMarkerBrowserOverlay.style.display
+  == "flex"` (visible); si no, conserva el valor ya persistido para ese
+  proyecto.
 - **Restore**: no puede pasar en el cambio de tab (la lista se arma
   recién en `nikOpenMarkerBrowser()`) — se lee
   `nikTabUiMemory[nikCurrentProjectName].markerScrollTop` ahí mismo.
@@ -180,21 +178,18 @@ de ese marker, mínimo de taps posible.
   bien separados entre sí (para que el pulgar sobre el botón nunca tape
   el número).
 - **Rango**: 1 a 8 compases, clamped en `nikPreMarkerBarsStep()`.
-- **Paleta final**: unificada a la neutra general del proyecto
-  (`#D0D0D0`/`#4A4A4A`, ver `remote_control.md`) con `#EDEDED` para el
-  número — la propuesta original de esta feature (`#4A8C99` de borde de
-  acento, `#A8A8A8` de caption) **no prevaleció**, quedó descartada al
-  unificar paleta con el resto de los popups en una sesión posterior.
+- **Paleta**: la neutra de popups (`remote_control_ui.md` §1), con
+  `#EDEDED` para el número.
 - **Persistencia de N por proyecto/tab**: key `preMarkerBars` en
   `tab-ui-memory.js`, default `2`. El estado expandido/colapsado del
   stepper **no** persiste (deliberado, "se usa una vez y se olvida").
 - **Long-press por fila** (`nikAttachMarkerLongPress`, implementación
-  propia del popup — no usa `core/long-press.js`, ver arquitectura en
-  `remote_control.md`): umbral 450ms (gesto pre-entrenado, default de
-  Android/iOS), tolerancia de movimiento 10px, barra de progreso animada
-  vía CSS `transition` de `width` (sin JS de por medio). Tap corto sigue
-  igual que siempre: seek directo al marker (`SET/POS_STR/m<id>`,
-  nativo, sin Lua).
+  propia del popup: no usa `core/long-press.js`, que no soporta barra de
+  progreso, ver `remote_control_ui.md` §5): umbral 450ms (gesto 
+  pre-entrenado, default de Android/iOS), tolerancia de movimiento 10px, 
+  barra de progreso animada vía CSS `transition` de `width` (sin JS de 
+  por medio). Tap corto sigue igual que siempre: seek directo al marker 
+  (`SET/POS_STR/m<id>`, nativo, sin Lua).
 - **Seek con acción nativa (`41043`, "Move edit cursor back one
   measure")** en vez de cálculo manual sobre `TimeMap` — más
   determinístico porque reusa la lógica de tempo/time-signature que
@@ -209,31 +204,24 @@ de ese marker, mínimo de taps posible.
   Necesario porque `41043` mueve el edit cursor pero no garantiza que la
   reproducción salte ahí (depende de la preferencia "Link edit and play
   cursors while playing", no asumible activada).
-- **Script nuevo**: `RemoteControl/Nik_Markers_SeekRelative.lua` — lee
+- **Script**: `RemoteControl/Nik_Markers_SeekRelative.lua` — lee
   `preseek_marker_id`/`preseek_bars` de ExtState, usa `find_marker_pos` +
   `41043` (N veces) + `SetEditCurPos` en dos pasos.
-- **Command ID confirmado**: `_RS4a5dc1b0b6e91880cf9f2d469c1cb0bad2bc87b2`
-  — entrada `preMarkerSeek` en `NIK_LUA_COMMANDS` (`config.js`).
+- **Command ID**: entrada `preMarkerSeek` en `NIK_LUA_COMMANDS`
+  (`config.js`, ver `remote_control_protocol.md` §8).
 
-## Gotchas específicos de este dominio
+## 5. Gotchas específicos de este dominio
 
-- **`id` obsoleto en JS tras un rediseño de HTML**: al pasar del layout
-  en fila única (`nikPreMarkerBarsLabel`) al apilado
-  (`nikPreMarkerBarsNumber`/`nikPreMarkerBarsCaption`), la función JS se
-  quedó buscando el `id` viejo — el guard `if (label) {...}` fallaba en
-  silencio (elemento no existe, sin error en consola) y la función no
-  actualizaba nada visualmente aunque el estado sí cambiaba por detrás.
-  Recordatorio: estos guards, aunque defensivos y necesarios, pueden
-  esconder desincronizaciones HTML↔JS durante iteración rápida de
-  diseño — confirmar el `id` real tras cada rediseño de markup.
-- `pointer-events:none` obligatorio en los fades de scroll (ver arriba) —
-  sin eso tapan tap/long-press de la última fila visible.
-- El resto de gotchas de este dominio (`position:sticky` +
-  `scrollHeight`, `scrollTop` de elemento oculto, `min-width` no alinea
-  texto) son generales y ya viven en `remote_control.md` — se activaron
-  primero acá pero aplican a cualquier lista scrolleable futura.
+- Los guards `if (elemento)` pueden esconder un `id` obsoleto tras
+  rediseñar el markup (en este popup: `nikPreMarkerBarsNumber` y
+  `nikPreMarkerBarsCaption`): `remote_control_protocol.md` §5.
+- Los gotchas generales de listas scrolleables (`position:sticky` y
+  `scrollHeight`, `min-width` que no alinea texto) están en
+  `remote_control_ui.md` §3; el de `scrollTop` de un elemento oculto, en
+  `remote_control_projects.md` §1. El `pointer-events:none` de los fades
+  está en §4, "Diseño visual".
 
-## Funciones/variables de referencia
+## 6. Funciones/variables de referencia
 
 | Nombre | Archivo | Qué hace |
 |---|---|---|
@@ -253,7 +241,7 @@ de ese marker, mínimo de taps posible.
 | `markerScrollTop` | `tab-ui-memory.js` (key) | Scroll del popup, por proyecto |
 | `preMarkerBars` | `tab-ui-memory.js` (key) | Valor de N, por proyecto |
 
-## Pendiente / no probado
+## 7. Pendiente / no probado
 
 - N=8 en secciones de compases muy cortos o con cambios de time
   signature densos cerca del marker elegido — no testeado explícitamente,
@@ -261,3 +249,9 @@ de ese marker, mínimo de taps posible.
 - Uso bajo el issue ya conocido de freezes correlacionados con WiFi en
   sala de ensayo — no debería interactuar con este feature, pero no
   probado bajo esas condiciones.
+- **Loop de sección:** `reaper.GoToRegion(proj, index, true)` más la
+  preferencia "Loop points linked to time selection". Requiere regiones
+  (no solo markers) para las secciones.
+- **Long-press propio del popup:** migrar `nikAttachMarkerLongPress` a
+  `core/long-press.js`, solo si el helper genérico suma soporte de barra
+  de progreso.

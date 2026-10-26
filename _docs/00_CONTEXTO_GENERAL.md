@@ -131,7 +131,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Render Workflow           | Regiones, count-in y preset implementados; batch render pendiente |
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
-| Control remoto web        | Funcional, pendientes menores (ver doc feature)|
+| Control remoto web        | Funcional. Pendientes por capa en `features/remote_control.md` §5 |
 | MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
 | Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo), UI web del baterista, capa PA con modo PA en el remoto principal. Pendientes en sus docs. Ver `features/monitor_mix.md`, `features/monitor_mix_ui.md` y `features/monitor_mix_pa.md` |
@@ -144,16 +144,6 @@ render, pero conviven en el mismo proyecto/entorno):
 - Pitch-shift toggle script (per-stem, mapeable a footswitch MIDI).
 - Parser de nomenclatura alternativa de secciones (V1, V2, PC, C1...) usada en
   otros proyectos — no bloqueante.
-- Evaluar portar al control remoto general el manejo de conexión del prompter
-  (indicador de datos viejos, tope del backoff de `main.js`, compensación por
-  RTT) — ver `features/musicstate_sync.md` §14.
-- Control remoto web: decidir si los `commandId` hardcodeados como fallback en
-  `config.js` deben eliminarse (forzar error visible si falta
-  `config.local.js`) o mantenerse con validación explícita — hoy fallan en
-  silencio si el generador no corrió en esa PC (ver `05_REAPACK_DEPLOY.md`).
-- Control remoto web: crear `manifest.json` (+ íconos) para habilitar PWA
-  instalable — referenciado por `nsaudio_remote_control.html` al boot,
-  nunca se llegó a crear (404 preexistente, sin impacto funcional).
 
 ## Qué adjuntar según la tarea (MusicState)
 
@@ -171,3 +161,15 @@ Punto de partida: el doc principal de la tarea y lo que ese doc cita como depend
 | Reutilizar la tira de acordes | `musicstate_instrumentista.md`, `musicstate_shared_ui.md`, `musicstate_sync.md`, `musicstate_client.md` | `instrumentista/`, `shared/ms-beat.js`, `shared/ms-section-row.js` (ejemplo de extracción) |
 | Key nueva publicada desde el Helper | `musicstate_data_model.md`, `musicstate_bridge.md`, `musicstate_helper.md` | `MusicState/*.lua` |
 | Letras (ingreso y publicación) | `musicstate_lyrics.md`, `musicstate_lyrics_helper.md` | `MusicState/Nik_MusicState_PublishLyrics.lua` |
+
+## Qué adjuntar según la tarea (Control remoto)
+
+Punto de entrada: `remote_control.md` (arquitectura e índice). Docs en `_docs/features/`; código en `web/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Popup nuevo, estilos, OptionsBar, posición del transporte | `remote_control_ui.md` | `modals/<nombre>/`, `modal-loader.js`, `styles.css`, `nsaudio_remote_control.html` |
+| Lectura de estado nueva (poll, `ExtState`, `CMDSTATE`), dispatch del feed | `remote_control_protocol.md` | `RemoteControl/Nik_RemoteState_Poll.lua`, `core/wwr-dispatch.js`, `config.js` |
+| Memoria de UI por proyecto, selector de tabs, watchdog | `remote_control_projects.md` | `core/tab-ui-memory.js`, `modals/project-tabs/`, `core/init.js` |
+| Markers (seeker, popup, colores, seek relativo) | `remote_control_markers.md`, `remote_control_ui.md` | `modals/marker-browser/`, `markers/markers.js`, `RemoteControl/MarkerBars_common_logic.lua` |
+| Playrate, ReaPitch, fader vertical y knob | `remote_control_faders.md`, `remote_control_ui.md` | `core/vertical-fader.js`, `core/fader-knob-svg.js`, `modals/playrate/`, `modals/reapitch/` |
