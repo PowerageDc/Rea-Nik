@@ -4,7 +4,7 @@ Mezcla de monitoreo por músico: bus propio con salida de hardware
 secundaria, sends por track, filtro de qué tracks se ofrecen y canal de
 datos hacia la UI. Lo lee quien toca el ruteo, el filtro, el config o el
 contrato de la lista. La interfaz web (shell, render, faders, slider):
-`monitor_mix_ui.md`.
+`monitor_mix_ui.md`. El corte del PA por track: `monitor_mix_pa.md`.
 
 Fuera de este doc: ganchos de `ms-dispatch.js`, polls y ciclo de proyecto
 (`musicstate_sync.md` §1, §8, §10, §11), patrón "disparar vs solo leer"
@@ -109,6 +109,12 @@ base 1). Los pares no alineados (`3/4`, `5/6` base 0) se descartan.
 - Mute del send y mute del track son independientes en el estado, pero
   **mutear el track silencia sus sends incluso en pre-fader (post-FX)**.
   Bajar el fader del track no afecta a un send pre-fader.
+- **Mutear un folder** (Stem Bus, Click Bus) silencia también los sends de
+  sus hijos: dejan de sonar en el par secundario. Solear un track silencia
+  los sends del resto: en el par secundario queda solo ese track.
+- **Quitar el send al master/padre** (`B_MAINSEND = 0`) de un track o de un
+  bus calla el par 1/2 y no cambia el par 3/4. Mutear el master hace lo
+  mismo. Es la base de la capa PA (`monitor_mix_pa.md`).
 - Crear o borrar el bus deja una sola entrada de Undo.
 
 ## 4. Feed nativo del Web Control
@@ -148,6 +154,8 @@ SEND  <track>  <idx>  <flags>  <vol lineal>  <pan>  <track destino>
 `Nik_MonitorMix_Publish.lua` (one-shot) corre `MM.ensure_sends`, aplica el
 filtro y publica en el ExtState global, namespace `NikMonitorMix`. Volumen
 y mute en vivo siguen por el feed nativo (§4), sin pasar por ExtState.
+También refresca `pa_state`, el estado de la capa PA (`monitor_mix_pa.md`
+§3.2).
 
 | Key | Contenido |
 |---|---|
@@ -198,6 +206,11 @@ DOM):
 - Los ganchos de `ms-dispatch.js` y el disparo al cambiar de proyecto:
   `musicstate_sync.md` §1 y §11. Las UIs que no cargan `monitor.js` no
   cambian.
+- El remoto principal (`core/wwr-dispatch.js`) también dispara el script al
+  conectar y al cambiar de proyecto, con `NIK_MM_ENSURE_ON_SWITCH` en
+  `config.js`, para que el bus exista sin depender de que la UI de Monitor
+  Mix esté abierta en algún dispositivo. El disparo llega hasta ~1 s después
+  del cambio real de tab (slow poll).
 - El web control duplica las `\`: se des-escapa antes del `JSON.parse`
   (`musicstate_data_model.md` §3).
 
@@ -311,7 +324,9 @@ update de ReaPack: `05_REAPACK_DEPLOY.md`, Pendientes.
 
 - **Snapshots `SN_*`:** si mutean tracks, ese mute silencia también el
   monitoreo (§3.3). Por ejemplo, `SN_Drums_Muted` dejaría al baterista sin
-  batería. Falta ver si los snapshots mutean o bajan volúmenes.
+  batería. Falta ver si los snapshots mutean o bajan volúmenes. La capa PA
+  corta el PA sin tocar el monitoreo, pero no está conectada a los
+  snapshots (`monitor_mix_pa.md` §6).
 - **Dispositivo cerrado:** con la opción de cerrar el dispositivo por
   inactividad, la API informa 0 salidas y el publish aborta con `no_pair`
   (síntoma: proyecto abierto y después la UI falla, y la UI abierta antes
@@ -330,6 +345,11 @@ update de ReaPack: `05_REAPACK_DEPLOY.md`, Pendientes.
 - `MonitorMix/Nik_MonitorMix_Publish.lua` — publicador one-shot (§5).
 - `MonitorMix/Nik_MonitorMix_EnsureSends.lua` — cáscara para correr
   `MM.ensure_sends` a mano.
+- `MonitorMix/Nik_MonitorMix_PaRoute.lua` y
+  `MonitorMix/MonitorMixPa_common_logic.lua` — órdenes y estado de la capa
+  PA (`monitor_mix_pa.md`).
+- `web/core/pa-mode.js` — modo PA del remoto principal
+  (`monitor_mix_pa.md` §4).
 - `MonitorMix/MonitorMix_common_logic.lua` — filtro, par secundario,
   `MM.ensure_sends`.
 - `MonitorMix/MonitorMix_config.lua` — config en código (§6.5).
@@ -346,10 +366,7 @@ update de ReaPack: `05_REAPACK_DEPLOY.md`, Pendientes.
   Click`), ambos con hardware output al mismo par secundario y cada track
   mandando al bus de su `role`. El limitador quedaría repetido en cada
   bus. `buses` en el config pasaría a ser un bus por `role` y por músico.
-- **Mute en la mezcla principal:** mutear un track en el remoto del
-  coordinador también silencia su send al monitoreo (§3.3). Se quiere que
-  el baterista lo siga recibiendo, con la "M" roja visible solo en el
-  remoto del coordinador. Sin investigar.
+- Pendientes de la capa PA: `monitor_mix_pa.md` §6.
 - Validar en sala el ruteo con la U-Phoria (pares 1/2, 2/3, 3/4): salidas
   listadas, `I_DSTCHAN` del master y par resuelto.
 - Probar `dirty` y Undo con el proyecto limpio.

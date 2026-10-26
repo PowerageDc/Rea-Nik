@@ -113,8 +113,10 @@ render, pero conviven en el mismo proyecto/entorno):
   script one-shot que dispara el cliente, y una interfaz web separada
   (segundo Web Control) sin controles de transporte, con el mismo header,
   secciones que las UIs de MusicState (la fila de cues del footer no está
-  cableada). Ver `features/monitor_mix.md` (ruteo, filtro y datos) y
-  `features/monitor_mix_ui.md` (interfaz).
+  cableada). El remoto principal tiene un modo PA para cortar tracks del PA
+  sin alterar la mezcla del par secundario. Ver `features/monitor_mix.md`
+  (ruteo, filtro y datos), `features/monitor_mix_ui.md` (interfaz) y
+  `features/monitor_mix_pa.md` (capa PA).
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -124,15 +126,15 @@ render, pero conviven en el mismo proyecto/entorno):
 | Funcionalidad           | Estado                                        |
 |--------------------------|------------------------------------------------|
 | Auto-color system        | Confirmado funcionando                         |
-| MVSEP stem importer      | Importer base y script de voces separadas (lead/back) implementados, con módulo y config compartidos. Pendientes en `features/mvsep_importer.md` |
+| MVSEP stem importer      | Importer base y script de voces separadas (lead/back), con módulo y config compartidos. Pendientes en `features/mvsep_importer.md` |
 | Sistema de Snapshots      | Implementado (script custom, prefijo SN_)      |
 | Render Workflow           | Regiones, count-in y preset implementados; batch render pendiente |
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | Control remoto web        | Funcional, pendientes menores (ver doc feature)|
-| MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra) implementados. Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
+| MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
-| Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo) y UI web del baterista implementados. Pendientes en sus docs. Ver `features/monitor_mix.md` y `features/monitor_mix_ui.md` |
+| Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo), UI web del baterista, capa PA con modo PA en el remoto principal. Pendientes en sus docs. Ver `features/monitor_mix.md`, `features/monitor_mix_ui.md` y `features/monitor_mix_pa.md` |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -165,6 +167,7 @@ Punto de partida: el doc principal de la tarea y lo que ese doc cita como depend
 | Módulo compartido (fila de sección, cabecera, sin señal) | `musicstate_shared_ui.md` y el de la UI | `shared/ms-*.js` |
 | Sync (posición, lookahead, tempo, playrate, polls) | `musicstate_sync.md`, `musicstate_client.md`, `musicstate_testing.md` | `core/music-state.js`, `shared/ms-tempo.js`, `shared/ms-beat.js`, `shared/ms-dispatch.js` |
 | Ruteo, filtro y datos de Monitor Mix | `monitor_mix.md`, `musicstate_sync.md` | `MonitorMix/*.lua`, `monitor/monitor.js`, `shared/ms-dispatch.js`, `config.js` |
+| Capa PA (corte del PA, modo PA del remoto) | `monitor_mix_pa.md`, `monitor_mix.md` | `MonitorMix/MonitorMixPa_common_logic.lua`, `MonitorMix/Nik_MonitorMix_PaRoute.lua`, `core/pa-mode.js`, `core/wwr-dispatch.js`, `config.js` |
 | Reutilizar la tira de acordes | `musicstate_instrumentista.md`, `musicstate_shared_ui.md`, `musicstate_sync.md`, `musicstate_client.md` | `instrumentista/`, `shared/ms-beat.js`, `shared/ms-section-row.js` (ejemplo de extracción) |
 | Key nueva publicada desde el Helper | `musicstate_data_model.md`, `musicstate_bridge.md`, `musicstate_helper.md` | `MusicState/*.lua` |
 | Letras (ingreso y publicación) | `musicstate_lyrics.md`, `musicstate_lyrics_helper.md` | `MusicState/Nik_MusicState_PublishLyrics.lua` |

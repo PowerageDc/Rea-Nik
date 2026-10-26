@@ -211,7 +211,7 @@ vive en el poll de fondo: `NikMusicState` es independiente de
 
 | UI | Dispatcher | Cuándo pide |
 |---|---|---|
-| Control remoto general | `core/wwr-dispatch.js` | al conectar y al cambiar de proyecto |
+| Control remoto general | `core/wwr-dispatch.js` | al conectar y al cambiar de proyecto; en los mismos momentos dispara `monitorMixPublish` (`monitor_mix.md` §5) |
 | Instrumentista | `ms-dispatch.js` | al conectar, al cambiar de proyecto y cuando cambia `publish_version` |
 | Cantante | `ms-dispatch.js` + `cantante.js` | letra (`RequestLyrics`) al conectar y al cambiar de proyecto; solo `GET` (`FetchLyrics`) cuando cambia `lyrics_version` |
 | Monitor Mix | `ms-dispatch.js` + `monitor.js` | lista (`nikMmRequestList`, dispara el script) al conectar, al cambiar de proyecto y desde Actualizar; solo `GET` (`nikMmFetchList`) cuando cambia `list_version` |
