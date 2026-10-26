@@ -175,8 +175,9 @@ como implementación de referencia).
   `RemoteControl/`, `dir` con la ruta relativa, ej. `../MusicState/`).
   Si falta, o si el generador no se volvió a correr tras actualizar, la
   UI usa el default de dev de `config.js` y el pedido falla en silencio
-  en destino. Casos reales: `musicStatePublishLyrics` (UI de cantante) y
-  `monitorMixPublish` (UI de monitor, `dir = "../MonitorMix/"`). El
+  en destino. Casos reales: `musicStatePublishLyrics` (UI de cantante),
+  `monitorMixPublish` (UI de monitor, `dir = "../MonitorMix/"`) y
+  `monitorMixPaRoute` (modo PA del remoto principal, mismo `dir`). El
   guard de `nikMusicStateRequestLyrics` solo avisa si la key falta del
   todo, no si trae un ID que no existe en esa PC.
 - El HTML/JS de la interfaz debe cargar `config.local.js` **después** de
@@ -376,6 +377,12 @@ independiente: no depende de otros paquetes ni usa el generador.
 
 ## Pendientes
 
+- **Bumpeado sin deployar:** MonitorMix está en 1.2 en el header (suma la
+  capa PA, `features/monitor_mix_pa.md`). La interfaz web `.www` sigue en
+  1.9 y hay que bumpearla en el mismo commit del deploy (regla dura de
+  arriba). El deploy espera a resolver la UI de monitor con poco alto de
+  viewport (`features/monitor_mix_ui.md`, pendientes). Al deployar se
+  elimina este ítem.
 - `MonitorMix_config.lua` va en el `@provides` de MonitorMix, así que
   ReaPack lo sobrescribe en cada actualización: cualquier edición local
   del filtro en una PC de destino se pierde. Decidir si el filtro pasa a
