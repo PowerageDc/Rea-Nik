@@ -111,6 +111,9 @@ function wwr_onreply(results) {
                 }
                 break;
             case "EXTSTATE":
+                if (tok[1] == "NikMonitorMix" && tok[2] == "pa_state") {
+                    nikPaApplyState(tok[3]);
+                }
                 if (tok[1] == "NikRemote" && tok[2] == "active_project_name") {
                     if (tok[3] != nikCurrentProjectName) {
                         if (nikCurrentProjectName != null) nikTabMemorySave(nikCurrentProjectName);
@@ -470,8 +473,10 @@ function wwr_onreply(results) {
                                 masterMuteOnButton = document.getElementById("master-mute-on");
                                 if (tok[3] & 8) { masterMuteOffButton.style.visibility = "hidden"; masterMuteOnButton.style.visibility = "visible"; }
                                 else { masterMuteOffButton.style.visibility = "visible"; masterMuteOnButton.style.visibility = "hidden"; }
-                                masterMuteOffButton.onmousedown = mouseDownEventHandler("SET/TRACK/" + 0 + "/MUTE/-1;TRACK/" + 0);
-                                masterMuteOnButton.onmousedown = mouseDownEventHandler("SET/TRACK/" + 0 + "/MUTE/-1;TRACK/" + 0);
+                                var masterMuteReq = nikPaReq("toggle", "all", "SET/TRACK/" + 0 + "/MUTE/-1;TRACK/" + 0);
+                                masterMuteOffButton.onmousedown = mouseDownEventHandler(masterMuteReq);
+                                masterMuteOnButton.onmousedown = mouseDownEventHandler(masterMuteReq);
+                                nikPaApplyMaster(masterMuteOffButton, masterMuteOnButton);
                                 masterClipIndicator = document.getElementById("master-clip_on");
                                 if (tok[6] > 0) { masterClipIndicator.style.visibility = "visible"; }
                                 else { masterClipIndicator.style.visibility = "hidden"; }
@@ -544,8 +549,8 @@ function wwr_onreply(results) {
                                 }
 
                                 trackRow1Content.firstChild.getElementsByClassName("recarm")[0].onmousedown = mouseDownEventHandler("SET/TRACK/" + idx + "/RECARM/-1;TRACK/" + idx);
-                                trackRow1Content.firstChild.getElementsByClassName("mute")[0].onmousedown = mouseDownEventHandler("SET/TRACK/" + tok[1] + "/MUTE/-1;TRACK/" + tok[1]);
-                                trackRow1Content.firstChild.getElementsByClassName("solo")[0].onmousedown = mouseDownEventHandler("SET/TRACK/" + idx + "/SOLO/-1;TRACK/" + idx);
+                                trackRow1Content.firstChild.getElementsByClassName("mute")[0].onmousedown = mouseDownEventHandler(nikPaReq("toggle", idx, "SET/TRACK/" + tok[1] + "/MUTE/-1;TRACK/" + tok[1]));
+                                trackRow1Content.firstChild.getElementsByClassName("solo")[0].onmousedown = mouseDownEventHandler(nikPaReq("solo", idx, "SET/TRACK/" + idx + "/SOLO/-1;TRACK/" + idx));
                                 trackRow1Content.firstChild.getElementsByClassName("monitor")[0].onmousedown = mouseDownEventHandler("SET/TRACK/" + idx + "/RECMON/-1;TRACK/" + idx);
                                 if (tok[3] != trackFlagsAr[idx]) {
 
@@ -589,6 +594,7 @@ function wwr_onreply(results) {
                                     else { folderIcon.style.visibility = "hidden"; }
                                     trackFlagsAr[idx] = tok[3];
                                 }
+                                nikPaApplyRow(idx, trackRow1Content.firstChild, tok[3]);
 
                                 if (tok[10] != trackSendCntAr[idx]) {
                                     sendIndicator = trackRow1Content.firstChild.getElementsByClassName("s_on")[0];

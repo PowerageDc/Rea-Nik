@@ -276,3 +276,29 @@ body {
     color: #FF5757 !important;
     background-color: #3a2020 !important;
 }
+
+/* Capa PA: botón de modo en la fila MASTER. */
+.nikPaChip { cursor: pointer; }
+.nikPaChipBg { fill: #262626; stroke: #4A4A4A; stroke-width: 1; }
+.nikPaChipText { fill: #A8A8A8; }
+.nikPaChip.nikPaCuts .nikPaChipBg { stroke: #81D4FA; stroke-width: 1.5; }
+.nikPaChip.nikPaCuts .nikPaChipText { fill: #81D4FA; }
+.nikPaChip.nikPaOn .nikPaChipBg { fill: #0277BD; stroke: #0277BD; }
+.nikPaChip.nikPaOn .nikPaChipText { fill: #FFFFFF; }
+
+/* Capa PA: M/S propios. Glifo blanco sobre fondo oscuro (>= 4,8:1). */
+.mute.nikPaAll .mute-on path[fill="#F13F24"] { fill: #0277BD; }
+.solo.nikPaAll .solo-on path[fill="#F1C524"] { fill: #00796B; }
+#mute.nikPaAll #master-mute-on path[fill="#F13F24"] { fill: #0277BD; }
+
+/* Parcial (folder con parte de sus hojas cortadas): botón apagado con fondo
+   tintado y glifo y borde oscuros. */
+.mute.nikPaPart .mute-off path[fill^="url("] { fill: #B3E5FC; }
+.mute.nikPaPart .mute-off path[fill="#54362A"],
+.mute.nikPaPart .mute-off path[fill="#1A1A1A"] { fill: #01579B; }
+.solo.nikPaPart .solo-off path[fill^="url("] { fill: #B2DFDB; }
+.solo.nikPaPart .solo-off path[fill="#50542A"],
+.solo.nikPaPart > path[fill="#1A1A1A"] { fill: #004D40; }
+#mute.nikPaPart #master-mute-off path[fill^="url("] { fill: #B3E5FC; }
+#mute.nikPaPart #master-mute-off path[fill="#54362A"],
+#mute.nikPaPart path[fill="#1A1A1A"] { fill: #01579B; }

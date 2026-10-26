@@ -46,6 +46,7 @@
     <script src="core/tab-ui-memory.js"></script>
     <script src="core/music-transpose.js"></script>
     <script src="core/music-state.js"></script>
+    <script src="core/pa-mode.js"></script>
     <script src="core/wwr-dispatch.js"></script>
     <script src="core/init.js"></script>
 
@@ -699,6 +700,12 @@
                                 opacity="0.5" font-family="'Open Sans'" font-size="12px">xxdB</text>
                             <rect class="hitbox" x="49" y="1" opacity="0" width="173" height="53.9"
                                 onClick="hitbox(0)" />
+                            <g id="nikPaChip" class="nikPaChip" onclick="nikPaToggleMode()">
+                                <rect x="164" y="1" width="100" height="28" fill="transparent" />
+                                <rect class="nikPaChipBg" x="172" y="7" width="86" height="22" rx="4" />
+                                <text class="nikPaChipText" x="215" y="23" text-anchor="middle"
+                                    font-family="'Open Sans'" font-size="15px" font-weight="700">PA</text>
+                            </g>
                         </svg>
                     </div>
 
