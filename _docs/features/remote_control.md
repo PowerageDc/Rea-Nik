@@ -12,9 +12,11 @@ no un historial de sesiones.
   "N compases antes" (long-press).
 - `remote_control_faders.md` — fader vertical modular, knob SVG calcado,
   Playrate (tempo map variable, BPM bidireccional), ReaPitch (Stem Bus).
+- `monitor_mix_pa.md` — modo PA del remoto (M/S sobre el corte del PA, chip
+  en la fila MASTER, colores) y su contrato de datos.
 
 ## Setup técnico
-- REAPER v7.79, SWS/S&M Extensions, Windows 10.
+- REAPER v7.82, SWS/S&M Extensions, Windows 10.
 - Servidor web integrado de REAPER (Preferences > Control/OSC/web).
 - Cliente: celular Android vía **Fully Kiosk Browser** (no PWA de Chrome —
   descartada, IP LAN no alcanzable por el servidor de Google que genera
@@ -44,6 +46,7 @@ reaper_www_root/
 │   ├── long-press.js              ← helper genérico de long-press (touch+mouse)
 │   ├── tracks-render.js           ← hitbox() — expandir/colapsar filas
 │   ├── tab-ui-memory.js           ← memoria de UI por proyecto (ver sección dedicada)
+│   ├── pa-mode.js                 ← modo PA: M/S sobre el corte del PA (ver monitor_mix_pa.md)
 │   ├── wwr-dispatch.js            ← wwr_onreply() — parser central del feed de REAPER
 │   └── init.js                    ← bootstrapping, watchdog, init()
 ├── markers/markers.js             ← parseo/color de nombres de marker (compartido)
@@ -309,6 +312,34 @@ del proyecto B.
   pintado, no achican ese cálculo. Fix: `flex:1 1 0` (básis fijo en 0)
   en el elemento de texto variable + `flex:0 0 auto` y
   `white-space:nowrap` en los vecinos de ancho fijo.
+- **Una excepción dentro de `wwr_onreply` congela el resto de la
+  respuesta:** corta el `for` del parser, y todo lo que venía después en
+  esa respuesta no se procesa (nombre de proyecto en `-`, tracks del
+  proyecto anterior, lista de tabs vacía). Caso real: el `case "SEND"`
+  usaba `document.getElementById("sendsTrack" + n)` sin comprobar `null`,
+  y llega una respuesta `SEND` de un track cuya fila ya se quitó del DOM
+  (cambio a un proyecto con menos tracks). Se manifestó al disparar
+  `monitorMixPublish` en cada cambio de proyecto. Fix: `!= null` antes de
+  usar el elemento, como ya hace el `case "TRACK"`. Regla general: todo
+  `getElementById` sobre filas dinámicas dentro de `wwr_onreply` necesita
+  guard.
+- **Arrays por track de `wwr-dispatch.js` sin limpiar al quitar la fila**
+  (variante del estado heredado entre proyectos, arriba): el bloque que
+  quita la fila sobrante limpiaba seis arrays y dejaba `trackSendCntAr`,
+  `trackRcvCntAr`, `trackHwOutCntAr`, `trackSendHwCntAr`, `trackPeakAr` y
+  `recarmCountAr`. Efectos: el loop final de `wwr_onreply` seguía pidiendo
+  `GET/TRACK/x/SEND/y` de tracks que ya no existen, en cada respuesta; una
+  fila recreada con el mismo índice no repintaba su indicador si el valor
+  coincidía con el viejo (la comparación es contra el valor guardado); y
+  `recarmCountAr`, que se suma con `reduce`, arrastraba armados de tracks
+  quitados. Fix: limpiarlos en ese mismo bloque, con `0` para
+  `recarmCountAr` (un `undefined` explícito hace que el `reduce` dé
+  `NaN`). Regla general: todo array por track nuevo se limpia ahí.
+- **`:hover` queda pegado en táctil tras un toque:** el overlay blanco
+  semitransparente de `.button:hover .mouseover` seguía encima del botón
+  recién apagado y su letra se veía lavada, como deshabilitada, hasta
+  tocar otro elemento. Fix: la regla de hover va dentro de
+  `@media (hover: hover)`. Aplica a cualquier efecto de hover de la UI.
 
 ## Watchdog de "proyecto desconectado" (`core/init.js`)
 
@@ -445,6 +476,7 @@ datos (sí hace falta uno para el refresco).
 | Toggle Loop/Rec/Tracks armadas (`#optionsBar`) | Cerrado | Reemplaza a Snap — ver OptionsBar |
 | Toggle Solo in front (`#optionsBar`) | Cerrado | `40745`, ver OptionsBar |
 | Ids de gradiente/template únicos al clonar SVG | Cerrado | `nikUniquifyGradientIds()` + `removeAttribute("id")` — ver gotchas |
+| Modo PA (M/S sobre el corte del PA, chip en la fila MASTER) | Cerrado | `core/pa-mode.js`, ver `monitor_mix_pa.md` |
 
 ## Pendientes activos
 
