@@ -126,8 +126,12 @@ body {
 
 }
 
-.button:hover .mouseover {
-    visibility: visible;
+/* Solo con puntero real: en táctil :hover queda pegado tras el toque y
+   deja el overlay claro sobre el botón. */
+@media (hover: hover) {
+    .button:hover .mouseover {
+        visibility: visible;
+    }
 }
 
 .button:active .mouseover {
