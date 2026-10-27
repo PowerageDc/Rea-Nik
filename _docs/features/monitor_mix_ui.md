@@ -169,15 +169,25 @@ completo: aplicarla a cada pieza dejaba ver el relleno a través del thumb.
   master sin hardware output y falta de un par alineado libre. Depende de
   que el publish informe el motivo (`monitor_mix.md` §9). Con el motivo
   disponible, mostrar un texto distinto por causa.
-- **Sin probar:** un tercero moviendo el mismo send mientras el baterista
-  no lo toca (el fader debería seguirlo).
+- **Pantalla apagada en el celular del baterista:** el bus de monitoreo ya
+  no depende de que la UI esté despierta (`monitor_mix.md` §5), pero falta
+  verificar que al reactivar la pantalla la UI refresque la lista con el
+  proyecto activo sin tocar Actualizar.
 - `monitor.css` depende de `cantante.css` (clases `cn-*`): evaluar
   extraer el layout común a un archivo compartido.
-- **Vista horizontal (celular apaisado):** queda poco alto; el título y
-  la primera fila del stage ocupan casi todo. Diseño acordado: tiras de
-  canal con fader vertical y scroll horizontal, y el Click en una columna
-  lateral con faders horizontales compactos. Requiere un eje configurable
-  en `mm-slider.js` (pintado, cálculo de fracción, umbrales y
+- **Poco alto de viewport:** header, fila de sección, toolbar, dock de
+  Click y footer son fijos y el stage se queda con lo que sobra (§11), así
+  que con poco alto el stage casi desaparece: no se ven los faders de
+  Música ni se puede scrollear hasta ellos por el dock de Click.
+  Reproducido en desktop con la ventana baja, en celulares de pantalla
+  chica en vertical y en apaisado; no es específico de un dispositivo. En
+  iPhone vertical se sumaron la barra de URL y una franja inferior blanca
+  sin identificar (hipótesis sin confirmar: la banda que reserva
+  `msCueBand`, §1). Pendiente definir cómo se reparte el alto cuando no
+  alcanza. El caso apaisado ya tiene diseño acordado: tiras de canal con
+  fader vertical y scroll horizontal, y el Click en una columna lateral
+  con faders horizontales compactos. Requiere un eje configurable en
+  `mm-slider.js` (pintado, cálculo de fracción, umbrales y
   `touch-action`), resuelto al empezar cada gesto leyendo la media query
   `min-aspect-ratio: 1/1` de `cantante.css`, sin reconstruir al rotar.
 - **Fade en iOS Safari:** verificar que la máscara (§11) no parpadee con
