@@ -674,6 +674,12 @@ function wwr_onreply(results) {
                             trackFlagsAr[lastTrackId] = undefined;
                             trackHeightsAr[lastTrackId] = undefined;
                             faderConAr[lastTrackId] = undefined;
+                            trackSendCntAr[lastTrackId] = undefined;
+                            trackRcvCntAr[lastTrackId] = undefined;
+                            trackHwOutCntAr[lastTrackId] = undefined;
+                            trackSendHwCntAr[lastTrackId] = undefined;
+                            trackPeakAr[lastTrackId] = undefined;
+                            recarmCountAr[lastTrackId] = 0; // 0 y no undefined: el reduce de armados daría NaN
                         }
                     }
                 }
@@ -701,7 +707,7 @@ function wwr_onreply(results) {
                     if (tok[3] & 8) sendMuted = ", MUTED";
 
                     var trackSendsContent = document.getElementById("sendsTrack" + tok[1]);
-                    if (trackSendsContent.childNodes.length > 0) {
+                    if (trackSendsContent != null && trackSendsContent.childNodes.length > 0) {
                         var thisSendDiv = trackSendsContent.childNodes[tok[2]];
                         if (thisSendDiv != null) {
                             thisSendDiv.id = [tok[2]];
