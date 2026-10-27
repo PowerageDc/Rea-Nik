@@ -255,12 +255,12 @@ insertado, puede terminar antes que la plantilla en el DOM — a partir de
 ahí, cualquier código que siga buscando la plantilla por
 `getElementById()` empieza a recibir el clon en su lugar (con el estado
 que ese clon tenga en ese momento), de forma silenciosa y sin error en
-consola. Bug real encontrado por esta causa: control remoto web,
-`core/wwr-dispatch.js`, templates `trackRow1Svg`/`trackRow2Svg`/
-`trackSendSvg` (ver `features/remote_control_ui.md` §3).
+consola. Caso en el proyecto: templates `trackRow1Svg`/`trackRow2Svg`/
+`trackSendSvg` de `core/wwr-dispatch.js` (ver
+`features/remote_control_ui.md` §3).
 
-Aplica a cualquier patrón de clonado de templates por instancia (tracks,
-sends, o UI repetida en otros paneles) — no solo al caso ya resuelto.
+Aplica a cualquier patrón de clonado de templates por instancia (tracks, 
+sends, o UI repetida en otros paneles), no solo a ese caso.
 
 ## FLIP de texto con cambio de tamaño (animación por `transform`)
 
