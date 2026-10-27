@@ -17,9 +17,9 @@ bidireccional playrate% ↔ BPM).
   manejo de touch/mouse nativo del input, evita reinventar lo que
   `core/faders.js` ya resuelve para un caso distinto (faders de volumen,
   con geometría propia por color de track).
-- **Doble-tap-reset** generalizado a partir del patrón ya existente en
-  `core/faders.js` (`faderCheckDoubleTap`/`faderLastTapAr`), con key
-  string en vez de track id.
+- **Doble-tap-reset:** mismo patrón que `core/faders.js`
+  (`faderCheckDoubleTap`/`faderLastTapAr`), con key string en vez de
+  track id.
 - Botones de step (+/−) junto al fader, `config.step`.
 - **`<input type="range">` rotado con `transform:rotate(-90deg)`:** el
   thumb custom necesita `-webkit-appearance:none` tanto en el
@@ -38,9 +38,9 @@ bidireccional playrate% ↔ BPM).
 ## 2. Knob SVG calcado (`core/fader-knob-svg.js`)
 
 Módulo reutilizable, calco del `<g class="fader">` de `trackRow2Svg` (fila
-de volumen nativa de la UI principal) — reemplaza visualmente al thumb
-nativo del `<input type="range">` (círculo cyan liso) sin tocar su lógica
-de drag existente. Expone `nikCreateFaderKnobSvg({mountEl, orientation})`
+de volumen nativa de la UI principal) — sustituye visualmente al thumb
+nativo del `<input type="range">` sin tocar su lógica de drag. Expone
+`nikCreateFaderKnobSvg({mountEl, orientation})`
 → `{setFraction(f)}` (`f` entre 0 y 1, mueve el `translate` del grupo a lo
 largo del recorrido).
 
@@ -61,9 +61,9 @@ largo del recorrido).
   `wwr-dispatch.js` (ver `remote_control_ui.md` §3): más de un fader knob en
   la misma página duplicaría `<linearGradient id>` si no se sufija.
 - **Track del knob**: color sólido `#262626` (mismo gris que
-  `.nikVFaderStepBtn`/reset) — el original usa `#1A1A1A` con opacidad 0.5
-  sobre fondo `#333333` (fila de track), valor casi invisible sobre el
-  fondo `#1a1a1a` del popup, por eso se resolvió distinto acá.
+  `.nikVFaderStepBtn`/reset). El del original (`#1A1A1A` con opacidad 0.5
+  sobre `#333333`) sería casi invisible sobre el fondo `#1a1a1a` del
+  popup.
 
 ### Integración con el `<input>` existente
 
@@ -73,17 +73,15 @@ provista por `nikCreateVerticalFader`). Se vuelve invisible
 (`background:transparent`, thumb transparente) pero sigue capturando el
 gesto. El SVG del knob se monta **encima**, en el mismo `.nikVFaderWrap`,
 con `pointer-events:none` — capa puramente visual, sincronizada con el
-valor real del input. Se descartó reimplementar el drag a mano sobre el
-SVG (al estilo `core/faders.js`) por duplicar lógica ya probada sin
-necesidad — el único requisito nuevo era visual.
+valor real del input. No reimplementa el drag sobre el SVG (como hace
+`core/faders.js`): duplicaría lógica que el input ya resuelve.
 
 **Hook en `core/vertical-fader.js`**: `nikCreateVerticalFader(config)`
 acepta dos claves opcionales — `knobMountId` (id del elemento donde
 montar el knob, típicamente el mismo `.nikVFaderWrap`) y
 `knobOrientation` (`"vertical"` por default si hay `knobMountId`, o
-`"horizontal"`). Sin `knobMountId`, el fader funciona exactamente como
-antes (compatible con instancias futuras que no necesiten el knob
-visual). El knob se resincroniza en tres puntos: init, listener
+`"horizontal"`). Sin `knobMountId` no se monta knob y el fader usa solo
+el input nativo. El knob se resincroniza en tres puntos: init, listener
 `"input"` (drag en vivo), y `handle.setValue()` (usado tanto por el poll
 de servidor como por `stepBy`/`reset`, que llaman a `setValue`
 internamente).
@@ -95,13 +93,12 @@ acompañante del flujo normal (`position:absolute`) para que el elemento
 principal sea el único que participa del centrado del contenedor**, en
 vez de centrar el bloque conjunto.
 
-- **Botones +/−**: de fila a columna a la izquierda del fader (+ arriba,
-  − abajo, gap 16px), sacados del flujo con `position:absolute;
-  right:100%` dentro de `.nikVFaderWrap` (que pasa a
-  `position:relative`) — así el fader queda centrado contra el readout
-  numérico de arriba, no contra el bloque botones+fader. Tamaño de
-  `.nikVFaderStepBtn` subido de 44px a 52px (mejor agarre, menos roce con
-  el fader).
+- **Botones +/−**: en columna a la izquierda del fader (+ arriba, −
+  abajo, gap 16px), sacados del flujo con `position:absolute;
+  right:100%` dentro de `.nikVFaderWrap` (`position:relative`) — así el
+  fader queda centrado contra el readout numérico de arriba, no contra el
+  bloque botones+fader. `.nikVFaderStepBtn` mide 52px (agarre, menos roce
+  con el fader).
 - **Input de BPM + label "BPM"** (solo Playrate): mismo patrón — el
   label pasa a `position:absolute; left:100%` respecto de un wrapper
   `position:relative` alrededor del `<input>`, que queda como único
@@ -137,10 +134,9 @@ colorean según cuánto se aleja el valor de su default.
 
 ## 5. Rango y comportamiento del fader de Playrate
 
-- **Rango 50–150%** (no 40–150 del slider original) — el punto medio
-  matemático (100%) coincide con el `defaultValue`, evitando el
-  desalineo visual círculo/botones-de-step (ver §1, "Desalineo visual").
-  Confirmado que no se usa playrate por debajo de 50% en la práctica.
+- **Rango 50–150%**: el punto medio matemático (100%) coincide con el 
+  `defaultValue`, evitando el desalineo visual círculo/botones-de-step (ver 
+  §1, "Desalineo visual"). No se usa playrate debajo de 50% en la práctica.
 - **Clamp visual**: flash breve de color/fondo (`.nikVFaderClampFlash`)
   cuando el BPM tipeado excede el rango y se corrige.
 - **Campo BPM**: confirmación por `onchange` (blur/Enter) — no botón
@@ -148,70 +144,58 @@ colorean según cuánto se aleja el valor de su default.
   (`onfocus="this.select()"`). Enter fuerza `blur()` explícito (no
   depender de que el teclado virtual dispare blur solo).
 - **Jerarquía visual**: BPM protagonista (grande, color de acento), % es
-  secundario (chico, gris) — invertido respecto al diseño original donde
-  el % era protagonista.
+  secundario (chico, gris).
 
-## 6. Playrate → Tempo: mapa de tempo variable (no un BPM fijo)
+## 6. Playrate → Tempo: mapa de tempo variable
 
-**Problema resuelto**: el BPM equivalente mostrado "desviaba" en
-proyectos con mapa de tempo variable (correcciones de tempo a lo largo de
-toda la canción, típico de temas grabados sin metrónomo, con intro
-atípica) — no en proyectos de tempo estable, donde el cálculo era
-correcto.
+El BPM equivalente depende de en qué sección del mapa de tempo está la
+posición de reproducción. En proyectos con mapa variable (correcciones de
+tempo a lo largo de toda la canción, típico de temas grabados sin
+metrónomo, con intro atípica) cada sección tiene su propio tempo
+original, y no existe un tempo de referencia fijo por proyecto.
 
-**Causa raíz**: `base_tempo` estaba diseñado como un tempo de referencia
-fijo por proyecto, leído una sola vez. En un proyecto con mapa de tempo
-variable no existe tal cosa — cada sección tiene su propio tempo
-original, y el BPM equivalente correcto depende de en qué sección está la
-posición de reproducción en cada momento.
+Se lee **el mapa de tempo completo** (posición y bpm de cada tempo/time-sig
+marker) on-demand: boot, abrir popup y cambio de proyecto/tab (**no**
+entra al poll rápido). En el cliente, en cada tick del poll de
+`TRANSPORT` (10ms) se busca el tempo vigente en la posición actual
+(`playPosSeconds`, que ya se actualiza en ese poll): el último marker con
+`pos <= posición actual`, sin interpolación porque los cambios de tempo
+son saltos discretos, no rampas. No hay llamadas Lua adicionales en el
+loop rápido: el costo extra es un `for` liviano sobre un array en
+memoria.
 
-**Solución**: en vez de leer un solo BPM, se lee **el mapa de tempo
-completo** del proyecto (todas las posiciones de tempo/time-sig marker +
-su bpm), con los mismos triggers on-demand de antes — boot, abrir popup,
-cambio de proyecto/tab (**no** entra al poll rápido). Del lado cliente,
-en cada tick del poll de `TRANSPORT` (10ms, ya existente) se busca el
-tempo vigente en la posición actual (`playPosSeconds`, ya se actualiza en
-ese mismo poll) mediante lookup "último marker con `pos <= posición
-actual`" — sin interpolación, porque los cambios de tempo son saltos
-discretos, no rampas. Cero llamadas Lua adicionales en el loop rápido:
-todo el costo extra es un `for` liviano sobre un array ya en memoria.
-
-- **Script**: `Nik_Playrate_ReadTempoMap.lua` (reemplaza y elimina a
-  `Nik_Playrate_ReadBaseTempo.lua`) — itera
+- **Script**: `Nik_Playrate_ReadTempoMap.lua` — itera
   `CountTempoTimeSigMarkers`/`GetTempoTimeSigMarker`, publica
   `NikRemote/tempo_map` como `"pos1:bpm1,pos2:bpm2,..."`. Sin markers,
-  fallback a un único punto en `pos=0` con `Master_GetTempo()`.
-- **`config.js`**: `playrateTempoMapRead` reemplaza a
-  `playrateBaseTempoRead`.
-- **`playrate.js`**: `nikPlayrateTempoMap` (array `{pos, bpm}`)
-  reemplaza a `nikPlayrateBaseTempo` (número fijo).
-  `nikPlayrateTempoAt(positionSeconds)` — lookup nuevo.
-  `nikPlayrateComputeEquivalentBpm` y `nikPlayrateBpmCommit` resuelven el
-  tempo vigente en la posición actual en vez de un valor fijo.
-  `nikPlayrateSetTempoMap`/`nikPlayrateRequestTempoMap` reemplazan a sus
-  equivalentes de `base_tempo`.
+  fallback a un único punto en `pos=0` con `Master_GetTempo()`. En la
+  misma corrida publica `NikRemote/timesig_map`, que consume
+  `core/music-state.js` (contrato en `musicstate_data_model.md` §4.5);
+  `nikPlayrateRequestTempoMap()` pide las dos keys juntas.
+- **`config.js`**: `playrateTempoMapRead`.
+- **`playrate.js`**: `nikPlayrateTempoMap` (array `{pos, bpm}`).
+  `nikPlayrateTempoAt(positionSeconds)` resuelve el tempo vigente en una
+  posición. `nikPlayrateComputeEquivalentBpm` y `nikPlayrateBpmCommit`
+  usan ese tempo. `nikPlayrateSetTempoMap`/`nikPlayrateRequestTempoMap`
+  guardan y piden el mapa.
 - **`wwr-dispatch.js`**: case `TRANSPORT` refresca el readout principal
-  de Playrate en cada tick (antes solo en el poll lento
-  `EXTSTATE/playrate`, 1000ms) — necesario para que el BPM equivalente
-  siga en vivo la sección que está sonando. Case `EXTSTATE` escucha
-  `tempo_map` en vez de `base_tempo`.
-- **`init.js`**: boot y watchdog de desconexión actualizados al nuevo
-  nombre/tipo de variable — al desconectar, `nikPlayrateTempoMap` se
-  resetea a `null` y el readout cae al placeholder `—`.
+  de Playrate en cada tick, para que el BPM equivalente siga en vivo la
+  sección que está sonando. Case `EXTSTATE` escucha `tempo_map`.
+- **`init.js`**: el boot pide el mapa; al desconectar, el watchdog
+  resetea `nikPlayrateTempoMap` a `null` y el readout cae al placeholder
+  `—` (`remote_control_projects.md` §3).
 
-**Casos borde cubiertos** (verificar que se mantengan ante cualquier
-refactor futuro): 1 solo tempo marker (comportamiento idéntico a antes
-del fix); tempo estable + cambios de métrica (no afecta, el cálculo solo
-mira bpm, no time signature); sin tab activa/proyecto sin guardar (el
-script opera sobre `proj = 0`, no depende de que el proyecto esté
-guardado); REAPER cerrado (reutiliza el watchdog existente).
+**Casos borde** que el diseño cubre: 1 solo tempo marker (se comporta como
+un tempo fijo); tempo estable con cambios de métrica (no afecta, el
+cálculo solo mira bpm, no time signature); sin tab activa o proyecto sin
+guardar (el script opera sobre `proj = 0`, no depende de que el proyecto
+esté guardado); REAPER cerrado (lo cubre el watchdog,
+`remote_control_projects.md` §3).
 
-**Dato de fallback que sigue vigente**: el tempo base de un solo punto
-(caso sin markers) usa `GetTempoTimeSigMarker(0,0)` si existe, si no
-`Master_GetTempo()` — confirmado empíricamente que `Master_GetTempo()`
-depende de la posición del cursor de edición (toma el tempo del marker a
-su izquierda), no es referencia estable salvo en el caso sin ningún
-marker de tempo.
+**Fallback**: el tempo base de un solo punto (caso sin markers) usa
+`GetTempoTimeSigMarker(0,0)` si existe, si no `Master_GetTempo()`.
+`Master_GetTempo()` depende de la posición del cursor de edición (toma el
+tempo del marker a su izquierda), así que solo es referencia estable en el
+caso sin ningún marker de tempo.
 
 **Principio general reutilizable**: cuando un valor derivado necesita
 reflejar algo que cambia con la posición de reproducción (no solo con el
@@ -223,45 +207,39 @@ nuevos al loop de 10ms.
 
 ## 7. Readout principal de Playrate (fuera del popup)
 
-`#nikPlayrateReadout` mostraba `%` de playrate — ahora muestra el tempo
-equivalente en BPM, redondeado sin decimales, reusando el cálculo del
-popup (no duplicado).
+`#nikPlayrateReadout` muestra el tempo equivalente en BPM, redondeado sin
+decimales, reusando el cálculo del popup (no duplicado).
 
 - `nikPlayrateComputeEquivalentBpm(percent)` — función pura en
-  `playrate.js`, hoy resuelve el tempo vigente vía el mapa de tempo (ver
-  arriba). Consumida tanto por `nikPlayrateUpdateBpmField()` (campo del
-  popup, un decimal) como por `nikPlayrateRefreshMainReadout()` (readout
-  principal, `Math.round()`, sin decimales) — un solo lugar para
-  corregir precisión a futuro, el fix aplica a los dos displays.
+  `playrate.js` que resuelve el tempo vigente vía el mapa de tempo (ver
+  arriba). La consumen `nikPlayrateUpdateBpmField()` (campo del popup, un
+  decimal) y `nikPlayrateRefreshMainReadout()` (readout principal,
+  `Math.round()`, sin decimales): un solo lugar para corregir la
+  precisión de ambos displays.
 - **Disponibilidad del mapa de tempo sin abrir el popup**: disparo
-  on-demand (`nikPlayrateRequestTempoMap()`) en tres momentos — boot
-  (`init()`), cambio de proyecto activo (handler `active_project_name`
-  en `wwr-dispatch.js`), y reconexión implícita (el watchdog resetea a
-  `null` al detectar desconexión; no hay reintento activo mientras sigue
-  desconectado, se retoma solo con el próximo boot o cambio de proyecto).
+  on-demand (`nikPlayrateRequestTempoMap()`) en el boot (`init()`) y en el
+  cambio de proyecto activo (handler `active_project_name` en
+  `wwr-dispatch.js`). Tras una desconexión no hay reintento activo
+  (`remote_control_projects.md` §3).
 - **Ícono** ♩ (negra musical, U+2669) a la izquierda del número, en
   `<span>` propio (`#nikPlayrateNoteIcon`). Contenedor
-  `display:inline-flex; align-items:center` — el centrado por `baseline`
-  (default de texto) rompía la alineación vertical al usar un glifo con
-  `font-size` distinto al del número; con flex, el centrado es por altura
-  real de cada hijo, no por baseline.
-- **Espaciado** de los tres readouts del bloque superior (métrica /
-  ReaPitch / posición / Playrate / menú): `#nikReaPitchReadout` `left:16%`
-  → `left:20%`; `#nikPlayrateReadout` `right:16%` → `right:18%`. El ancho
-  de "posición" (centro del bloque) varía según el formato mostrado
-  (`measures.beats` vs `min:seg`, ver `remote_control_ui.md` §5) — estos
-  porcentajes son un punto medio razonable contra el peor caso, no un 
-  centrado matemático exacto.
+  `display:inline-flex; align-items:center`: centra por altura real de
+  cada hijo; el centrado por `baseline` (default de texto) desalinea
+  verticalmente un glifo de `font-size` distinto al del número.
+- **Espaciado** de los readouts del bloque superior (métrica / ReaPitch /
+  posición / Playrate / menú): `#nikReaPitchReadout` `left:20%`;
+  `#nikPlayrateReadout` `right:18%`. El ancho de "posición" (centro del 
+  bloque) varía según el formato mostrado (`measures.beats` vs `min:seg`, 
+  ver `remote_control_ui.md` §5) — estos porcentajes son un punto medio 
+  razonable contra el peor caso, no un centrado matemático exacto.
 
 ## 8. Pendiente
 
-- **Precisión del cálculo Playrate→BPM**: reportada como "a veces no muy
-  precisa" *antes* del fix del mapa de tempo variable — a re-observar si
-  reaparece; puede que ya esté resuelta por el fix de arriba. Centralizado
-  en una sola función, así que cualquier corrección futura aplica a
-  ambos displays sin tocar dos lugares.
-- **Limpieza**: borrar `Nik_Playrate_ReadBaseTempo.lua` del repo si sigue
-  físicamente ahí, y `playrateBaseTempoRead` de `config.js` si quedó.
+- **Precisión del cálculo Playrate→BPM**: se reportó como "a veces no muy
+  precisa" con un tempo base fijo; sin confirmar si persiste con el mapa
+  de tempo. El cálculo está en una sola función
+  (`nikPlayrateComputeEquivalentBpm`), así que una corrección aplica a
+  ambos displays.
 
 ## 9. Archivos de este dominio
 

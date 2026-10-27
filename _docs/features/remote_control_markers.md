@@ -8,45 +8,33 @@ Gotchas generales de CSS de listas scrolleables: `remote_control_ui.md`
 
 ## 1. Seeker de markers (`#nextPrev`)
 
-Rediseño cerrado: `viewBox` `0 0 318.9 87.8` → `0 0 266 36` — sin
-regiones, alto comprimido a padding + texto + badge + padding
-(3 / 14.6 / 15 / 3.4).
+`viewBox` `0 0 266 36`, sin regiones. El alto es padding + texto + badge +
+padding (3 / 14.6 / 15 / 3.4).
 
-- Sacados del HTML: `#regionStrip`, `#region1`-`#region4`,
-  `#locTriangles`, los 3 `markerStalk`. `#markerSecBg` conserva solo la
-  muesca central (indicador del marker actual), recalculada al nuevo
-  alto y ancho.
+- `#markerSecBg` contiene solo la muesca central (indicador del marker
+  actual).
 - `#prevButton`/`#nextButton`: los paths (pill + gradiente `mrg1`/`mrg2`)
-  **no se redibujaron** — se reposicionan/escalan con
-  `transform="translate(tx,ty) scale(sx,sy)"` sobre el `<g>` completo. El
-  bbox de referencia para calcular `sx`/`sy`/`tx`/`ty` sale del path de
-  **relleno** (`fill="#1A1A1A"`), no del `shadow` (el shadow sobresale
-  más abajo por el offset de sombra e infla el bbox). El contra-escalado
-  de íconos dentro de estos botones sigue el patrón general documentado
-  en `remote_control_ui.md` §3 (grupo SVG con `scale` no-uniforme).
+  se reposicionan y escalan con `transform="translate(tx,ty) scale(sx,sy)"` 
+  sobre el `<g>` completo. El bbox de referencia para calcular `sx`/`sy`/
+  `tx`/`ty` sale del path de **relleno** (`fill="#1A1A1A"`), no del 
+  `shadow` (el shadow sobresale más abajo por el offset de sombra e infla 
+  el bbox). El contra-escalado de íconos dentro de estos botones sigue el 
+  patrón general documentado en `remote_control_ui.md` §3 (grupo SVG con 
+  `scale` no-uniforme).
 - Markers extremos (prev/next) separados simétricamente del centro
-  (antes ±56.85, ahora ±62) + área de texto ensanchada (56.8→62 cada una)
-  para nombres largos.
+  (±62), con un área de texto de 62 cada uno para nombres largos.
 
-### Fix: color de markers `xN` en el seeker
+### Color de markers `xN` en el seeker
 
-**Síntoma:** un marker `xN` (cadena, hereda color del último marker
-categorizado anterior) se mostraba gris cuando ese marker "ancla" no
-estaba entre los 3 markers visibles (prev/this/next).
-
-**Causa:** `nikTransportChainState = {color:null, step:0}` se reseteaba
-en cada redraw y solo se resolvían los 3 markers visibles, en orden — si
-el ancla quedaba fuera de esa ventana, el `chainState.color` nunca se
-seteaba a tiempo.
-
-**Fix:** en `core/wwr-dispatch.js`, dentro del bloque `if ((pos != newPos
-|| mrMapAr.length != newMrMapLength) && nextPrevSvg)`, se resuelve **toda
-la timeline de markers una sola vez** por redraw (recorriendo `mrMapAr`
-ya ordenado) armando `markerChainMap[markerId] → {displayName,
+Un marker `xN` (cadena) hereda el color del último marker categorizado
+anterior, que puede no estar entre los 3 visibles (prev/this/next). Por
+eso, en `core/wwr-dispatch.js`, dentro del bloque `if ((pos != newPos ||
+mrMapAr.length != newMrMapLength) && nextPrevSvg)`, se resuelve **toda la
+timeline de markers una sola vez** por redraw (recorriendo `mrMapAr` ya
+ordenado) y se arma `markerChainMap[markerId] → {displayName,
 resolvedColor}`. prev/this/next consultan ese mapa en vez de llamar a
-`nikResolveMarkerDisplay()` directo. El popup de markers **no sufría este
-bug** — ya recorre `g_markers` completo en orden al armar la lista.
-`markers.js`/`config.js` no se tocaron.
+`nikResolveMarkerDisplay()` directo. El popup recorre `g_markers`
+completo en orden al armar la lista, así que no necesita el mapa.
 
 ## 2. Colores y traducción de markers (`NIK_MARKER_COLOR_MAP`, en `config.js`)
 
@@ -63,8 +51,8 @@ popup como por los indicadores de transporte.
   traduce el texto mostrado al `label` completo (+ número si tenía).
 - **Cadena `x<número>`** (`NIK_MARKER_CHAIN_PATTERN`/`_STEP`): hereda el
   color del último marker categorizado encontrado antes en la lista,
-  aclarando hacia blanco un paso fijo por eslabón sucesivo. Ver fix de
-  color arriba (seeker) — el popup nunca tuvo este bug.
+  aclarando hacia blanco un paso fijo por eslabón sucesivo. En el seeker
+  se resuelve con `markerChainMap` (§1); el popup no lo necesita.
 - Colores auditados con contraste WCAG AA (≥4.5:1) contra `#1a1a1a`.
 
 En los **indicadores de transporte** (prev/actual/next), mismo
@@ -91,8 +79,7 @@ markers que caen una fracción de float antes del downbeat real. Se suma un
 
 - **Filas**: dos líneas apiladas — nombre del marker arriba (1.22em,
   weight 600), metadata (tiempo + compases) abajo, más chica y en gris.
-- **Separadores**: `#3A3A3A` (antes `#262626`, sin contraste suficiente
-  sobre `#1a1a1a`).
+- **Separadores**: `#3A3A3A`.
 - **Paleta**: la neutra de popups (`remote_control_ui.md` §1). El cyan
   del indicador de "parado en marker" (borde izquierdo + fondo) y el de la
   barra de long-press se conservan a propósito.
@@ -101,7 +88,7 @@ markers que caen una fracción de float antes del downbeat real. Se suma un
   left-aligned entre filas, ver `remote_control_ui.md` §3). Formato
   `"Compases: N"` (label `#9A9A9A`, número `#C4C4C4` negrita).
   Separador `|` como **span propio** dentro del flex de `posSpan` (no
-  texto concatenado — rompía centrado/baseline/color), color `#5A5A5A`.
+  texto concatenado — rompe centrado, baseline, y color), color `#5A5A5A`.
 - **Fades de scroll** (`#nikMarkerScrollFade` / `#nikMarkerScrollFadeTop`):
   abajo 28px de alto / opacidad pico 0.55; arriba 20px / opacidad pico
   0.75 — valores distintos a propósito para verse parejos (el más alto
@@ -135,9 +122,8 @@ Extensión de `nikMarkerBrowserHighlightCurrent()`: cuando el marker
 actual cambia, si el ítem no está dentro del viewport del scroller
 (`#nikMarkerBrowserScroll`), se centra con `scrollIntoView({block:
 "center", behavior:"smooth"})` (con chequeo previo de visibilidad para no
-re-centrar de más). La función tiene un parámetro `skipAutoScroll` sin
-ningún caller hoy que lo pase en `true` — se dejó en la firma por si hace
-falta a futuro un open "silencioso".
+re-centrar de más). El parámetro `skipAutoScroll` en `true` suprime el
+autoscroll (open "silencioso").
 
 ### Scroll persistente por proyecto (tab)
 
@@ -157,13 +143,11 @@ mecanismo que el resto de las keys, ver `remote_control_projects.md` §1).
 - **Restore**: no puede pasar en el cambio de tab (la lista se arma
   recién en `nikOpenMarkerBrowser()`) — se lee
   `nikTabUiMemory[nikCurrentProjectName].markerScrollTop` ahí mismo.
-- **UX del marker actual fuera del scroll restaurado**: resuelto sin
-  código nuevo — al abrir, se restaura el scroll guardado y *después* se
-  llama a `nikMarkerBrowserHighlightCurrent()` sin `skipAutoScroll`; si
-  el marker actual ya cae dentro del scroll restaurado no pasa nada, si
-  no, el autoscroll lo trae a la vista.
-- **Confirmado en uso real**: testeado con lista larga (sticky header +
-  fades) y con persistencia de scroll entre tabs — anda bien.
+- **Marker actual fuera del scroll restaurado**: al abrir, se restaura el
+  scroll guardado y *después* se llama a
+  `nikMarkerBrowserHighlightCurrent()` sin `skipAutoScroll`; si el marker
+  actual ya cae dentro del scroll restaurado no pasa nada, si no, el
+  autoscroll lo trae a la vista.
 
 ### Seek relativo "N compases antes" (pre-marker)
 
@@ -229,7 +213,7 @@ de ese marker, mínimo de taps posible.
 | `nikMarkerBrowserSorted` | `marker-browser.js` | Lista de markers ordenada por tiempo, global al abrir el popup |
 | `nikMarkerBrowserCurrentId` | `marker-browser.js` | Id del marker "actual" resuelto la última vez, gatea repintados |
 | `nikMarkerBrowserFindCurrentId(pos)` | `marker-browser.js` | Resuelve qué marker corresponde a una posición dada |
-| `nikMarkerBrowserHighlightCurrent(skipAutoScroll)` | `marker-browser.js` | Pinta el marker actual + dispara autoscroll (sin caller que pase `true` hoy) |
+| `nikMarkerBrowserHighlightCurrent(skipAutoScroll)` | `marker-browser.js` | Pinta el marker actual + dispara autoscroll (`skipAutoScroll=true` lo suprime) |
 | `nikMarkerBrowserSaveScroll()` | `marker-browser.js` | Persiste el scroll actual en `nikTabUiMemory` (al cerrar) |
 | `nikUpdatePreMarkerBarsDisplay()` | `marker-browser.js` | Refresca el número/caption del stepper |
 | `nikTogglePreMarkerStepper()` | `marker-browser.js` | Expande/colapsa el stepper de la pill "Nc" |
