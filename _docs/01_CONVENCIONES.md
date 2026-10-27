@@ -174,6 +174,7 @@ C:\dev\Rea-Nik\
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
 ├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List
+├── ABPair/ alternar por solo entre dos tracks (par guardado en el proyecto)
 ├── AutoColor/ auto-color de tracks
 ├── StemFragment/ captura/UI de fragmentos de stem
 ├── Tests-Debug/ scripts de diagnóstico y prueba (sin dominio propio)

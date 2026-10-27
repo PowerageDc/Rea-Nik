@@ -96,6 +96,9 @@ render, pero conviven en el mismo proyecto/entorno):
   tempo para intros atípicas.
 - **Panel ReaPitch (Stem Bus)**: control nativo de semitonos ReaPitch vía
   ReaImGui, ver `03_PANEL_REAPITCH_KNOB.md`.
+- **A/B de tracks (ABPair)**: alterna por solo entre dos tracks (ej. MIDI
+  corregido vs WAV original) con un atajo, también desde el Piano Roll. El
+  contrato vive en el encabezado de los scripts; hoy solo uso local.
 - **Control remoto web**: interfaz HTML para controlar REAPER desde el
   celular en ensayos (transporte, faders, markers, playrate, semitonos
   ReaPitch), ver `features/remote_control.md`.
