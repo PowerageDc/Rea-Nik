@@ -16,20 +16,18 @@
 // respuesta o si no llegó ningún valor válido. nikPlayrateTempoAt() resuelve
 // el bpm original vigente en una posición dada -- necesario en proyectos
 // con mapa de tempo variable (intros atípicas), donde no existe "un" tempo
-// de referencia único (reemplaza al viejo nikPlayrateBaseTempo, un solo
-// número fijo). La traducción fader↔BPM es puramente de cliente, no
+// de referencia único. La traducción fader↔BPM es puramente de cliente, no
 // dispara un segundo wwr_req: el commit real (SET/EXTSTATE playrate_target)
 // sale siempre a través del fader.
 //
 // Cargado como <script src> clásico (sin type="module"): las funciones
 // cuelgan de `window` para que los onclick="..." inline de playrate.html
-// las encuentren igual que antes.
+// las encuentren.
 
 var nikPlayrateFaderHandle = null;
 // Mapa de tempo completo del proyecto: array de {pos, bpm} ordenado por pos
 // ascendente, o null hasta la primera respuesta / si no llegó ningún valor
-// válido. Reemplaza al viejo nikPlayrateBaseTempo (un solo número) -- ver
-// Nik_Playrate_ReadTempoMap.lua.
+// válido. Lo publica Nik_Playrate_ReadTempoMap.lua.
 var nikPlayrateTempoMap = null;
 
 function nikPlayrateEnsureFader() {
@@ -107,7 +105,7 @@ function nikPlayrateUpdateBpmField(percent) {
 
 // Pinta el readout principal (#nikPlayrateReadout, fuera del modal) con el
 // tempo equivalente redondeado sin decimales — placeholder "—" mientras no
-// haya nikPlayrateBaseTempo disponible (boot / reconexión en curso).
+// haya mapa de tempo disponible (boot / reconexión en curso).
 function nikPlayrateRefreshMainReadout(percent) {
     var readout = document.getElementById("nikPlayrateReadout");
     var bpmValue = document.getElementById("nikPlayrateBpmValue");
@@ -121,7 +119,7 @@ function nikPlayrateRefreshMainReadout(percent) {
 // popup — usada al bootear la app (init.js) y al detectar cambio de
 // proyecto activo (wwr-dispatch.js), para que el readout principal muestre
 // BPM equivalente desde el arranque, no solo después de haber abierto el
-// popup alguna vez. Reemplaza a nikPlayrateRequestBaseTempo.
+// popup alguna vez.
 function nikPlayrateRequestTempoMap() {
     // timesig_map viaja pegado a tempo_map -- Nik_Playrate_ReadTempoMap.lua publica
     // los dos en la misma corrida. Lo consume core/music-state.js, no este archivo.
@@ -165,8 +163,7 @@ function nikPlayrateBpmKeydown(event, el) {
 // proyecto, ver nikPlayrateRequestTempoMap). Parsea "pos1:bpm1,pos2:bpm2,..."
 // a un array ordenado, y refresca ambos displays de una: el campo BPM del
 // popup (si existe fader) y el readout principal (con el % actual conocido
-// por el fader, sin esperar el próximo poll). Reemplaza a
-// nikPlayrateSetBaseTempo.
+// por el fader, sin esperar el próximo poll).
 function nikPlayrateSetTempoMap(val) {
     var map = [];
     if (val) {

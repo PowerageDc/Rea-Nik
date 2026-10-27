@@ -1,10 +1,9 @@
 -- Nik_Playrate_ReadTempoMap.lua
--- Reemplaza a Nik_Playrate_ReadBaseTempo.lua: en vez de un solo BPM de
--- referencia, publica el mapa de tempo completo del proyecto (posicion en
--- segundos + bpm de cada tempo/time-sig marker), para que el remoto pueda
--- calcular el BPM equivalente vigente en cada punto de la cancion -- no solo
--- en el primero -- en proyectos con mapa de tempo variable (intros atipicas
--- grabadas sin metronomo). Ver playrate.js.
+-- Publica el mapa de tempo completo del proyecto (posicion en segundos +
+-- bpm de cada tempo/time-sig marker), para que el remoto pueda calcular el
+-- BPM equivalente vigente en cada punto de la cancion, en proyectos con
+-- mapa de tempo variable (intros atipicas, o tracks grabadas sin metronomo).
+-- Ver playrate.js.
 --
 -- Formato del ExtState (NikRemote/tempo_map): "pos1:bpm1,pos2:bpm2,..."
 -- ordenado por posicion ascendente. Cambios de compas sin cambio de bpm

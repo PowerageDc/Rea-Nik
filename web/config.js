@@ -40,9 +40,7 @@ var NIK_LUA_COMMANDS = {
     // posiciones de tempo/time-sig marker + su bpm, o un unico punto en
     // pos=0 con Master_GetTempo() si no hay ninguno) — encadenada solo al
     // abrir el popup de Playrate / boot / cambio de proyecto, no vive en el
-    // poll de fondo (mismo criterio que projectTabsRead). Reemplaza al
-    // viejo playrateBaseTempoRead (un solo BPM fijo, no servia para
-    // proyectos con mapa de tempo variable). Ver playrate.js /
+    // poll de fondo (mismo criterio que projectTabsRead). Ver playrate.js /
     // Nik_Playrate_ReadTempoMap.lua.
     playrateTempoMapRead: {
         luaFile: "Nik_Playrate_ReadTempoMap.lua",
