@@ -163,6 +163,11 @@ var NIK_MARKER_CHAIN_STEP = 0.18;
 // ==== Timing / UX ====
 var NIK_FADER_DBLTAP_MS = 300; // ventana de doble-tap para reset de fader a 0dB
 
+// true = al conectar y al cambiar de proyecto, el remoto dispara
+// monitorMixPublish (asegura bus y sends de monitoreo), sin depender de que
+// la UI de Monitor Mix esté abierta en algún dispositivo.
+var NIK_MM_ENSURE_ON_SWITCH = true;
+
 // 1 = tamaño original; <1 achica todo el bloque play/pause/stop por igual,
 // sin deformar (ver calculateScale() en core/).
 var NIK_TRANSPORT_SCALE = 0.55;

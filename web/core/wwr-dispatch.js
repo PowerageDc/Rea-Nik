@@ -119,6 +119,11 @@ function wwr_onreply(results) {
                         nikCurrentProjectName = tok[3];
                         nikPlayrateRequestTempoMap(); // el mapa de tempo puede diferir por proyecto (trae tempo_map + timesig_map)
                         nikMusicStateRequestAll(); // harmony/key/roles/cues tambien son por-proyecto
+                        // Bus y sends de monitoreo del proyecto recién activo: va en el núcleo
+                        // porque tiene que ocurrir sin importar qué vista esté visible.
+                        if (NIK_MM_ENSURE_ON_SWITCH && NIK_LUA_COMMANDS.monitorMixPublish) {
+                            wwr_req(NIK_LUA_COMMANDS.monitorMixPublish.commandId);
+                        }
                     }
                     nikLastProjectNameUpdate = Date.now();
                     var nameDisplay = document.getElementById("nikActiveProjectName");
