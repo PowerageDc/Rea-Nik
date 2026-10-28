@@ -116,8 +116,10 @@ quedan separados alfabéticamente de los ejecutables.
 **Config en código** (valores que el coordinador edita a mano, sin UI):
 `<Dominio>_config.lua`, también **sin** prefijo `Nik_`. Devuelve una
 tabla (`return { ... }`), se carga con `dofile` y no contiene lógica.
-Casos: `MonitorMix_config.lua`, `MvsepImporter_config.lua` (patrones de nombres de
-MVSEP y recetas de import; ver `features/mvsep_importer.md`) y `MusicStateKeys_config.lua` (atajos de
+Casos: `MonitorMix_config.lua`, `MidiNav_config.lua` (tolerancias y
+comportamiento de las acciones de navegación; ver `features/midi_nav.md`),
+`MvsepImporter_config.lua` (patrones de nombres de MVSEP y recetas de import; 
+ver `features/mvsep_importer.md`) y `MusicStateKeys_config.lua` (atajos de
 teclado del Helper, con los ids de binding como `<área>.<acción>`; ver
 `features/musicstate_keys.md`).
 
@@ -171,6 +173,7 @@ C:\dev\Rea-Nik\
 ├── MvsepImporter/ importador de stems desde MVSEP
 ├── MusicState/ Helper ReaImGui (armonía, cues, roles) y publicación a ExtState
 ├── MonitorMix/ mezcla de monitoreo por músico (filtro de tracks, bus y sends de monitoreo)
+├── MidiNav/ acciones de navegación en el MIDI Editor (cursor, gaps, selección de notas)
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
 ├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List
@@ -200,8 +203,10 @@ las tabs del Helper). Un módulo usado por un solo dominio se queda dentro de la
 carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
 `ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de
 `RemoteControl/`, y `MusicStateBridge_common_logic.lua` y
-`MusicStateRowInputs_common_logic.lua` dentro de `MusicState/`, no en
-`_Shared/`, porque solo los consume ese dominio).
+`MusicStateRowInputs_common_logic.lua` dentro de `MusicState/`, y
+`MidiNav_common_logic.lua`, `MidiNavGap_common_logic.lua` y
+`MidiNavSelect_common_logic.lua` dentro de `MidiNav/`, no en `_Shared/`, porque 
+solo los consume ese dominio).
 
 **Importante:** mover o renombrar un script ya registrado en el Action List
 (o mapeado a un footswitch MIDI) invalida su Command ID — hay que sacarlo

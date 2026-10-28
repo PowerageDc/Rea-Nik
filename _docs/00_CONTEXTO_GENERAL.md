@@ -20,8 +20,8 @@ Estructura:
 ```
 C:\dev\Rea-Nik
 ├── AutoColor, RemoteControl, ReaPitchBus, RenderWorkflow, TempoTools,
-│ MvsepImporter, MusicState, MonitorMix, ProjectFolder, StemFragment, 
-│ Tests-Debug, _Shared
+│ MvsepImporter, MusicState, MonitorMix, MidiNav, ProjectFolder, 
+│ StemFragment, Tests-Debug, _Shared
 ├── web\ ← contenido servido como reaper_www_root
 ├── _docs
 └── Rea-Nik.code-workspace
@@ -120,6 +120,11 @@ render, pero conviven en el mismo proyecto/entorno):
   sin alterar la mezcla del par secundario. Ver `features/monitor_mix.md`
   (ruteo, filtro y datos), `features/monitor_mix_ui.md` (interfaz) y
   `features/monitor_mix_pa.md` (capa PA).
+- **MidiNav (navegación en el MIDI Editor)**: acciones one-shot para asignar a
+  atajos: cursor al medio del gap entre notas (adelante y atrás), cursor al
+  inicio del compás actual o previo, y selección de la nota siguiente o previa
+  según la posición del cursor. Sin UI, con config en código. Ver
+  `features/midi_nav.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -134,6 +139,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Render Workflow           | Regiones, count-in y preset implementados; batch render pendiente |
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
+| MidiNav                   | Cinco acciones funcionando y validadas. Pendientes en `features/midi_nav.md` |
 | Control remoto web        | Funcional. Pendientes por capa en `features/remote_control.md` §5 |
 | MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
