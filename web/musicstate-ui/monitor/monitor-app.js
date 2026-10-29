@@ -1,8 +1,8 @@
 // monitor-app.js — bootstrap de la UI de Monitor Mix
 //
 // Mismo molde que cantante.js: polls propios y render loop. La capa de
-// datos (lista, sends) vive en monitor.js; acá solo el arranque y el render.
-// En 2a el cuerpo del stage es un panel de debug temporal.
+// datos (lista, sends) vive en monitor.js; acá solo el arranque, el render y
+// el reparto de alto entre los layouts dock, inline y side.
 //
 // Requiere, ya cargados antes: main.js, config.js, config.local.js (opcional),
 // core/utils.js, markers/markers.js, core/music-transpose.js,
@@ -39,7 +39,7 @@ function nikMonitorInit() {
     // active_project_name (arranca en null), no hace falta pedirlo acá.
 }
 
-// --- Lista del mixer (2b): solo estructura, sin valores en vivo (2c) ---
+// --- Lista del mixer: solo estructura, sin valores en vivo ---
 // Se redibuja únicamente cuando cambia nikMmListRevision (contenido nuevo).
 
 var NIK_MONITOR_NOTICES = {
@@ -149,7 +149,7 @@ function nikMonitorListRender() {
     nikMonitorFadeAll();
 }
 
-// --- Faders y valores en vivo (2c-1: solo lectura) ---
+// --- Faders y valores en vivo ---
 
 var nikMonitorFaders = {};   // "track:send" -> {handle, muteEl, rowEl, sig}
 

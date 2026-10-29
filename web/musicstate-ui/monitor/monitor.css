@@ -1,5 +1,6 @@
 /* monitor.css — pisa solo lo que difiere de cantante.css (se carga después).
-   El stage del mixer scrollea solo él; header y footer quedan fijos. */
+   El layout del mixer (dock, inline o side) lo fija monitor-app.js con los
+   atributos data-mm-layout y data-mm-shed de .ms-screen. */
 
 /* Contenedor de los grupos Click y Música. --mm-row-scale escala solo las
    filas (padding, tipografía y controles); el resto de los elementos fijos
