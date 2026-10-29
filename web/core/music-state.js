@@ -18,6 +18,8 @@
 
 // --- Estado cacheado (llenado por los setters, uno por key de EXTSTATE) ---
 var nikMusicStateHarmonyFlat = [];   // array ordenado {bar, qn_offset, chord}
+var nikMusicStateHarmonyRaw = [];    // armonía aplanada sin expandir (para re-expandir si cambia el timesig_map)
+var nikMusicStateAnticipationMaxQn = 0.5; // distancia máxima al final del compás para considerar anticipo
 var nikMusicStateCuesFlat = [];      // array ordenado {bar, qn_offset, roles, text, duration_qn}
 var nikMusicStateTimesigMap = [];    // array ordenado {bar, num, den}
 var nikMusicStateProjectKey = null;  // {tonic, mode} | null
@@ -27,8 +29,8 @@ var nikMusicStateProjectRoles = [];  // array de strings, sin "todos" (reservado
 // (misma responsabilidad que nikPlayrateSetTempoMap en playrate.js)
 
 function nikMusicStateSetHarmonyData(val) {
-    var flat = nikMusicStateFlattenBarKeyed(nikMusicStateParseJsonSafe(val));
-    nikMusicStateHarmonyFlat = nikMusicStateExpandHarmonyRepeats(flat);
+    nikMusicStateHarmonyRaw = nikMusicStateFlattenBarKeyed(nikMusicStateParseJsonSafe(val));
+    nikMusicStateHarmonyFlat = nikMusicStateExpandHarmonyRepeats(nikMusicStateHarmonyRaw);
 }
 
 function nikMusicStateSetCuesData(val) {
@@ -60,6 +62,7 @@ function nikMusicStateSetTimesigMap(val) {
         map.sort(function (a, b) { return a.bar - b.bar; });
     }
     nikMusicStateTimesigMap = map;
+    nikMusicStateHarmonyFlat = nikMusicStateExpandHarmonyRepeats(nikMusicStateHarmonyRaw);
 }
 
 function nikMusicStateParseJsonSafe(val) {
@@ -122,7 +125,13 @@ function nikMusicStateExpandHarmonyRepeats(flat) {
         if (i === flat.length - 1) break;
         var curBar = flat[i].bar;
         var nextBar = flat[i + 1].bar;
+        // Un evento a <= nikMusicStateAnticipationMaxQn del final de su
+        // compás es un anticipo del siguiente: la primera entrada virtual
+        // repetiría el mismo acorde pocos instantes después de que ya entró.
+        var isAnticipation = flat[i].qn_offset > 0 &&
+            (nikMusicStateBarDurationQn(curBar) - flat[i].qn_offset) <= nikMusicStateAnticipationMaxQn + 1e-6;
         for (var b = curBar + 1; b < nextBar; b++) {
+            if (b === curBar + 1 && isAnticipation) continue;
             expanded.push({ bar: b, qn_offset: 0, chord: flat[i].chord, isRepeat: true });
         }
     }
