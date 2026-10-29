@@ -24,7 +24,7 @@ function nikMonitorInit() {
     nikMonitorBindFade();
     nikMonitorPanBind();
     window.addEventListener("resize", function () {
-        nikMonitorDockFit();
+        nikMonitorFitLayout();
         nikMonitorFadeAll();
     });
 
@@ -126,6 +126,7 @@ function nikMonitorListRender() {
     noticeEl.textContent = notice;
     noticeEl.style.display = notice ? "" : "none";
     if (notice) {
+        nikMonitorFitLayout();
         nikMonitorFadeAll();
         return;
     }
@@ -144,7 +145,7 @@ function nikMonitorListRender() {
         dockEl.style.display = "";
     }
     nikMonitorFadersBuild(L.tracks);
-    nikMonitorDockFit();
+    nikMonitorFitLayout();
     nikMonitorFadeAll();
 }
 
@@ -289,6 +290,10 @@ var NIK_MM_CLICK_VISIBLE_ROWS = 2;   // filas de Click visibles sin scrollear
 function nikMonitorDockFit() {
     var body = document.getElementById("mmClickBody");
     if (!body) return;
+    if (nikMonitorIsInline()) {
+        body.style.maxHeight = "";
+        return;
+    }
     var rows = body.querySelectorAll(".mm-row");
     var n = NIK_MM_CLICK_VISIBLE_ROWS;
     if (rows.length <= n) {
@@ -298,6 +303,81 @@ function nikMonitorDockFit() {
     var top = rows[0].getBoundingClientRect().top;
     var bottom = rows[n - 1].getBoundingClientRect().bottom;
     body.style.maxHeight = (bottom - top) + "px";
+}
+
+var NIK_MM_MIN_STAGE_ROWS = 2;   // filas de Música que el stage debe poder mostrar
+var NIK_MM_SHED_MAX = 2;         // niveles de cesión: 1 sin cues, 2 además sin fila de sección
+
+function nikMonitorIsInline() {
+    var screen = document.querySelector(".ms-screen");
+    return !!screen && screen.getAttribute("data-mm-layout") === "inline";
+}
+
+function nikMonitorFitApply(screen, mixer, shed, scale, inline) {
+    if (shed > 0) screen.setAttribute("data-mm-shed", String(shed));
+    else screen.removeAttribute("data-mm-shed");
+    if (inline) screen.setAttribute("data-mm-layout", "inline");
+    else screen.removeAttribute("data-mm-layout");
+    mixer.style.setProperty("--mm-row-scale", String(scale));
+    nikMonitorDockFit();
+}
+
+// Cuánto se puede multiplicar la escala actual para que el mixer ocupe justo su
+// alto: (alto del mixer - parte fija) / parte que escala. Mayor que 1 = sobra
+// lugar. La parte fija es todo lo que hay sobre el stage menos las filas del dock.
+function nikMonitorFitRatio(mixer, stage) {
+    var rows = mixer.querySelectorAll(".mm-row");
+    if (!rows.length) return null;
+    var rowH = rows[0].getBoundingClientRect().height;
+    if (!(rowH > 0)) return null;
+    var clickRows = mixer.querySelectorAll("#mmClickBody .mm-row").length;
+    var musicRows = mixer.querySelectorAll("#mmList .mm-row").length;
+    var dockRows = Math.min(clickRows, NIK_MM_CLICK_VISIBLE_ROWS);
+    var stageRows = Math.min(musicRows, NIK_MM_MIN_STAGE_ROWS);
+    var fixed = stage.getBoundingClientRect().top - mixer.getBoundingClientRect().top -
+        dockRows * rowH;
+    return (mixer.clientHeight - fixed) / ((dockRows + stageRows) * rowH);
+}
+
+// Escala para un nivel de cesión dado. La relación no es exactamente lineal
+// (los bordes de las filas son de 1 px), así que se corrige midiendo de nuevo.
+function nikMonitorFitSolve(screen, mixer, stage, shed, floor) {
+    var scale = 1;
+    var want = 1;
+    for (var i = 0; i < 4; i++) {
+        nikMonitorFitApply(screen, mixer, shed, scale);
+        var ratio = nikMonitorFitRatio(mixer, stage);
+        if (ratio === null) return { scale: 1, fits: true };
+        want = scale * ratio;
+        var next = Math.max(floor, Math.min(1, want));
+        if (Math.abs(next - scale) < 0.005) break;
+        scale = next;
+    }
+    nikMonitorFitApply(screen, mixer, shed, scale);
+    return { scale: scale, fits: want >= floor - 0.005 };
+}
+
+// Reparte el alto del mixer: primero reduce la escala de las filas hasta el
+// piso, si no alcanza cede elementos fijos de a un nivel, y como último
+// recurso pasa a layout inline (un solo scroll con Click y Música).
+function nikMonitorFitLayout() {
+    var screen = document.querySelector(".ms-screen");
+    var mixer = document.getElementById("mmMixer");
+    var stage = document.getElementById("mmStage");
+    if (!screen || !mixer || !stage) return;
+
+    nikMonitorFitApply(screen, mixer, 0, 1);
+    var slider = mixer.querySelector(".mm-slider");
+    if (!slider) return;
+    var thumb = (typeof NIK_MM_SLIDER !== "undefined") ? NIK_MM_SLIDER.THUMB_PX : 0;
+    var floor = (thumb > 0 && slider.offsetHeight > 0)
+        ? Math.min(1, thumb / slider.offsetHeight)
+        : 1;
+
+    for (var shed = 0; shed <= NIK_MM_SHED_MAX; shed++) {
+        if (nikMonitorFitSolve(screen, mixer, stage, shed, floor).fits) return;
+    }
+    nikMonitorFitApply(screen, mixer, NIK_MM_SHED_MAX, floor, true);
 }
 
 // Fade de borde: marca cada scroller según haya más contenido arriba o abajo.
@@ -310,12 +390,13 @@ function nikMonitorFadeUpdate(el) {
 }
 
 function nikMonitorFadeAll() {
+    nikMonitorFadeUpdate(document.getElementById("mmMixer"));
     nikMonitorFadeUpdate(document.getElementById("mmStage"));
     nikMonitorFadeUpdate(document.getElementById("mmClickBody"));
 }
 
 function nikMonitorBindFade() {
-    var ids = ["mmStage", "mmClickBody"];
+    var ids = ["mmMixer", "mmStage", "mmClickBody"];
     for (var i = 0; i < ids.length; i++) {
         var el = document.getElementById(ids[i]);
         if (el) {

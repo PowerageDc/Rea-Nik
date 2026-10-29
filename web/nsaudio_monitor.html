@@ -24,7 +24,7 @@
     </div>
   </div>
 
-  <hr class="ms-divider">
+  <hr class="ms-divider mm-div-section">
 
   <div class="ms-section-row" id="msSectionRow">
     <span class="ms-section-adj" id="msSectionPrev">—</span>
@@ -40,23 +40,27 @@
     <button type="button" class="mm-refresh" id="mmRefresh">Actualizar</button>
   </div>
 
-  <!-- Dock de Click: fijo, alto propio con tope, scroll propio. -->
-  <div class="mm-click-dock" id="mmClickDock" style="display:none">
-    <div class="mm-section-title">Click</div>
-    <div class="mm-area-body" id="mmClickBody"></div>
+  <!-- Mixer: grupo Click (dock fijo, scroll propio) y grupo Música (stage que
+       scrollea y ocupa todo lo que sobra). -->
+  <div class="mm-mixer" id="mmMixer">
+    <div class="mm-click-dock" id="mmClickDock" style="display:none">
+      <div class="mm-section-title">Click</div>
+      <div class="mm-area-body" id="mmClickBody"></div>
+    </div>
+
+    <div class="mm-music-group" id="mmMusicGroup">
+      <div class="mm-section-title mm-music-title" id="mmMusicTitle" style="display:none">Música</div>
+
+      <div class="cn-stage mm-stage" id="mmStage">
+        <div class="mm-notice" id="mmNotice"></div>
+        <div id="mmList"></div>
+      </div>
+    </div>
   </div>
 
-  <div class="mm-section-title mm-music-title" id="mmMusicTitle" style="display:none">Música</div>
+  <hr class="ms-divider mm-div-cue">
 
-  <!-- Stage del mixer: ocupa todo lo que sobra y scrollea solo él. -->
-  <div class="cn-stage mm-stage" id="mmStage">
-    <div class="mm-notice" id="mmNotice"></div>
-    <div id="mmList"></div>
-  </div>
-
-  <hr class="ms-divider">
-
-  <!-- Banda de cues: altura reservada, sin cablear todavía. -->
+  <!-- Banda de cues: reserva su altura salvo que falte alto (data-mm-shed). -->
   <div class="cn-cue-band" id="msCueBand"></div>
 </div>
 

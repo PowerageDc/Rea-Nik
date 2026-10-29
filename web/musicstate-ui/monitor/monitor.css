@@ -1,6 +1,71 @@
 /* monitor.css — pisa solo lo que difiere de cantante.css (se carga después).
    El stage del mixer scrollea solo él; header y footer quedan fijos. */
 
+/* Contenedor de los grupos Click y Música. --mm-row-scale escala solo las
+   filas (padding, tipografía y controles); el resto de los elementos fijos
+   sigue en --u. */
+.mm-mixer {
+  --mm-row-scale: 1;
+  --mm-ru: calc(var(--u) * var(--mm-row-scale));
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mm-music-group {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Layout inline (lo fija nikMonitorFitLayout en .ms-screen): el mixer es el
+   único scroller y contiene el grupo Click y el grupo Música en fila. Los
+   títulos quedan sticky dentro de su grupo, así que el de Música desplaza al
+   de Click. El fade es solo inferior para no difuminar el título pegado. */
+.ms-screen[data-mm-layout="inline"] .mm-mixer {
+  display: block;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--mm-fade-bot)), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--mm-fade-bot)), transparent 100%);
+}
+
+.ms-screen[data-mm-layout="inline"] .mm-music-group {
+  display: block;
+}
+
+.ms-screen[data-mm-layout="inline"] .mm-stage,
+.ms-screen[data-mm-layout="inline"] .mm-area-body {
+  flex: none;
+  overflow: visible;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.ms-screen[data-mm-layout="inline"] .mm-section-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--ms-bg);
+}
+
+/* Cesión de elementos fijos cuando el alto no alcanza. Lo fija
+   nikMonitorFitLayout en .ms-screen: 1 = sin banda de cues, 2 = además
+   sin fila de sección. */
+.ms-screen[data-mm-shed] .cn-cue-band,
+.ms-screen[data-mm-shed] .mm-div-cue {
+  display: none;
+}
+
+.ms-screen[data-mm-shed="2"] .ms-section-row,
+.ms-screen[data-mm-shed="2"] .mm-div-section {
+  display: none;
+}
+
 .mm-stage {
   scroll-snap-type: y mandatory;
   overflow-x: hidden;
@@ -50,10 +115,7 @@
   opacity: 0.5;
 }
 
-/* --- dock de Click: hermano fijo del stage, con scroll propio ---
-   Alto máximo = título + --mm-click-rows filas, y nunca más que 35 % del
-   alto visible (celular horizontal). Las constantes 6.6 y 20.6 son el alto
-   del título y de una fila en unidades --u. */
+/* --- dock de Click: bloque fijo sobre el stage, con scroll propio --- */
 
 .mm-click-dock {
   --mm-accent: #3fb37f;
@@ -94,6 +156,11 @@
   mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mm-fade-top), #000 calc(100% - var(--mm-fade-bot)), transparent 100%);
 }
 
+.mm-mixer {
+  --mm-fade-size: calc(var(--u) * 6);
+  --mm-fade-bot: 0px;
+}
+
 .has-more-up {
   --mm-fade-top: var(--mm-fade-size);
 }
@@ -124,7 +191,7 @@
 }
 
 .mm-row {
-  padding: calc(var(--u) * 2.5) calc(var(--u) * 1.5);
+  padding: calc(var(--mm-ru) * 2.5) calc(var(--mm-ru) * 1.5);
   border-top: 1px solid var(--ms-divider-color);
   scroll-snap-align: start;
 }
@@ -139,7 +206,7 @@
   flex: 1 1 0;
   min-width: 0;
   line-height: 1.2;
-  font-size: calc(var(--u) * 4.2);
+  font-size: calc(var(--mm-ru) * 4.2);
   font-weight: 500;
   color: var(--ms-song-name-color);
   white-space: nowrap;
@@ -150,17 +217,17 @@
 .mm-row-head {
   display: flex;
   align-items: center;
-  gap: calc(var(--u) * 3);
-  margin-bottom: calc(var(--u) * 1.5);
+  gap: calc(var(--mm-ru) * 3);
+  margin-bottom: calc(var(--mm-ru) * 1.5);
 }
 
 .mm-pan-chip {
   flex: none;
-  min-width: calc(var(--u) * 14);
-  min-height: calc(var(--u) * 8);
-  padding: 0 calc(var(--u) * 2.5);
+  min-width: calc(var(--mm-ru) * 14);
+  min-height: calc(var(--mm-ru) * 8);
+  padding: 0 calc(var(--mm-ru) * 2.5);
   font: inherit;
-  font-size: calc(var(--u) * 3.4);
+  font-size: calc(var(--mm-ru) * 3.4);
   font-variant-numeric: tabular-nums;
   color: var(--ms-fg-dim);
   background: transparent;
@@ -178,17 +245,17 @@
 .mm-row-ctl {
   display: flex;
   align-items: center;
-  gap: calc(var(--u) * 3);
-  min-height: calc(var(--u) * 9);
+  gap: calc(var(--mm-ru) * 3);
+  min-height: calc(var(--mm-ru) * 9);
 }
 
 .mm-mute {
   flex: none;
-  width: calc(var(--u) * 9);
-  height: calc(var(--u) * 9);
+  width: calc(var(--mm-ru) * 9);
+  height: calc(var(--mm-ru) * 9);
   padding: 0;
   font: inherit;
-  font-size: calc(var(--u) * 3.6);
+  font-size: calc(var(--mm-ru) * 3.6);
   font-weight: 700;
   color: var(--ms-fg-dim);
   background: transparent;
@@ -211,7 +278,7 @@
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  height: calc(var(--u) * 9);
+  height: calc(var(--mm-ru) * 9);
   margin: 0;
   touch-action: pan-y;
   user-select: none;
@@ -230,9 +297,9 @@
 .mm-sl-line,
 .mm-sl-fill {
   top: 50%;
-  height: calc(var(--u) * 1);
-  margin-top: calc(var(--u) * -0.5);
-  border-radius: calc(var(--u) * 0.5);
+  height: calc(var(--mm-ru) * 1);
+  margin-top: calc(var(--mm-ru) * -0.5);
+  border-radius: calc(var(--mm-ru) * 0.5);
 }
 
 .mm-sl-line {
@@ -262,9 +329,9 @@
 
 .mm-db {
   flex: none;
-  width: calc(var(--u) * 17);
+  width: calc(var(--mm-ru) * 17);
   text-align: right;
-  font-size: calc(var(--u) * 3.4);
+  font-size: calc(var(--mm-ru) * 3.4);
   font-variant-numeric: tabular-nums;
   color: var(--ms-fg-dim);
 }
@@ -280,8 +347,8 @@
   pointer-events: none;
   top: 50%;
   width: 2px;
-  height: calc(var(--u) * 3);
-  margin-top: calc(var(--u) * -1.5);
+  height: calc(var(--mm-ru) * 3);
+  margin-top: calc(var(--mm-ru) * -1.5);
   background: var(--ms-fg-dim);
   transform: translateX(-50%);
 }
@@ -306,6 +373,7 @@
 }
 
 .mm-pan-panel {
+  --mm-ru: var(--u);
   box-sizing: border-box;
   width: min(88%, calc(var(--u) * 90));
   padding: calc(var(--u) * 4);
