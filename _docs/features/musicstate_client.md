@@ -42,6 +42,7 @@ de proyecto reutiliza los mismos setters, ver
 | Estado | Setter | Contenido |
 |---|---|---|
 | `nikMusicStateHarmonyFlat` | `nikMusicStateSetHarmonyData` | array ordenado `{bar, qn_offset, chord}`, ya expandido (§1.2) |
+| `nikMusicStateHarmonyRaw` | `nikMusicStateSetHarmonyData` | el mismo array sin expandir; se vuelve a expandir al cambiar el `timesig_map` (§1.2) |
 | `nikMusicStateCuesFlat` | `nikMusicStateSetCuesData` | array ordenado `{bar, qn_offset, roles, text, duration_qn}` |
 | `nikMusicStateTimesigMap` | `nikMusicStateSetTimesigMap` | array ordenado `{bar, num, den}` |
 | `nikMusicStateProjectKey` | `nikMusicStateSetProjectKey` | `{tonic, mode}` o `null` |
@@ -67,6 +68,22 @@ compases dejaría la tira del prompter estática.
 No expande antes del primer evento ni después del último: no hay acorde
 previo del cual copiar. Depende de la convención de autoría de
 `musicstate_data_model.md` §4.1.
+
+**Anticipos.** Un evento real a `nikMusicStateAnticipationMaxQn` (0.5 qn,
+ajustable desde la consola) o menos del final de su compás se considera
+anticipo del siguiente: se suprime la primera entrada virtual que le
+seguiría, porque repetiría el mismo acorde pocos instantes después de que
+ya entró (rebote en la tira y reinicio de la barra de pulso).
+
+- El umbral está en QN, no en segundos: equivale a la segunda mitad del
+  último tiempo en 4/4 y 3/4, y a una corchea en 6/8.
+- Solo se suprime la entrada virtual. Un evento real escrito en el offset
+  0 del compás siguiente se conserva siempre.
+- Los compases posteriores sin evento propio se expanden como siempre.
+- Un anticipo con `chord: null` (silencio) también suprime su carry.
+- La decisión depende del `timesig_map`, que llega por otro setter:
+  `nikMusicStateHarmonyRaw` guarda el aplanado sin expandir y
+  `nikMusicStateSetTimesigMap` vuelve a expandir.
 
 ### 1.3. Posición y compases
 

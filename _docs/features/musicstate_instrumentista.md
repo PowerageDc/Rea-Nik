@@ -115,7 +115,10 @@ evento de armonía vigente (`bar_qn_offset`, igual que
 (`beats restantes × 60 / bpm / playrate`; recalcular por render provocaría
 tirones porque cada ancla nueva corrige la estimación) y
 `nikInstrumentistaStartChordRing()` dispara una transición CSS
-(`transform: scaleX()`).
+(`transform: scaleX()`). Tras un acorde anticipado no hay evento virtual
+en el tiempo 1 del compás siguiente (`musicstate_client.md` §1.2): la
+barra cruza el barline sin reiniciarse y llena hasta el próximo evento o
+carry.
 
 **Gate de `stopped`:** los dots no animan en el tiempo; la barra sí.
 `RenderBeat` corta y resetea la barra
@@ -159,6 +162,16 @@ Ninguno bloqueante.
   · próximo2`, con debounce de 150–200 ms si implica cambios de estructura
   por JS).
 - Pulsos para den=2 y den=8 no compuesto (§3).
+- Acorde anticipado seguido de un evento propio en el compás siguiente,
+  más allá del tiempo 1 (ej. `G` en 2:3.5 y `Am` en 4:3.0): los compases 3
+  y 4 quedan sin marca de `G` en la tira. El 3 por la supresión del carry
+  tras el anticipo, y el 4 porque el carry solo se inserta en compases
+  intermedios sin evento, no en uno con evento propio. Los pulsos y la
+  barra de progreso indican la situación. Workaround: escribir el `G`
+  como evento explícito en `qn_offset` 0 del compás donde se lo quiera
+  ver. Decidir tras usarlo en un ensayo; el cambio de fondo sería
+  insertar carry en el offset 0 de compases cuyo primer evento es
+  posterior, lo que también afecta casos sin anticipo.
 - Limpieza de datos al cerrar un proyecto o tab "sin guardar": no se pudo
   reproducir tras los cambios del cambio de proyecto (`musicstate_sync.md`
   §11). Cerrar el ítem si no reaparece. El literal de REAPER para un

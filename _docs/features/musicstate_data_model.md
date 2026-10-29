@@ -167,6 +167,13 @@ con un array de eventos por compás:
   resuelve el cliente, `musicstate_client.md` §1.2).
 - **`"chord": null` es silencio explícito:** corta el carry-over. Se
   guarda sin comillas.
+- **Anticipos:** un evento a 0.5 qn o menos del final de su compás (en
+  4/4, `qn_offset` 3.5 o 3.75) se trata como anticipo del compás
+  siguiente, y el carry-over no repite ese acorde en el tiempo 1 del
+  compás siguiente (`musicstate_client.md` §1.2). Si se quiere el acorde
+  visible en ese tiempo 1, se escribe como evento explícito en
+  `qn_offset` 0. Los eventos que caen antes de ese umbral (ej. el tiempo
+  4 completo, `qn_offset` 3.0) son cambios normales.
 
 **Convención de autoría.** Una sección todavía sin armonía cargada debe
 empezar con una fila de silencio explícito (acorde vacío, que el Helper
