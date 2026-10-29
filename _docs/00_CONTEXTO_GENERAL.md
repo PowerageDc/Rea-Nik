@@ -116,10 +116,11 @@ render, pero conviven en el mismo proyecto/entorno):
   script one-shot que dispara el cliente, y una interfaz web separada
   (segundo Web Control) sin controles de transporte, con el mismo header,
   secciones que las UIs de MusicState (la fila de cues del footer no está
-  cableada). El remoto principal tiene un modo PA para cortar tracks del PA
-  sin alterar la mezcla del par secundario. Ver `features/monitor_mix.md`
-  (ruteo, filtro y datos), `features/monitor_mix_ui.md` (interfaz) y
-  `features/monitor_mix_pa.md` (capa PA).
+  cableada), y un layout que se adapta al espacio disponible (dock, un solo
+  scroll o tiras verticales en apaisado). El remoto principal tiene un modo
+  PA para cortar tracks del PA sin alterar la mezcla del par secundario. Ver 
+  `features/monitor_mix.md` (ruteo, filtro y datos), `features/monitor_mix_ui.md` 
+  (interfaz) y `features/monitor_mix_pa.md` (capa PA).
 - **MidiNav (navegación en el MIDI Editor)**: acciones one-shot para asignar a
   atajos: cursor al medio del gap entre notas (adelante y atrás), cursor al
   inicio del compás actual o previo, y selección de la nota siguiente o previa
@@ -143,7 +144,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Control remoto web        | Funcional. Pendientes por capa en `features/remote_control.md` §5 |
 | MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
-| Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo), UI web del baterista, capa PA con modo PA en el remoto principal. Pendientes en sus docs. Ver `features/monitor_mix.md`, `features/monitor_mix_ui.md` y `features/monitor_mix_pa.md` |
+| Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo), UI web del baterista (layout según el espacio), capa PA con modo PA en el remoto principal. Pendientes en sus docs. Ver `features/monitor_mix.md`, `features/monitor_mix_ui.md` y `features/monitor_mix_pa.md` |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma

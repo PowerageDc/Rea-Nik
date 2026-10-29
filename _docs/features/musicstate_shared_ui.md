@@ -101,4 +101,6 @@ Usar los ids de §2 y §3, cargar los módulos en el orden de
 `musicstate_sync.md` §3 y respetar §3 (orden de render y `screenJumped`).
 Ejemplo sin contenido principal: Monitor Mix llama a la cabecera y a la
 fila de sección en cada render, con `screenJumped` en `false`
-(`monitor_mix_ui.md` §1).
+(`monitor_mix_ui.md` §1). Una UI puede ocultar la fila de sección con
+`display: none` cuando falta alto (Monitor Mix lo hace, `monitor_mix_ui.md`
+§14): el render sigue corriendo sobre el nodo oculto sin errores.
