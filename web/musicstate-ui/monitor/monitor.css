@@ -475,6 +475,12 @@
   opacity: 0.5;
 }
 
+/* Control fino activo (lo marca mm-slider.js): anillo alrededor del thumb. */
+.mm-slider.is-fine .mm-sl-thumb {
+  outline: calc(var(--mm-ru) * 0.6) solid var(--mm-accent, var(--ms-chord-color));
+  outline-offset: calc(var(--mm-ru) * 0.8);
+}
+
 .mm-db {
   flex: none;
   width: calc(var(--mm-ru) * 17);

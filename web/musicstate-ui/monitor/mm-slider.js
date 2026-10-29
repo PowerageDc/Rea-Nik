@@ -6,7 +6,9 @@
 // La orientación la define la clase is-vertical del contenedor, que el módulo
 // lee al empezar cada gesto; el pintado lo hace el CSS a partir de las
 // variables --mm-sl-pos, --mm-sl-a, --mm-sl-len y --mm-sl-mark.
-// En vertical el mínimo queda abajo.
+// En vertical el mínimo queda abajo. Control fino: durante el arrastre, alejar
+// el dedo en sentido transversal al eje reduce la sensibilidad (distancias en
+// múltiplos del thumb) y el slider lleva la clase is-fine.
 // Mismo contrato que nikCreateVerticalFader (core/vertical-fader.js), más
 // isActive(). El contenedor (#sliderId) lo crea monitor-app.js; los hijos
 // (línea, relleno, thumb) los crea este módulo.
@@ -17,7 +19,10 @@ var NIK_MM_SLIDER = {
     HIT_HALF_PX: 22,       // medio ancho de la zona táctil del thumb (blanco de 44 px)
     AXIS_THR_LINE_PX: 8,   // movimiento para decidir eje, down sobre la línea
     AXIS_THR_THUMB_PX: 4,  // idem, down sobre el thumb
-    TAP_MAX_MS: 350        // más que esto sin mover = hold, no cuenta como tap
+    TAP_MAX_MS: 350,       // más que esto sin mover = hold, no cuenta como tap
+    FINE_DEAD_THUMBS: 1,   // deriva transversal sin efecto, en thumbs
+    FINE_SPAN_THUMBS: 2,   // exceso transversal con el que la sensibilidad cae a 1/2
+    FINE_MIN: 0.08         // sensibilidad mínima
 };
 
 function nikMmCreateSlider(config) {
@@ -103,12 +108,38 @@ function nikMmCreateSlider(config) {
         return true;
     }
 
+    // Arrastre a lo largo: la primera llamada toma la posición absoluta del dedo
+    // y las siguientes acumulan el desplazamiento por la sensibilidad vigente.
+    // El acumulado no se recorta, así que pasarse de un extremo y volver no
+    // mueve el valor hasta que el dedo regresa.
+    function dragFromEvent(e) {
+        var thumb = K.THUMB_PX;
+        var along = alongOf(g.vert, g.rect, e);
+        var across = g.vert ? e.clientX : e.clientY;
+        var across0 = g.vert ? g.x0 : g.y0;
+        var over = Math.abs(across - across0) - thumb * K.FINE_DEAD_THUMBS;
+        var f = 1;
+        if (over > 0) f = Math.max(K.FINE_MIN, 1 / (1 + over / (thumb * K.FINE_SPAN_THUMBS)));
+        el.classList.toggle("is-fine", f < 1);
+        var usable = (g.vert ? g.rect.height : g.rect.width) - thumb;
+        if (usable <= 0) return false;
+        if (g.frac === null) g.frac = fracFromEvent(e);
+        else g.frac += (along - g.lastAlong) * f / usable;
+        g.lastAlong = along;
+        var v = snap(g.frac);
+        if (v === value) return false;
+        value = v;
+        paint();
+        return true;
+    }
+
     function endGesture(e) {
         if (g && el.releasePointerCapture) {
             try { el.releasePointerCapture(g.id); } catch (err) { /* sin captura */ }
         }
         g = null;
         dragging = false;
+        el.classList.remove("is-fine");
     }
 
     el.addEventListener("pointerdown", function (e) {
@@ -130,6 +161,8 @@ function nikMmCreateSlider(config) {
             vert: vert,
             onThumb: onThumb,
             grab: onThumb ? (pos - center) : 0,
+            frac: null,
+            lastAlong: 0,
             axis: null
         };
         // Sin escribir nada: la intención se decide en move/up.
@@ -149,7 +182,7 @@ function nikMmCreateSlider(config) {
             dragging = true;
             try { el.setPointerCapture(g.id); } catch (err) { /* sin captura */ }
         }
-        if (setFromEvent(e) && config.onDragChange) config.onDragChange(value);
+        if (dragFromEvent(e) && config.onDragChange) config.onDragChange(value);
     }, false);
 
     el.addEventListener("pointerup", function (e) {
