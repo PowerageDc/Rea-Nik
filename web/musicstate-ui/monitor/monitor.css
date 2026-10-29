@@ -53,6 +53,152 @@
   background: var(--ms-bg);
 }
 
+/* Layout side (apaisado, lo fija nikMonitorFitLayout en .ms-screen): el mixer
+   pasa a fila con el grupo Click a la izquierda y Música a la derecha. Cada
+   track es una tira vertical (nombre, paneo, dB, fader, mute) y cada grupo
+   scrollea en horizontal. --mm-strip-w es el ancho de 9 caracteres a la
+   tipografía de la tira (la palabra más larga de un nombre) más padding. */
+.ms-screen[data-mm-layout="side"] .mm-mixer {
+  --mm-strip-w: calc(var(--mm-ru) * 22);
+  flex-direction: row;
+  gap: var(--cn-gap);
+}
+
+.ms-screen[data-mm-layout="side"] .mm-click-dock {
+  max-width: 35%;
+  margin-bottom: 0;
+  padding-right: var(--cn-gap);
+  border-bottom: none;
+  border-right: 2px solid var(--mm-accent);
+}
+
+.ms-screen[data-mm-layout="side"] .mm-music-group {
+  min-width: 0;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-stage,
+.ms-screen[data-mm-layout="side"] .mm-area-body {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.ms-screen[data-mm-layout="side"] #mmList {
+  flex: none;
+  display: flex;
+  flex-direction: row;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-notice {
+  flex: 1 1 0;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-row {
+  flex: 0 0 var(--mm-strip-w);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--mm-ru) * 1.5);
+  padding: calc(var(--mm-ru) * 1.5);
+  border-top: none;
+  border-left: 1px solid var(--ms-divider-color);
+  scroll-snap-align: start;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-row:first-child {
+  border-left-color: transparent;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-row-head,
+.ms-screen[data-mm-layout="side"] .mm-row-ctl {
+  display: contents;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-row-name {
+  order: 1;
+  flex: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.4em;
+  font-size: calc(var(--mm-ru) * 3.4);
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-pan-chip {
+  order: 2;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-db {
+  order: 3;
+  width: 100%;
+  text-align: center;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-slider.is-vertical {
+  order: 4;
+  flex: 1 1 0;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-mute {
+  order: 5;
+  align-self: stretch;
+  width: auto;
+}
+
+/* En side el ancho sobra y el alto falta: header y toolbar comparten la
+   primera fila del grid, y el mixer ocupa la segunda a todo el ancho. */
+.ms-screen[data-mm-layout="side"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  grid-template-rows: auto minmax(0, 1fr);
+  column-gap: calc(var(--u) * 4);
+  align-items: center;
+}
+
+.ms-screen[data-mm-layout="side"] .cn-header {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  gap: calc(var(--u) * 8);
+}
+
+.ms-screen[data-mm-layout="side"] .cn-song-name {
+  flex: 0 1 auto;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-toolbar {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  justify-content: flex-end;
+  border-bottom: none;
+}
+
+.ms-screen[data-mm-layout="side"] .mm-mixer {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  align-self: stretch;
+  min-height: 0;
+  border-top: 1px solid var(--ms-divider-color);
+}
+
 /* Cesión de elementos fijos cuando el alto no alcanza. Lo fija
    nikMonitorFitLayout en .ms-screen: 1 = sin banda de cues, 2 = además
    sin fila de sección. */
@@ -308,15 +454,17 @@
   background: var(--ms-divider-color);
 }
 
-/* El ancho lo fija mm-slider.js (llega hasta el centro del thumb). */
+/* Inicio y largo los fija mm-slider.js por variables (llega hasta el centro del thumb). */
 .mm-sl-fill {
-  left: 0;
+  left: var(--mm-sl-a, 0);
+  width: var(--mm-sl-len, 0);
   background: var(--mm-accent, var(--ms-chord-color));
 }
 
-/* Ancho y alto los fija mm-slider.js (NIK_MM_SLIDER.THUMB_PX). */
+/* Ancho y alto los fija mm-slider.js (NIK_MM_SLIDER.THUMB_PX); la posición, por variable. */
 .mm-sl-thumb {
   top: 50%;
+  left: var(--mm-sl-pos, 0);
   transform: translateY(-50%);
   border-radius: 50%;
   background: var(--mm-accent, var(--ms-chord-color));
@@ -346,11 +494,60 @@
   position: absolute;
   pointer-events: none;
   top: 50%;
+  left: var(--mm-sl-mark, 0);
   width: 2px;
   height: calc(var(--mm-ru) * 3);
   margin-top: calc(var(--mm-ru) * -1.5);
   background: var(--ms-fg-dim);
   transform: translateX(-50%);
+}
+
+/* --- orientación vertical: el mínimo queda abajo y el gesto transversal es
+   el scroll horizontal. El alto lo da el contenedor. --- */
+
+.mm-slider.is-vertical {
+  flex: none;
+  width: calc(var(--mm-ru) * 9);
+  height: calc(var(--mm-ru) * 40);
+  touch-action: pan-x;
+}
+
+.is-vertical > .mm-sl-line,
+.is-vertical > .mm-sl-fill {
+  top: auto;
+  left: 50%;
+  width: calc(var(--mm-ru) * 1);
+  height: auto;
+  margin-top: 0;
+  margin-left: calc(var(--mm-ru) * -0.5);
+}
+
+.is-vertical > .mm-sl-line {
+  top: 0;
+  right: auto;
+  bottom: 0;
+}
+
+.is-vertical > .mm-sl-fill {
+  bottom: var(--mm-sl-a, 0);
+  height: var(--mm-sl-len, 0);
+}
+
+.is-vertical > .mm-sl-thumb {
+  top: auto;
+  left: 50%;
+  bottom: var(--mm-sl-pos, 0);
+  transform: translateX(-50%);
+}
+
+.is-vertical > .mm-sl-mark {
+  top: auto;
+  left: 50%;
+  bottom: var(--mm-sl-mark, 0);
+  width: calc(var(--mm-ru) * 3);
+  height: 2px;
+  margin: 0 0 0 calc(var(--mm-ru) * -1.5);
+  transform: translateY(50%);
 }
 
 /* --- popup de paneo: un solo panel centrado --- */

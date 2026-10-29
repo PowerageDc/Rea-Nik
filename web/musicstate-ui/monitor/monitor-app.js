@@ -290,7 +290,7 @@ var NIK_MM_CLICK_VISIBLE_ROWS = 2;   // filas de Click visibles sin scrollear
 function nikMonitorDockFit() {
     var body = document.getElementById("mmClickBody");
     if (!body) return;
-    if (nikMonitorIsInline()) {
+    if (nikMonitorDockFree()) {
         body.style.maxHeight = "";
         return;
     }
@@ -308,9 +308,18 @@ function nikMonitorDockFit() {
 var NIK_MM_MIN_STAGE_ROWS = 2;   // filas de Música que el stage debe poder mostrar
 var NIK_MM_SHED_MAX = 2;         // niveles de cesión: 1 sin cues, 2 además sin fila de sección
 
-function nikMonitorIsInline() {
+// En inline y en side el dock no tiene tope de alto propio.
+function nikMonitorDockFree() {
     var screen = document.querySelector(".ms-screen");
-    return !!screen && screen.getAttribute("data-mm-layout") === "inline";
+    var layout = screen ? screen.getAttribute("data-mm-layout") : null;
+    return layout === "inline" || layout === "side";
+}
+
+// Apaisado: misma condición que el header de una sola fila de cantante.css.
+var NIK_MM_SIDE_QUERY = "(min-aspect-ratio: 1/1)";
+
+function nikMonitorIsSide() {
+    return window.matchMedia(NIK_MM_SIDE_QUERY).matches;
 }
 
 function nikMonitorFitApply(screen, mixer, shed, scale, inline) {
@@ -359,12 +368,25 @@ function nikMonitorFitSolve(screen, mixer, stage, shed, floor) {
 
 // Reparte el alto del mixer: primero reduce la escala de las filas hasta el
 // piso, si no alcanza cede elementos fijos de a un nivel, y como último
-// recurso pasa a layout inline (un solo scroll con Click y Música).
+// recurso pasa a layout inline (un solo scroll con Click y Música). En
+// apaisado usa tiras verticales (layout side) con la cesión al máximo y sin
+// medir.
 function nikMonitorFitLayout() {
     var screen = document.querySelector(".ms-screen");
     var mixer = document.getElementById("mmMixer");
     var stage = document.getElementById("mmStage");
     if (!screen || !mixer || !stage) return;
+
+    var side = nikMonitorIsSide();
+    var sliders = mixer.querySelectorAll(".mm-slider");
+    for (var s = 0; s < sliders.length; s++) sliders[s].classList.toggle("is-vertical", side);
+    if (side) {
+        screen.setAttribute("data-mm-layout", "side");
+        screen.setAttribute("data-mm-shed", String(NIK_MM_SHED_MAX));
+        mixer.style.setProperty("--mm-row-scale", "1");
+        nikMonitorDockFit();
+        return;
+    }
 
     nikMonitorFitApply(screen, mixer, 0, 1);
     var slider = mixer.querySelector(".mm-slider");
