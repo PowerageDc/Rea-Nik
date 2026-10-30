@@ -16,6 +16,7 @@ líneas que cargan su módulo y llaman a `run("next")` o `run("prev")`.
 | `Nik_MidiNav_CursorGapMidPrev.lua` | Espejo: gap entre la anterior y la actual |
 | `Nik_MidiNav_SelectNoteNext.lua` | Selecciona la primera nota posterior al cursor |
 | `Nik_MidiNav_SelectNotePrev.lua` | Selecciona la última nota anterior al cursor |
+| `Nik_MidiNav_ToggleMainEditor.lua` | Alterna el foco entre la ventana principal y el MIDI Editor flotante; si no hay editor abierto, abre el del ítem seleccionado |
 
 Módulos de soporte (solo `dofile`, no se registran):
 - `MidiNav_common_logic.lua`: `collect_notes`, `move_cursor` y `with_undo`.
@@ -25,6 +26,11 @@ Módulos de soporte (solo `dofile`, no se registran):
 Registro: sección **MIDI Editor** del Action List. El de compás usa tiempo de
 proyecto y también funciona registrado en Main; el resto necesita un editor
 activo y sale sin hacer nada si no lo hay.
+
+`ToggleMainEditor` es la excepción: se registra en **Main** y en **MIDI
+Editor** (dos registros del mismo archivo, cada uno con su Command ID) y se le
+asigna la misma tecla en ambas secciones, para que el mismo atajo vaya y vuelva.
+Requiere la extensión js_ReaScriptAPI y avisa con un mensaje si falta.
 
 ## 2. Comportamiento
 
@@ -68,6 +74,24 @@ compás 1, no hace nada. Respeta cambios de compás y de tempo.
 - Sin selección previa funciona igual, por lo que no depende de las acciones
   nativas de siguiente y previa nota.
 
+### Foco entre ventana principal y MIDI Editor
+- Si la ventana en primer plano es un MIDI Editor, enfoca la principal.
+- Si no, busca el editor abierto (con `JS_Window_ArrayAllTop`, y como respaldo
+  `MIDIEditor_GetActive()`) y lo enfoca.
+- Solo si no hay ningún editor abierto lanza `40153` (abrir el ítem
+  seleccionado en el editor integrado). Esa acción abre el editor con el zoom
+  que tenía al cerrarse, pero con el editor ya abierto lo resetea al zoom del
+  contenido del ítem, por eso nunca se la llama si hay un editor.
+- Con varios editores abiertos elige uno solo, que no siempre es el último
+  usado.
+
+### Marcadores (sin script)
+La sección MIDI Editor no tiene acciones de marcador siguiente y previo. Se
+resuelve asignando las mismas teclas que tienen esas acciones en el arrange
+(`´` y `ç`) a `Misc: Pass through key to main window` en la sección MIDI
+Editor. No es una acción que se pueda incluir en una custom action: reenvía
+la pulsación a la ventana principal, donde la tecla ya está asignada.
+
 ## 3. Config (`MidiNav_config.lua`)
 
 | Sección | Valores |
@@ -97,6 +121,19 @@ tolerancia de acorde).
 - **Dominios planos por propósito** (`MidiNav/`, y a futuro `MidiGen/` y
   `ScorePrep/`) en vez de una carpeta `Midi/` única: permite filtrar el Action
   List por prefijo, publicar por separado y mantener un config por dominio.
+- **Script propio para el foco, no `_S&M_WNFOCUS9`:** la acción de SWS (Cycle
+  focused window) va de la ventana principal al editor pero no a la vuelta, ya
+  que en el editor no existe una equivalente, y además incluye en el anillo
+  cualquier otra ventana abierta. `ToggleMainEditor` solo conoce la principal y
+  el editor, y no tiene config.
+- **`40153` solo si no hay editor abierto:** con el editor abierto la acción
+  resetea el zoom, por eso el script primero busca un editor existente y
+  recién después la usa.
+- **Marcadores por pass-through, sin script:** `Misc: Pass through key to main
+  window` reenvía las teclas del arrange al editor y alcanza para ir al
+  marcador siguiente y previo. Un script con `Main_OnCommand` sería la
+  alternativa si alguna tecla (por ejemplo una tecla muerta del teclado) no
+  se reenviara bien.
 
 ## 5. Pendientes
 
@@ -107,4 +144,5 @@ tolerancia de acorde).
   take pre-Dorico): dominios planeados, sin código todavía. Cuando haya un
   segundo consumidor, extraer los helpers de take (enumerar notas, PPQ y
   tiempo, selección) a `_Shared/MidiTake_common_logic.lua`.
-- Alta en ReaPack si MidiNav llega a otras PCs.
+- Alta en ReaPack si MidiNav llega a otras PCs. `ToggleMainEditor` depende de
+  js_ReaScriptAPI (deployar implica considerar su declaración o dejar fuera)

@@ -173,7 +173,7 @@ C:\dev\Rea-Nik\
 ├── MvsepImporter/ importador de stems desde MVSEP
 ├── MusicState/ Helper ReaImGui (armonía, cues, roles) y publicación a ExtState
 ├── MonitorMix/ mezcla de monitoreo por músico (filtro de tracks, bus y sends de monitoreo)
-├── MidiNav/ acciones de navegación en el MIDI Editor (cursor, gaps, selección de notas)
+├── MidiNav/ acciones de navegación en el MIDI Editor (cursor, gaps, selección de notas, foco entre ventanas)
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
 ├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List
