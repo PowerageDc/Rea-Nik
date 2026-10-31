@@ -3,7 +3,7 @@
 -- proyecto activo y publica NikMusicState/lyrics_data + lyrics_version
 -- a ExtState. Si no hay track o no hay eventos, borra ambas keys.
 
-local DEBUG = true -- false = sin mensajes en consola
+local DEBUG = false -- false = sin mensajes en consola
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Bridge = dofile(script_dir .. "MusicStateBridge_common_logic.lua")
