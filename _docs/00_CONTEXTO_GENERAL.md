@@ -96,24 +96,19 @@ render, pero conviven en el mismo proyecto/entorno):
   celular en ensayos (transporte, faders, markers, playrate, semitonos
   ReaPitch), ver `features/remote_control.md`.
 - **MusicState (armonía, cues, prompter y letra)**: el Helper (ReaImGui)
-  carga por proyecto tonalidad, roles, armonía, cues y letra; se publican
-  vía ExtState y UIs web de celular (prompter de instrumentista, UI de
-  cantante) los muestran sincronizados con el transporte, tolerando una
-  red inestable. Punto de entrada e índice de docs de la feature:
-  `features/musicstate_data_model.md`. Qué adjuntar según la tarea: sección
-  "Qué adjuntar según la tarea (MusicState y Monitor Mix)", al final de este doc.
+  carga los datos musicales por proyecto y UIs web de celular (prompter
+  de instrumentista, UI de cantante) los muestran sincronizados con el
+  transporte. Punto de entrada e índice de docs de la feature:
+  `features/musicstate_data_model.md`. Qué adjuntar según la tarea:
+  sección "Qué adjuntar según la tarea (MusicState y Monitor Mix)", al
+  final de este doc.
 - **Monitor Mix (monitoreo por músico)**: mezcla personal del baterista
-  (a futuro, de otros músicos) por un bus con `B_MAINSEND=0` hacia el par
-  de salidas secundario de la placa, con volumen, mute y paneo a nivel de send.
-  Filtro de tracks configurable en código, publicado por ExtState con un
-  script one-shot que dispara el cliente, y una interfaz web separada
-  (segundo Web Control) sin controles de transporte, con el mismo header,
-  secciones que las UIs de MusicState (la fila de cues del footer no está
-  cableada), y un layout que se adapta al espacio disponible (dock, un solo
-  scroll o tiras verticales en apaisado). El remoto principal tiene un modo
-  PA para cortar tracks del PA sin alterar la mezcla del par secundario. Ver 
-  `features/monitor_mix.md` (ruteo, filtro y datos), `features/monitor_mix_ui.md` 
-  (interfaz) y `features/monitor_mix_pa.md` (capa PA).
+  (a futuro, de otros músicos) por un bus hacia el par de salidas
+  secundario de la placa, con interfaz web propia y una capa PA en el
+  remoto principal para cortar tracks del PA sin alterar esa mezcla. Ver
+  `features/monitor_mix.md` (ruteo, filtro y datos),
+  `features/monitor_mix_ui.md` (interfaz) y `features/monitor_mix_pa.md`
+  (capa PA).
 - **MidiNav (navegación en el MIDI Editor)**: acciones one-shot para asignar a
   atajos: cursor al medio del gap entre notas (adelante y atrás), cursor al
   inicio del compás actual o previo, selección de la nota siguiente o previa
