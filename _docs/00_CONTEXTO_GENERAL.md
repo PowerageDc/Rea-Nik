@@ -109,20 +109,14 @@ render, pero conviven en el mismo proyecto/entorno):
   `features/monitor_mix.md` (ruteo, filtro y datos),
   `features/monitor_mix_ui.md` (interfaz) y `features/monitor_mix_pa.md`
   (capa PA).
-- **MidiNav (navegación en el MIDI Editor)**: acciones one-shot para asignar a
-  atajos: cursor al medio del gap entre notas (adelante y atrás), cursor al
-  inicio del compás actual o previo, selección de la nota siguiente o previa
-  según la posición del cursor, y alternar el foco entre la ventana principal
-  y el MIDI Editor flotante. Los marcadores siguiente y previo se resuelven con
-  el pass-through nativo de teclas, sin script. Sin UI, con config en código.
-  Ver `features/midi_nav.md`.
+- **MidiNav (navegación en el MIDI Editor)**: acciones one-shot para asignar
+  a atajos (cursor por gaps y compases, selección de la nota siguiente o
+  previa, foco entre la ventana principal y el MIDI Editor). Sin UI, con
+  config en código. Ver `features/midi_nav.md`.
 - **FxWindow (ventana flotante de VSTi para grabar en OBS)**: acomoda la
-  ventana flotante de un VSTi (posición y tamaño del área cliente) según un
-  config por nombre de FX, para que el recorte de la captura de pantalla de OBS
-  caiga siempre igual en cualquier proyecto, con una escena de OBS por VSTi.
-  Script de aplicar sobre los tracks seleccionados y script de captura que
-  imprime la línea de config. Requiere JS_ReaScriptAPI. Ver
-  `features/fxwindow.md`.
+  ventana flotante de un VSTi según un config por nombre de FX, para que el
+  recorte de la captura de OBS caiga siempre igual en cualquier proyecto.
+  Requiere JS_ReaScriptAPI. Ver `features/fxwindow.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
