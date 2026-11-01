@@ -385,12 +385,8 @@ independiente: no depende de otros paquetes ni usa el generador.
   edición local en una PC de destino se pierde. Decidir si pasan a un
   archivo local aparte (estilo `config.local.js`, gitignoreado y fuera del
   `@provides`) o si se acepta reeditar tras cada update.
-- Teclas de foco del Helper en destino: `Nik_MusicState_FocusHelper.lua` es
-  `[main]` y queda en el Action List al instalar, pero **sin tecla**:
-  asignarle F4 a mano en la sección Main (y F5 al propio Helper). El foco del
-  teclado entre el Helper y REAPER necesita SWS o `js_ReaScriptAPI` en la PC
-  de destino; sin ninguna de las dos, F4 avisa una vez por consola y el
-  resto de los atajos funciona igual.
+- Teclas de foco del Helper en destino (F4 y F5 se asignan a mano en cada PC;
+  dependen de SWS o `js_ReaScriptAPI`): `features/musicstate_keys.md` §6.
 - Alternativa a correr el generador de `config.local.js` a mano por PC, sin
   caer en "regenerar en cada arranque de REAPER" (Startup Actions de
   SWS/S&M funciona pero reescribe siempre). No bloqueante.

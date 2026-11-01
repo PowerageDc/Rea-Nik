@@ -236,7 +236,13 @@ pasar el foco sin mouse.
   que no se haya publicado (`H`) se pierde, igual que con la X de la ventana.
 
 Dependencias: SWS; `js_ReaScriptAPI` solo como respaldo. Sin ninguna de las
-dos, el módulo avisa una sola vez por consola.
+dos, el módulo avisa una sola vez por consola y el resto de los atajos
+funciona igual.
+
+**En una PC de destino (ReaPack).** `Nik_MusicState_FocusHelper.lua` es
+`[main]`: queda en el Action List al instalar, pero sin tecla. Asignarle F4 a
+mano en la sección Main (y F5 al propio Helper); la asignación no la hace
+ReaPack ni se sincroniza entre PCs.
 
 ## 7. Sondas y hallazgos
 
@@ -297,7 +303,7 @@ Pruebas del anillo de foco y del combo: `musicstate_keys_inputs.md` §8.
 - **Repetición:** afinar `delay` y `rate` de ←/→ a mano en la config (los
   valores por defecto parecen rápidos).
 - **Despliegue:** `MusicStateKeys_config.lua` se pisa en cada update de
-  ReaPack y las teclas de F4 y F5 se asignan a mano en cada PC:
-  `05_REAPACK_DEPLOY.md`, Pendientes.
+  ReaPack (`05_REAPACK_DEPLOY.md`, Pendientes). Las teclas de F4 y F5 se
+  asignan a mano en cada PC (§6).
 - Pendientes del input con perfil, el anillo de foco y el combo:
   `musicstate_keys_inputs.md` §9.
