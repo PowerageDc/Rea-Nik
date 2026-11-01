@@ -9,13 +9,11 @@ setup de git (`04_GIT_TOOLING.md`).
 
 Solo un subconjunto del repo: hoy, `AutoColor/` (script suelto),
 `RemoteControl/` (metapaquete + `.www`, ver abajo), `MusicState/`,
-`MonitorMix/` y `ProjectFolder/` (metapaquetes de scripts; el `.www` de
-MusicState/prompter y el de MonitorMix comparten manifiesto con el de
-RemoteControl, que también cubre la UI de cantante y la de monitor, ver 
-abajo). El resto (`RenderWorkflow/`, `TempoTools/`, `MvsepImporter/`, 
-`StemFragment/`, `Tests-Debug/`) es uso local: no necesita exclusión 
-explícita, porque `reapack-index` solo indexa lo que tiene header de 
-metadata — sin header, no hay paquete, sin tener que listarlo en ningún lado.
+`MonitorMix/` y `ProjectFolder/` (metapaquetes de scripts). La `.www` de
+RemoteControl también sirve las UIs de prompter, cantante y monitor (ver
+abajo). El resto de los dominios es uso local y no necesita exclusión
+explícita: `reapack-index` solo indexa lo que tiene header de metadata, y
+sin header no hay paquete.
 
 `_docs/` se excluye siempre del escaneo (ver `.reapack-index.conf` más
 abajo) — no tiene sentido como paquete.
@@ -52,8 +50,8 @@ Ejemplo real: `AutoColor/reaper_autocolor_live.lua`.
 ## Metapaquete — varios scripts + módulos bajo una sola entrada
 
 Usar cuando un dominio tiene varios scripts ejecutables que comparten
-módulos `dofile` (caso `RemoteControl/`, hoy con 13 ejecutables + 5
-módulos `common_logic` en una sola entrada de ReaPack).
+módulos `dofile` (caso `RemoteControl/`: todos sus ejecutables y módulos
+`common_logic` en una sola entrada de ReaPack).
 
 Un script "ancla" lleva el header con `@metapackage` + `@provides`
 listando **todos** los archivos del grupo:
@@ -185,9 +183,6 @@ como implementación de referencia).
   (strings compuestos, closures) debe recalcularse on-demand después de
   esa carga — no capturarlo en una variable al momento de definir el
   default, o queda con el valor viejo sin error visible.
-- Pendiente abierto (no bloqueante): buscar alternativa a correr esto
-  manualmente sin caer en "regenerar en cada arranque de REAPER"
-  (Startup Actions de SWS/S&M funciona pero reescribe siempre).
 
 ## Generar y publicar el índice
 
@@ -313,8 +308,9 @@ Cuando la documentación de una feature no refleja todos los cambios
 (desarrollo por avance, doc progresiva sin consolidar), no alcanza con
 pedir un listado de carpetas — no distingue qué cambió desde el último
 deploy ni quién depende de qué. La fuente confiable es git, contra el
-commit del último deploy publicado (visible en el propio `index.xml`,
-campo `commit` de la versión más reciente de cada paquete afectado).
+commit del último deploy publicado (visible en el propio `index.xml`: el
+hash va en la URL de los `<source>` de la versión más reciente de cada
+paquete afectado, con la forma `.../raw/<hash>/...`).
 
 1. **Diff sin acotar carpeta, primero.** Acotar de entrada a las
    carpetas "esperadas" puede esconder un dominio nuevo entero:
@@ -348,16 +344,21 @@ campo `commit` de la versión más reciente de cada paquete afectado).
    vive en la misma carpeta que el generador (`RemoteControl/`) — no
    asumir que `script_dir .. entry.file` alcanza para todo.
 6. **El commit de referencia es por paquete.** Cada paquete se publicó
-   en un commit distinto (el `commit` de su versión en `index.xml`):
-   correr el `--name-status` contra el hash de cada uno y guiarse por el
-   diff del propio paquete. Un solo diff contra el hash más viejo marca
-   como cambiado lo que otro paquete ya publicó.
+   en un commit distinto (el hash de la URL de `<source>` de su versión en
+   `index.xml`): correr el `--name-status` contra el hash de cada uno y 
+   guiarse por el diff del propio paquete. Un solo diff contra el hash más
+   viejo marca como cambiado lo que otro paquete ya publicó.
 7. **Comparar el `@version` del header contra el del índice antes de
    bumpear.** Un header puede traer un bump ya hecho que nunca se
    indexó. Aun así, si el archivo cambió después del commit de ese
    bump, hay que subir otro número: `reapack-index` ata cada versión al
    commit donde apareció, y sin bump serviría el contenido viejo en
    silencio. Con rama temporal + squash el número extra no deja rastro.
+8. **Gotchas de PowerShell en estos comandos.** Para excluir una carpeta
+   con `_` en el nombre, usar `':(exclude)_docs'`: la forma corta
+   `':!_docs'` falla con `Unimplemented pathspec magic '_'`. Escribir
+   `git log -S "texto"` con espacio: pegado (`-S"texto"`) dio error de
+   consola en este entorno.
 
 ## Versiones publicadas (último deploy)
 
@@ -377,25 +378,22 @@ independiente: no depende de otros paquetes ni usa el generador.
 
 ## Pendientes
 
-- `MonitorMix_config.lua` va en el `@provides` de MonitorMix, así que
-  ReaPack lo sobrescribe en cada actualización: cualquier edición local
-  del filtro en una PC de destino se pierde. Decidir si el filtro pasa a
-  un archivo local aparte (estilo `config.local.js`, gitignoreado y fuera
-  del `@provides`) o si se acepta reeditar tras cada update.
-- `MusicStateKeys_config.lua` (atajos de teclado del Helper, ver
-  `features/musicstate_keys.md`) va en el `@provides` de MusicState y tiene
-  el mismo problema: ReaPack lo pisa en cada update. Si un atajo se ajusta a
-  mano en una PC de destino (la repetición de ←/→, por ejemplo), se pierde;
-  la decisión de arriba aplica a los tres configs (el tercero es
-  `ProjectFolder_config.lua`, con `render_default`).
+- Configs en código que ReaPack pisa en cada update: `MonitorMix_config.lua`
+  (filtro de tracks), `MusicStateKeys_config.lua` (atajos del Helper, ver
+  `features/musicstate_keys.md`) y `ProjectFolder_config.lua`
+  (`render_default`) van en el `@provides` de su paquete, así que cualquier
+  edición local en una PC de destino se pierde. Decidir si pasan a un
+  archivo local aparte (estilo `config.local.js`, gitignoreado y fuera del
+  `@provides`) o si se acepta reeditar tras cada update.
 - Teclas de foco del Helper en destino: `Nik_MusicState_FocusHelper.lua` es
   `[main]` y queda en el Action List al instalar, pero **sin tecla**:
   asignarle F4 a mano en la sección Main (y F5 al propio Helper). El foco del
   teclado entre el Helper y REAPER necesita SWS o `js_ReaScriptAPI` en la PC
   de destino; sin ninguna de las dos, F4 avisa una vez por consola y el
   resto de los atajos funciona igual.
-- Alternativa a correr el generador de `config.local.js` a mano por PC
-  (ver sección de mecanismo arriba).
+- Alternativa a correr el generador de `config.local.js` a mano por PC, sin
+  caer en "regenerar en cada arranque de REAPER" (Startup Actions de
+  SWS/S&M funciona pero reescribe siempre). No bloqueante.
 - Decidir si los `commandId` hardcodeados como fallback en `config.js`
   deben eliminarse (forzar error visible si falta `config.local.js`) o
   mantenerse con validación explícita — hoy, si falta el archivo
