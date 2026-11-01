@@ -365,10 +365,10 @@ Versiones en `main`:
 
 | Paquete | Versión | Ancla |
 |---------|---------|-------|
-| RemoteControl (scripts) | 1.10 | `Nik_RemoteState_Poll.lua` |
-| MusicState (scripts) | 1.6 | `Nik_MusicState_Helper.lua` |
-| MonitorMix (scripts) | 1.1 | `Nik_MonitorMix_Publish.lua` |
-| Interfaz web (`.www`) | 1.9 | `web/Nik_RemoteControl_WebUI.www` |
+| RemoteControl (scripts) | 1.11 | `Nik_RemoteState_Poll.lua` |
+| MusicState (scripts) | 1.7 | `Nik_MusicState_Helper.lua` |
+| MonitorMix (scripts) | 1.2 | `Nik_MonitorMix_Publish.lua` |
+| Interfaz web (`.www`) | 1.10 | `web/Nik_RemoteControl_WebUI.www` |
 | ProjectFolder (scripts) | 1.0 | `Nik_ProjectFolder_OpenRoot.lua` |
 
 En destino se instalan juntos los cuatro primeros y después se corre
@@ -377,12 +377,6 @@ independiente: no depende de otros paquetes ni usa el generador.
 
 ## Pendientes
 
-- **Bumpeado sin deployar:** MonitorMix está en 1.2 en el header (suma la
-  capa PA, `features/monitor_mix_pa.md`). La interfaz web `.www` sigue en
-  1.9 y hay que bumpearla en el mismo commit del deploy (regla dura de
-  arriba). El deploy espera a resolver la UI de monitor con poco alto de
-  viewport (`features/monitor_mix_ui.md`, pendientes). Al deployar se
-  elimina este ítem.
 - `MonitorMix_config.lua` va en el `@provides` de MonitorMix, así que
   ReaPack lo sobrescribe en cada actualización: cualquier edición local
   del filtro en una PC de destino se pierde. Decidir si el filtro pasa a
