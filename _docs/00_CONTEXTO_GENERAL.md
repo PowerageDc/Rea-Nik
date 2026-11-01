@@ -15,17 +15,10 @@ de antes) y una raíz de repo real abierta en VS Code (el workspace viejo
 abría subcarpetas sueltas vía `.gitignore` allow-list, lo cual rompía el
 refresh automático de extensiones como GitGraph).
 
-Estructura:
-
-```
-C:\dev\Rea-Nik
-├── AutoColor, RemoteControl, ReaPitchBus, RenderWorkflow, TempoTools,
-│ MvsepImporter, MusicState, MonitorMix, MidiNav, ProjectFolder, 
-│ FxWindow, StemFragment, Tests-Debug, _Shared
-├── web\ ← contenido servido como reaper_www_root
-├── _docs
-└── Rea-Nik.code-workspace
-```
+Estructura de carpetas: ver "Estructura de subcarpetas" en
+`01_CONVENCIONES.md`. Además de esas carpetas, la raíz del repo tiene
+`Rea-Nik.code-workspace`, y `web\` es el contenido servido como
+`reaper_www_root`.
 
 Los scripts Lua **no** requieren estar físicamente bajo `Scripts\` del
 resource path de REAPER — el Command ID se asigna según dónde REAPER
@@ -108,7 +101,7 @@ render, pero conviven en el mismo proyecto/entorno):
   cantante) los muestran sincronizados con el transporte, tolerando una
   red inestable. Punto de entrada e índice de docs de la feature:
   `features/musicstate_data_model.md`. Qué adjuntar según la tarea: sección
-  "Qué adjuntar según la tarea (MusicState)", al final de este doc.
+  "Qué adjuntar según la tarea (MusicState y Monitor Mix)", al final de este doc.
 - **Monitor Mix (monitoreo por músico)**: mezcla personal del baterista
   (a futuro, de otros músicos) por un bus con `B_MAINSEND=0` hacia el par
   de salidas secundario de la placa, con volumen, mute y paneo a nivel de send.
@@ -149,6 +142,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Render Workflow           | Regiones, count-in y preset implementados; batch render pendiente |
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
+| A/B de tracks (ABPair)    | Funcional, uso local (contrato en el encabezado de los scripts) |
 | MidiNav                   | Seis acciones funcionando y validadas (cinco de navegación y el toggle de foco). Pendientes en `features/midi_nav.md` |
 | Control remoto web        | Funcional. Pendientes por capa en `features/remote_control.md` §5 |
 | MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
@@ -165,7 +159,7 @@ render, pero conviven en el mismo proyecto/entorno):
 - Parser de nomenclatura alternativa de secciones (V1, V2, PC, C1...) usada en
   otros proyectos — no bloqueante.
 
-## Qué adjuntar según la tarea (MusicState)
+## Qué adjuntar según la tarea (MusicState y Monitor Mix)
 
 Punto de partida: el doc principal de la tarea y lo que ese doc cita como dependencia. Docs en `_docs/features/`; código de las UIs en `web/musicstate-ui/`.
 
