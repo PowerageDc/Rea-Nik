@@ -121,8 +121,10 @@ comportamiento de las acciones de navegación; ver `features/midi_nav.md`),
 `MvsepImporter_config.lua` (patrones de nombres de MVSEP y recetas de import; 
 ver `features/mvsep_importer.md`), `MusicStateKeys_config.lua` (atajos de
 teclado del Helper, con los ids de binding como `<área>.<acción>`; ver
-`features/musicstate_keys.md`) y `FxWindow_config.lua` (posición y tamaño de la
-ventana flotante de cada VSTi; ver `features/fxwindow.md`).
+`features/musicstate_keys.md`), `FxWindow_config.lua` (posición y tamaño de la
+ventana flotante de cada VSTi; ver `features/fxwindow.md`) y
+`MidiEdit_config.lua` (opciones de las acciones de edición MIDI sobre la
+selección; ver `features/midi_edit.md`).
 
 ### Pendiente (no bloqueante)
 Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
@@ -174,7 +176,8 @@ C:\dev\Rea-Nik\
 ├── MvsepImporter/ importador de stems desde MVSEP
 ├── MusicState/ Helper ReaImGui (armonía, cues, roles) y publicación a ExtState
 ├── MonitorMix/ mezcla de monitoreo por músico (filtro de tracks, bus y sends de monitoreo)
-├── MidiNav/ acciones de navegación en el MIDI Editor (cursor, gaps, selección de notas, foco entre ventanas)
+├── MidiNav/ acciones de navegación en el MIDI Editor (cursor, gaps, CC, selección de notas y de CC, foco entre ventanas)
+├── MidiEdit/ acciones de edición MIDI sobre la selección (alinear notas, mover CC al cursor)
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
 ├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List

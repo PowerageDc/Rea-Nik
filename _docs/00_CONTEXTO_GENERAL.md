@@ -110,9 +110,13 @@ render, pero conviven en el mismo proyecto/entorno):
   `features/monitor_mix_ui.md` (interfaz) y `features/monitor_mix_pa.md`
   (capa PA).
 - **MidiNav (navegación en el MIDI Editor)**: acciones one-shot para asignar
-  a atajos (cursor por gaps y compases, selección de la nota siguiente o
-  previa, foco entre la ventana principal y el MIDI Editor). Sin UI, con
-  config en código. Ver `features/midi_nav.md`.
+  a atajos (cursor por gaps, compases y eventos CC, selección de notas y de
+  CC, foco entre la ventana principal y el MIDI Editor). Sin UI, con config
+  en código. Ver `features/midi_nav.md`.
+- **MidiEdit (edición MIDI sobre la selección)**: acciones one-shot que
+  modifican lo seleccionado (igualar inicios y finales de un acorde, mover
+  CC al cursor). Se combinan con las de selección de MidiNav. Sin UI, con
+  config en código. Ver `features/midi_edit.md`.
 - **FxWindow (ventana flotante de VSTi para grabar en OBS)**: acomoda la
   ventana flotante de un VSTi según un config por nombre de FX, para que el
   recorte de la captura de OBS caiga siempre igual en cualquier proyecto.
@@ -132,7 +136,8 @@ render, pero conviven en el mismo proyecto/entorno):
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | A/B de tracks (ABPair)    | Funcional, uso local (contrato en el encabezado de los scripts) |
-| MidiNav                   | Seis acciones funcionando y validadas (cinco de navegación y el toggle de foco). Pendientes en `features/midi_nav.md` |
+| MidiNav                   | Doce acciones funcionando y validadas (cursor, selección de notas y de CC, y el toggle de foco). Pendientes en `features/midi_nav.md` |
+| MidiEdit                  | Tres acciones funcionando y validadas (alinear acordes y mover CC al cursor). Pendientes en `features/midi_edit.md` |
 | Control remoto web        | Funcional. Pendientes por capa en `features/remote_control.md` §5 |
 | MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
@@ -176,3 +181,12 @@ Punto de entrada: `remote_control.md` (arquitectura e índice). Docs en `_docs/f
 | Memoria de UI por proyecto, selector de tabs, watchdog | `remote_control_projects.md` | `core/tab-ui-memory.js`, `modals/project-tabs/`, `core/init.js` |
 | Markers (seeker, popup, colores, seek relativo) | `remote_control_markers.md`, `remote_control_ui.md` | `modals/marker-browser/`, `markers/markers.js`, `RemoteControl/MarkerBars_common_logic.lua` |
 | Playrate, ReaPitch, fader vertical y knob | `remote_control_faders.md`, `remote_control_ui.md` | `core/vertical-fader.js`, `core/fader-knob-svg.js`, `modals/playrate/`, `modals/reapitch/` |
+
+## Qué adjuntar según la tarea (MidiNav y MidiEdit)
+
+Docs en `_docs/features/`; código en `MidiNav/` y `MidiEdit/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Navegación y selección (cursor, gaps, notas, CC) | `midi_nav.md` | `MidiNav/*.lua`, `MidiNav_config.lua` |
+| Edición sobre la selección (alinear notas, mover CC) | `midi_edit.md`, `midi_nav.md` | `MidiEdit/*.lua`, `MidiEdit_config.lua` |
