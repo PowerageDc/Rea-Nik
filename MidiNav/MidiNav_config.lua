@@ -25,6 +25,22 @@ return {
         chord_pick_prev = "lowest",
     },
 
+    cc = {
+        lane_mode = "active",
+        threshold_sec = 0.005,
+    },
+
+    cc_range = {
+        mode = "replace",
+        lane_mode = "visible",
+        tolerance_sec = 0.002,
+    },
+
+    at_cursor = {
+        mode = "replace",
+        tolerance_sec = 0.005,
+    },
+
     gap = {
         position = 0.5,
         min_gap_ppq = 1,
