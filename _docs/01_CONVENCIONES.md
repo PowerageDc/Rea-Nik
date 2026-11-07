@@ -124,7 +124,9 @@ teclado del Helper, con los ids de binding como `<área>.<acción>`; ver
 `features/musicstate_keys.md`), `FxWindow_config.lua` (posición y tamaño de la
 ventana flotante de cada VSTi; ver `features/fxwindow.md`) y
 `MidiEdit_config.lua` (opciones de las acciones de edición MIDI sobre la
-selección; ver `features/midi_edit.md`).
+selección; ver `features/midi_edit.md`). Y `SubtitleExport_config.lua` 
+(perfiles de estilo, efectos y formato de acordes del SRT de armonía; ver 
+`features/subtitle_export.md`).
 
 ### Pendiente (no bloqueante)
 Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
@@ -182,6 +184,7 @@ C:\dev\Rea-Nik\
 ├── TempoTools/ utilidades de tempo/compás
 ├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List
 ├── FxWindow/ posición y tamaño de la ventana flotante de un VSTi según config, para la captura de OBS
+├── SubtitleExport/ SRT con la armonía del proyecto, para quemar en los videos de piano de KeySight
 ├── ABPair/ alternar por solo entre dos tracks (par guardado en el proyecto)
 ├── AutoColor/ auto-color de tracks
 ├── StemFragment/ captura/UI de fragmentos de stem
@@ -204,12 +207,13 @@ uno solo (`ImGuiInputCommit_common_logic.lua`, patrones de input;
 REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un modal de 
 confirmación: patrones de ReaImGui, hoy solo en el Helper de `MusicState/`; 
 `ImGuiButtonStyle_common_logic.lua`, estilo semántico de botones por tipo, hoy en 
-las tabs del Helper). Un módulo usado por un solo dominio se queda dentro de la 
-carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
-`ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de
-`RemoteControl/`, y `MusicStateBridge_common_logic.lua` y
-`MusicStateRowInputs_common_logic.lua` dentro de `MusicState/`, y
-`MidiNav_common_logic.lua`, `MidiNavGap_common_logic.lua` y
+las tabs del Helper; `MusicTranspose_common_logic.lua`, port a Lua de `nikTranspose`:
+transposición de acordes y tonalidad, hoy solo en `SubtitleExport/`). Un módulo 
+usado por un solo dominio se queda dentro de la carpeta de ese dominio (ej. 
+`ActiveProject_common_logic.lua`, `ProjectTabs_common_logic.lua` y 
+`MarkerBars_common_logic.lua` viven dentro de `RemoteControl/`, y 
+`MusicStateBridge_common_logic.lua` y `MusicStateRowInputs_common_logic.lua` dentro 
+de `MusicState/`, y `MidiNav_common_logic.lua`, `MidiNavGap_common_logic.lua` y
 `MidiNavSelect_common_logic.lua` dentro de `MidiNav/`, no en `_Shared/`, porque 
 solo los consume ese dominio).
 

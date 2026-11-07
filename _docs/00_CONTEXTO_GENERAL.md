@@ -121,6 +121,11 @@ render, pero conviven en el mismo proyecto/entorno):
   ventana flotante de un VSTi según un config por nombre de FX, para que el
   recorte de la captura de OBS caiga siempre igual en cualquier proyecto.
   Requiere JS_ReaScriptAPI. Ver `features/fxwindow.md`.
+- **SubtitleExport (subtítulos de armonía para videos de piano)**: genera un
+  SRT con la armonía del proyecto (transpuesta si hay ReaPitch), recortado al
+  item MIDI seleccionado, para quemarlo con Subtitle Edit sobre el video de
+  KeySight. Estilo por perfil (posición, fuente, color, efectos). Ver
+  `features/subtitle_export.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
   scripts (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a PCs de ensayo
   sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
@@ -143,6 +148,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
 | Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo), UI web del baterista (layout según el espacio), capa PA con modo PA en el remoto principal. Pendientes en sus docs. Ver `features/monitor_mix.md`, `features/monitor_mix_ui.md` y `features/monitor_mix_pa.md` |
 | FxWindow                  | Apply validado con Modo Bass 2; Capture con Modo Bass 2 y Ample Guitar L. Pendientes en `features/fxwindow.md` §6 |
+| SubtitleExport            | Export de SRT con armonía transpuesta, perfiles de estilo y efectos. Pendientes en `features/subtitle_export.md` §10 |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -190,3 +196,13 @@ Docs en `_docs/features/`; código en `MidiNav/` y `MidiEdit/`.
 |---|---|---|
 | Navegación y selección (cursor, gaps, notas, CC) | `midi_nav.md` | `MidiNav/*.lua`, `MidiNav_config.lua` |
 | Edición sobre la selección (alinear notas, mover CC) | `midi_edit.md`, `midi_nav.md` | `MidiEdit/*.lua`, `MidiEdit_config.lua` |
+
+## Qué adjuntar según la tarea (SubtitleExport)
+
+Docs en `_docs/features/`; código en `SubtitleExport/` y `_Shared/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Estilos, efectos, perfiles, formato de acordes | `subtitle_export.md` | `SubtitleExport/*.lua` |
+| Transposición (paridad con el JS) | `subtitle_export.md`, `musicstate_client.md` | `_Shared/MusicTranspose_common_logic.lua`, `web/core/music-transpose.js` |
+| Secciones y cues como subtítulos | `subtitle_export.md`, `musicstate_data_model.md` | `SubtitleExport/*.lua` |
