@@ -1,0 +1,14 @@
+Windows Registry Editor Version 5.00
+
+[-HKEY_CURRENT_USER\Software\Classes\*\shell\StemsZipWithPassword]
+[-HKEY_CURRENT_USER\Software\Classes\Directory\shell\StemsZipWithPassword]
+[-HKEY_CURRENT_USER\Software\Classes\AllFilesystemObjects\shell\StemsZipWithPassword]
+[-HKEY_CURRENT_USER\Software\Classes\AllFilesystemObjects\shell\ProjectPackZip]
+
+[HKEY_CURRENT_USER\Software\Classes\AllFilesystemObjects\shell\ProjectPackZip]
+@="Project zip with password"
+"Icon"="C:\\Program Files\\WinRAR\\WinRAR.exe"
+"MultiSelectModel"="Player"
+
+[HKEY_CURRENT_USER\Software\Classes\AllFilesystemObjects\shell\ProjectPackZip\command]
+@="wscript.exe \"C:\\Scripts\\ProjectPack_Hidden.vbs\" \"%1\""

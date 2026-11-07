@@ -182,7 +182,8 @@ C:\dev\Rea-Nik\
 ├── MidiEdit/ acciones de edición MIDI sobre la selección (alinear notas, mover CC al cursor)
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
-├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List
+├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List y juntar en Media\Samples los archivos que usan los FX
+├── ProjectPack/ zip con clave por menú contextual de Windows (`.bat`, `.vbs` y `.reg`, no scripts de REAPER: no siguen `Nik_<Dominio>_<Acción>`)
 ├── FxWindow/ posición y tamaño de la ventana flotante de un VSTi según config, para la captura de OBS
 ├── SubtitleExport/ SRT con la armonía del proyecto, para quemar en los videos de piano de KeySight
 ├── ABPair/ alternar por solo entre dos tracks (par guardado en el proyecto)
@@ -208,12 +209,13 @@ REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un modal de
 confirmación: patrones de ReaImGui, hoy solo en el Helper de `MusicState/`; 
 `ImGuiButtonStyle_common_logic.lua`, estilo semántico de botones por tipo, hoy en 
 las tabs del Helper; `MusicTranspose_common_logic.lua`, port a Lua de `nikTranspose`:
-transposición de acordes y tonalidad, hoy solo en `SubtitleExport/`). Un módulo 
-usado por un solo dominio se queda dentro de la carpeta de ese dominio (ej. 
-`ActiveProject_common_logic.lua`, `ProjectTabs_common_logic.lua` y 
-`MarkerBars_common_logic.lua` viven dentro de `RemoteControl/`, y 
-`MusicStateBridge_common_logic.lua` y `MusicStateRowInputs_common_logic.lua` dentro 
-de `MusicState/`, y `MidiNav_common_logic.lua`, `MidiNavGap_common_logic.lua` y
+transposición de acordes y tonalidad, hoy solo en `SubtitleExport/`; 
+`FolderView_common_logic.lua`, vista de Explorer de una carpeta y PowerShell sin 
+ventana, hoy solo en `ProjectFolder/`). Un módulo usado por un solo dominio se queda 
+dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
+`ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de 
+`RemoteControl/`, y `MusicStateBridge_common_logic.lua` y `MusicStateRowInputs_common_logic.lua` 
+dentro de `MusicState/`, y `MidiNav_common_logic.lua`, `MidiNavGap_common_logic.lua` y 
 `MidiNavSelect_common_logic.lua` dentro de `MidiNav/`, no en `_Shared/`, porque 
 solo los consume ese dominio).
 

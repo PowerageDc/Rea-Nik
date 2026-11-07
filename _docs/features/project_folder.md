@@ -88,15 +88,10 @@ pasen por la codepage ANSI.
 
 - **Verificar el flujo completo en la PC de la sala**: zip con clave, descarga,
   extracción y apertura, confirmando que el sample se resuelve.
-- **Empaquetado en lote desde REAPER**: hoy el zip se arma con el menú contextual
-  (ver `STEMS_ZIPPER.md`), seleccionando a mano todo menos la carpeta de render.
-  Evaluar un `Nik_ProjectFolder_Pack.lua` que recorra las pestañas y excluya la
-  carpeta de render. Puntos: reutilizar el zipper (la clave vive en su `.bat`) en
-  lugar de comprimir desde Lua; ver cómo el `.bat` recibe varias rutas por
-  invocación; calcular la carpeta de render con la lógica de este dominio (hoy
-  local en el módulo, habría que extraerla); guardar o saltear pestañas con
-  cambios; correr la recolección de samples antes. Alternativa más barata:
-  excluir la carpeta de render con un switch `-x` en el `.bat`.
+- **Empaquetado en lote desde REAPER**: pasó a `features/project_pack.md` §6. De
+  este dominio va a consumir la lógica que calcula la carpeta de render, que hoy
+  es local en `ProjectFolder_common_logic.lua` y habría que mover a `_Shared/`, y
+  la recolección de samples.
 - **Aviso en el empaquetado**: detectar en el `.rpp` rutas absolutas de samples
   fuera de la carpeta del proyecto, para cubrir el olvido de correr la
   recolección.
@@ -117,5 +112,5 @@ pasen por la codepage ANSI.
 |---|---|---|
 | Abrir carpetas | `project_folder.md` | `ProjectFolder_common_logic.lua`, `ProjectFolder_config.lua` |
 | Recolección de samples | `project_folder.md` | `Nik_ProjectFolder_CollectSamples.lua`, `_Shared/FolderView_common_logic.lua` |
-| Empaquetado en lote | `project_folder.md`, `STEMS_ZIPPER.md` | `Stems Zipper.bat`, `ProjectFolder_common_logic.lua` |
+| Empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `ProjectFolder_common_logic.lua` |
 | Migrar la vista de carpetas | `project_folder.md`, `mvsep_importer.md` | `_Shared/FolderView_common_logic.lua`, `MvsepImporter_common_logic.lua` |

@@ -126,10 +126,17 @@ render, pero conviven en el mismo proyecto/entorno):
   item MIDI seleccionado, para quemarlo con Subtitle Edit sobre el video de
   KeySight. Estilo por perfil (posición, fuente, color, efectos). Ver
   `features/subtitle_export.md`.
-- **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de
-  scripts (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a PCs de ensayo
-  sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. Ver
-  `05_REAPACK_DEPLOY.md`.
+- **ProjectFolder (carpetas del proyecto y samples)**: abre la raíz, Media o
+  Render del proyecto activo desde el Action List y copia a `Media\Samples` los
+  archivos que usan los FX (sample del Count In), para que viajen en el zip de la
+  sala. Ver `features/project_folder.md`.
+- **ProjectPack (zip con clave para la sala)**: acción de menú contextual de
+  Windows que comprime las carpetas de proyecto con clave, para subirlas a Drive.
+  Herramienta de escritorio, no script de REAPER. Ver `features/project_pack.md`.
+- **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de scripts 
+  (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a
+  PCs de ensayo sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. 
+  Ver `05_REAPACK_DEPLOY.md`.
 
 ## Estado general (ver detalle en cada doc de feature)
 | Funcionalidad           | Estado                                        |
@@ -149,6 +156,8 @@ render, pero conviven en el mismo proyecto/entorno):
 | Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo), UI web del baterista (layout según el espacio), capa PA con modo PA en el remoto principal. Pendientes en sus docs. Ver `features/monitor_mix.md`, `features/monitor_mix_ui.md` y `features/monitor_mix_pa.md` |
 | FxWindow                  | Apply validado con Modo Bass 2; Capture con Modo Bass 2 y Ample Guitar L. Pendientes en `features/fxwindow.md` §6 |
 | SubtitleExport            | Export de SRT con armonía transpuesta, perfiles de estilo y efectos. Pendientes en `features/subtitle_export.md` §10 |
+| ProjectFolder             | Abrir carpetas del proyecto y juntar samples de los FX en `Media\Samples`. Pendientes en `features/project_folder.md` §7 |
+| ProjectPack               | Zip con clave por menú contextual, clave fuera del repo. Pendientes en `features/project_pack.md` §6 |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -156,6 +165,10 @@ render, pero conviven en el mismo proyecto/entorno):
   calidad de sonido y porque el patrón rítmico del conteo varía (4 negras, o
   2 blancas + 4 negras en tempos rápidos).
 - Pitch-shift toggle script (per-stem, mapeable a footswitch MIDI).
+- Migrar la vista de Explorer (`desktop.ini`) y el ejecutor de PowerShell de
+  `MvsepImporter_common_logic.lua` y `ProjectFolder_common_logic.lua` a
+  `_Shared/FolderView_common_logic.lua`. Detalle en `features/project_folder.md` §7
+  y `features/mvsep_importer.md` §7.
 - Parser de nomenclatura alternativa de secciones (V1, V2, PC, C1...) usada en
   otros proyectos — no bloqueante.
 
@@ -206,3 +219,12 @@ Docs en `_docs/features/`; código en `SubtitleExport/` y `_Shared/`.
 | Estilos, efectos, perfiles, formato de acordes | `subtitle_export.md` | `SubtitleExport/*.lua` |
 | Transposición (paridad con el JS) | `subtitle_export.md`, `musicstate_client.md` | `_Shared/MusicTranspose_common_logic.lua`, `web/core/music-transpose.js` |
 | Secciones y cues como subtítulos | `subtitle_export.md`, `musicstate_data_model.md` | `SubtitleExport/*.lua` |
+
+## Qué adjuntar según la tarea (ProjectFolder y ProjectPack)
+
+Docs en `_docs/features/`; código en `ProjectFolder/`, `ProjectPack/` y `_Shared/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Abrir carpetas, juntar samples, vista de Explorer | `project_folder.md` | `ProjectFolder/*`, `_Shared/FolderView_common_logic.lua` |
+| Menú contextual, clave, empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `ProjectFolder_common_logic.lua` |
