@@ -136,4 +136,78 @@ function M.parseSemitones(s)
     return "invalid"
 end
 
+-- "RRGGBB" a tag de color de ASS (que usa orden BGR).
+local function colorTag(hex)
+    local r, g, b = hex:match("^(%x%x)(%x%x)(%x%x)$")
+    if not r then return "" end
+    return ("\\c&H%s%s%s&"):format(b:upper(), g:upper(), r:upper())
+end
+
+-- Generadores de efecto: reciben la duración de la fase (ms) y las opciones.
+local EFFECTS = {
+    fade = function(p)
+        return ("\\fad(%d,%d)"):format(p, p)
+    end,
+    grow = function(p)
+        return ("\\fscx0\\fscy0\\t(0,%d,\\fscx100\\fscy100)"):format(p)
+    end,
+    bounce = function(p)
+        local half = math.floor(p / 2)
+        return ("\\t(0,%d,\\fscx125\\fscy125)\\t(%d,%d,\\fscx100\\fscy100)"):format(half, half, p)
+    end,
+    wipe = function(p, o)
+        return ("\\clip(0,0,0,%d)\\t(0,%d,\\clip(0,0,%d,%d))"):format(
+            o.video_height, p, o.video_width, o.video_height)
+    end,
+}
+
+-- Bloque de tags ASS para una línea, o "" si el estilo no define nada.
+-- style: { an, pos = {x, y}, fn, fs, color, effect }
+-- opts: { effect_ms, effect_max_ratio, short_ms, slide_px, video_width, video_height }
+function M.buildTags(style, duration_s, opts)
+    opts = opts or {}
+    local parts = {}
+    if style.an then parts[#parts + 1] = "\\an" .. style.an end
+
+    -- Fase del efecto: acotada por la duración de la línea; 0 si la línea es corta.
+    local p = 0
+    local dur_ms = duration_s * 1000
+    if style.effect and dur_ms >= (opts.short_ms or 0) then
+        p = math.floor(math.min(opts.effect_ms or 300, dur_ms * (opts.effect_max_ratio or 0.25)))
+    end
+
+    if style.effect == "slide" and style.pos and p > 0 then
+        local x, y = style.pos[1], style.pos[2]
+        parts[#parts + 1] = ("\\move(%d,%d,%d,%d,0,%d)"):format(x - (opts.slide_px or 400), y, x, y, p)
+    elseif style.pos then
+        parts[#parts + 1] = ("\\pos(%d,%d)"):format(style.pos[1], style.pos[2])
+    end
+
+    if style.fn then parts[#parts + 1] = "\\fn" .. style.fn end
+    if style.fs then parts[#parts + 1] = "\\fs" .. style.fs end
+    if style.color then parts[#parts + 1] = colorTag(style.color) end
+
+    local generator = EFFECTS[style.effect]
+    if generator and p > 0 then parts[#parts + 1] = generator(p, opts) end
+
+    if #parts == 0 then return "" end
+    return "{" .. table.concat(parts) .. "}"
+end
+
+-- Antepone a cada entrada los tags de su estilo. Con opts.tags == false (o sin
+-- estilo) devuelve las entradas sin tocar.
+function M.styleEntries(entries, style, opts)
+    opts = opts or {}
+    if opts.tags == false or not style then return entries end
+    local styled = {}
+    for i, e in ipairs(entries) do
+        styled[i] = {
+            start = e.start,
+            stop = e.stop,
+            text = M.buildTags(style, e.stop - e.start, opts) .. e.text,
+        }
+    end
+    return styled
+end
+
 return M

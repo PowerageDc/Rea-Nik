@@ -1,0 +1,28 @@
+1
+00:00:01,000 --> 00:00:03,000
+{\fscx0\fscy0\t(0,300,\fscx100\fscy100)}Prueba H1: crece
+
+2
+00:00:04,000 --> 00:00:06,000
+{\t(0,150,\fscx125\fscy125)\t(150,300,\fscx100\fscy100)}Prueba H2: rebote
+
+3
+00:00:07,000 --> 00:00:09,000
+{\clip(0,0,0,1080)\t(0,500,\clip(0,0,1920,1080))}Prueba H3: se descubre de izquierda a derecha
+
+4
+00:00:10,000 --> 00:00:12,000
+{\an7\pos(0,0)}Prueba H4: esquina superior izquierda (0,0)
+
+5
+00:00:13,000 --> 00:00:15,000
+{\an9\pos(1920,0)}Prueba H5: esquina superior derecha (1920,0)
+
+6
+00:00:16,000 --> 00:00:18,000
+{\an5\move(0,540,960,540,0,500)}Prueba H6: entra desde la izquierda al centro
+
+7
+00:00:19,000 --> 00:00:21,000
+{\frz90\t(0,300,\frz0)}Prueba H7: rota al entrar
+

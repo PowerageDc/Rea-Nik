@@ -124,6 +124,12 @@ local function main()
         return fail("No hay acordes dentro de la ventana seleccionada.")
     end
 
+    local profile = Config.profiles[Config.profile]
+    if not profile then
+        return fail(("El perfil '%s' no existe en el config."):format(tostring(Config.profile)))
+    end
+    entries = Logic.styleEntries(entries, profile.chord, Config)
+
     local out_path = (project_path:gsub("%.[Rr][Pp][Pp]$", "")) .. Config.output_suffix .. ".srt"
     local file, err = io.open(out_path, "wb")
     if not file then
@@ -138,8 +144,8 @@ local function main()
         shortest = math.min(shortest, dur)
         longest = math.max(longest, dur)
     end
-    reaper.ShowConsoleMsg(("SubtitleExport: %d subtítulos, transposición %+d semitonos, inicio en %.3f s, desfase %.3f s\nDuración mínima %.3f s, máxima %.3f s\n%s\n")
-        :format(#entries, delta, t0, Config.video_offset_s or 0, shortest, longest, out_path))
+    reaper.ShowConsoleMsg(("SubtitleExport: %d subtítulos, perfil '%s', transposición %+d semitonos, inicio en %.3f s, desfase %.3f s\nDuración mínima %.3f s, máxima %.3f s\n%s\n")
+        :format(#entries, Config.profile, delta, t0, Config.video_offset_s or 0, shortest, longest, out_path))
 end
 
 main()

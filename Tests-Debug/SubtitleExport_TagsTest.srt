@@ -1,0 +1,32 @@
+1
+00:00:01,000 --> 00:00:04,000
+Prueba A: sin tag (control)
+
+2
+00:00:05,000 --> 00:00:08,000
+{\an7}Prueba B: arriba a la izquierda
+
+3
+00:00:09,000 --> 00:00:13,000
+Prueba C: linea normal
+
+4
+00:00:10,000 --> 00:00:13,000
+{\an7}Prueba C: solapada, arriba a la izquierda
+
+5
+00:00:14,000 --> 00:00:17,000
+{\an8}Prueba D: arriba al centro
+
+6
+00:00:18,000 --> 00:00:19,000
+{\fad(0,0)}Prueba E: sin fade (1 s)
+
+7
+00:00:20,000 --> 00:00:21,000
+Prueba E: fade habitual (1 s)
+
+8
+00:00:22,000 --> 00:00:25,000
+{\c&H0000FF&}Prueba F: rojo
+

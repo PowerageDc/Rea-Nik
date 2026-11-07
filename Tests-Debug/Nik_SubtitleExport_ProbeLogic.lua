@@ -119,4 +119,34 @@ check("semitonos: none", (Logic.parseSemitones("none")), "none")
 check("semitonos: mixed", (Logic.parseSemitones("mixed")), "mixed")
 check("semitonos: inválido", (Logic.parseSemitones("abc")), "invalid")
 
+-- Tags de estilo y efectos
+local fx = { effect_ms = 300, effect_max_ratio = 0.25, short_ms = 1000,
+    slide_px = 400, video_width = 1920, video_height = 1080 }
+check("tags: posición y fade",
+    Logic.buildTags({ an = 2, pos = { 960, 800 }, effect = "fade" }, 2.0, fx),
+    "{\\an2\\pos(960,800)\\fad(300,300)}")
+check("tags: fase acotada por la duración",
+    Logic.buildTags({ effect = "fade" }, 1.0, fx), "{\\fad(250,250)}")
+check("tags: línea corta sin efecto",
+    Logic.buildTags({ effect = "fade" }, 0.5, fx), "")
+check("tags: línea corta conserva alineación",
+    Logic.buildTags({ an = 7, effect = "fade" }, 0.5, fx), "{\\an7}")
+check("tags: grow",
+    Logic.buildTags({ effect = "grow" }, 2.0, fx), "{\\fscx0\\fscy0\\t(0,300,\\fscx100\\fscy100)}")
+check("tags: bounce",
+    Logic.buildTags({ effect = "bounce" }, 2.0, fx),
+    "{\\t(0,150,\\fscx125\\fscy125)\\t(150,300,\\fscx100\\fscy100)}")
+check("tags: wipe",
+    Logic.buildTags({ effect = "wipe" }, 2.0, fx), "{\\clip(0,0,0,1080)\\t(0,300,\\clip(0,0,1920,1080))}")
+check("tags: slide",
+    Logic.buildTags({ pos = { 960, 800 }, effect = "slide" }, 2.0, fx), "{\\move(560,800,960,800,0,300)}")
+check("tags: slide sin pos",
+    Logic.buildTags({ effect = "slide" }, 2.0, fx), "")
+check("tags: fuente, tamaño y color",
+    Logic.buildTags({ fn = "Arial", fs = 60, color = "FFD400" }, 2.0, fx), "{\\fnArial\\fs60\\c&H00D4FF&}")
+
+local plain = { { start = 0, stop = 2, text = "F" } }
+check("estilo: tags = false deja las entradas", Logic.styleEntries(plain, { an = 2 }, { tags = false }) == plain, true)
+check("estilo: antepone tags", Logic.styleEntries(plain, { an = 2 }, fx)[1].text, "{\\an2}F")
+
 out(("SubtitleExport probe: %d ok, %d fallas"):format(passed, failed))

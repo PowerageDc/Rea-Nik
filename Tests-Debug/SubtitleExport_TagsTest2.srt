@@ -1,0 +1,24 @@
+1
+00:00:01,000 --> 00:00:03,000
+Prueba G1: sin tag, sin efecto global (control)
+
+2
+00:00:04,000 --> 00:00:06,000
+{\fad(500,500)}Prueba G2: fade de 500 ms
+
+3
+00:00:07,000 --> 00:00:09,000
+{\fad(1500,0)}Prueba G3: fade-in largo (1,5 s), sin fade-out
+
+4
+00:00:10,000 --> 00:00:12,000
+{\an7}{\fad(500,500)}Prueba G4: tags separados, arriba a la izquierda
+
+5
+00:00:13,000 --> 00:00:15,000
+{\an7\fad(500,500)}Prueba G5: tags juntos, arriba a la izquierda
+
+6
+00:00:16,000 --> 00:00:17,000
+{\fad(100,100)}Prueba G6: fade corto en 1 s
+
