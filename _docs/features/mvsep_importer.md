@@ -243,6 +243,13 @@ se pudo crear.
 - **Sonda de clasificación**: un script en `Tests-Debug/` que reciba una lista de
   nombres de archivo y muestre cómo los clasifican `detect_stem` y las recetas, para
   probar cambios de nombres de MVSEP sin hacer un import real.
+- **Migrar la vista de Explorer y PowerShell a `_Shared/FolderView_common_logic.lua`**:
+  `ensure_media_folder` pasaría a llamar `FolderView.ensure_folder(path, "Generic")`
+  en lugar de `applyMediaFolderView`, y `run_powershell` y
+  `to_powershell_encoded_command` se reemplazan por `FolderView.run_powershell`,
+  eliminando el encoder duplicado. Antes de borrar `to_powershell_encoded_command`
+  del módulo, buscar con grep si algún script lo usa. Con el módulo nuevo el ini
+  se escribe desde PowerShell y no con `io.open`. Ver `features/project_folder.md`.
 - **Dividir este doc**: separar el importer base de las recetas y el despachador en
   docs distintos cuando haya tres o más recetas o exista el despachador. El nombre
   del doc nuevo se define al crearlo.
