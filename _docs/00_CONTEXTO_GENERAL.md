@@ -133,6 +133,12 @@ render, pero conviven en el mismo proyecto/entorno):
 - **ProjectPack (zip con clave para la sala)**: acción de menú contextual de
   Windows que comprime las carpetas de proyecto con clave, para subirlas a Drive.
   Herramienta de escritorio, no script de REAPER. Ver `features/project_pack.md`.
+- **MusicVideo (videos de instrumento y letra)**: pipeline para grabar videos de
+  práctica de VSTi sin equivalente a KeySight (MODO Bass, Ample Guitar) y de letra:
+  OBS compone la escena (captura del plugin con recorte y máscara, fondo y la UI de
+  acordes o de letra como Browser Source), el audio entra por ReaRoute y `ffmpeg`
+  agrega los fades. Herramienta de escritorio, no script de REAPER. Ver
+  `features/music_video.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de scripts 
   (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a
   PCs de ensayo sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. 
@@ -158,6 +164,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | SubtitleExport            | Export de SRT con armonía transpuesta, perfiles de estilo y efectos. Pendientes en `features/subtitle_export.md` §10 |
 | ProjectFolder             | Abrir carpetas del proyecto y juntar samples de los FX en `Media\Samples`. Pendientes en `features/project_folder.md` §7 |
 | ProjectPack               | Zip con clave por menú contextual, clave fuera del repo. Pendientes en `features/project_pack.md` §6 |
+| MusicVideo                | Escena de OBS, audio por ReaRoute y máscara validados con MODO Bass; Pendientes en `features/music_video.md` §13 |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -228,3 +235,14 @@ Docs en `_docs/features/`; código en `ProjectFolder/`, `ProjectPack/` y `_Share
 |---|---|---|
 | Abrir carpetas, juntar samples, vista de Explorer | `project_folder.md` | `ProjectFolder/*`, `_Shared/FolderView_common_logic.lua` |
 | Menú contextual, clave, empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `ProjectFolder_common_logic.lua` |
+
+## Qué adjuntar según la tarea (MusicVideo)
+
+Docs en `_docs/features/`; código en `MusicVideo/` y `web/musicstate-ui/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Escena de OBS, recorte, máscaras, audio, perfil | `music_video.md` | `MusicVideo/obs/` (`scenes/`, `profile/`), `MusicVideo/masks/` |
+| Fades y mp4 final | `music_video.md` | `MusicVideo/MusicVideo_Fades.bat` |
+| CSS del Browser Source de acordes | `music_video.md`, `musicstate_instrumentista.md`, `musicstate_shared_ui.md` | `MusicVideo/obs/css/chords_*.css`, `web/musicstate-ui/instrumentista/` |
+| Videos de letra | `music_video.md`, `musicstate_cantante.md` | `MusicVideo/obs/css/lyrics.css`, `web/musicstate-ui/cantante/`, `nsaudio_cantante.html` |

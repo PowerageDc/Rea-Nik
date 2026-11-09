@@ -186,6 +186,7 @@ C:\dev\Rea-Nik\
 ├── ProjectPack/ zip con clave por menú contextual de Windows (`.bat`, `.vbs` y `.reg`, no scripts de REAPER: no siguen `Nik_<Dominio>_<Acción>`)
 ├── FxWindow/ posición y tamaño de la ventana flotante de un VSTi según config, para la captura de OBS
 ├── SubtitleExport/ SRT con la armonía del proyecto, para quemar en los videos de piano de KeySight
+├── MusicVideo/ pipeline de videos de instrumento y letra: escenas de OBS, máscaras, CSS de los Browser Source y fades con ffmpeg (`.bat` y archivos de OBS, no scripts de REAPER: no siguen `Nik_<Dominio>_<Acción>`)
 ├── ABPair/ alternar por solo entre dos tracks (par guardado en el proyecto)
 ├── AutoColor/ auto-color de tracks
 ├── StemFragment/ captura/UI de fragmentos de stem
