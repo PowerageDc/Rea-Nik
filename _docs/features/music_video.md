@@ -53,6 +53,7 @@ OBS trabajan a 48 kHz.
 ```
 MusicVideo\
 ├── MusicVideo_Fades.bat
+├── MusicVideo_MakeMask.ps1      regenera las máscaras verticales de masks\
 ├── masks\                       máscaras PNG de los filtros de OBS
 └── obs\
     ├── css\
@@ -158,7 +159,8 @@ instrumento suma su archivo con los ajustes de estilo.
 
 - **Verticales** (MODO Bass): PNG de 16×130 px, blancas en todo el ancho y con
   degradado suave (smoothstep) de 2, 4 o 6 px arriba y abajo; con *expandir* se
-  estiran al recorte. Se usa la de 2 px.
+  estiran al recorte. Se usa la de 2 px. `MusicVideo_MakeMask.ps1` las regenera
+  (parámetros `-Width`, `-Height`, `-Feather`, `-OutDir`).
 - **A medida** (Ample Guitar): exportar un frame a 1:1 del recorte, trazar la
   forma en Photoshop (Pluma con trazados, o *Seleccionar sujeto* y *Seleccionar
   y aplicar máscara*), suavizar 1–2 px y guardar PNG blanco/negro de las mismas
@@ -202,6 +204,5 @@ instrumento suma su archivo con los ajustes de estilo.
 - Revisar el color (NV12, Rec. 709, rango parcial) en los ajustes avanzados de OBS.
 - Fondo transparente por parámetro de URL (`?transparent=1`) en la UI, en vez
   de CSS en OBS; evaluar un `?theme=` por instrumento.
-- Script de Python que regenera las máscaras verticales, guardado en `masks\`.
 - Comprobar si la posición de la ventana del plugin se conserva al reabrir el
   proyecto, para no recalcular el recorte.
