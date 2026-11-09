@@ -1,0 +1,3 @@
+:root { --ms-divider-color: rgba(242, 240, 234, 0.25) !important; }
+.ms-top-block { visibility: hidden !important; }
+.ms-cue-divider { visibility: hidden !important; }

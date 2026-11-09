@@ -1,0 +1,2 @@
+body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
+:root { --ms-bg: transparent !important; }
