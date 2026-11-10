@@ -123,7 +123,9 @@ Salida en modo *Avanzado*, grabación en `mkv`, NVENC H.264, *QP constante* 16,
 intervalo de fotogramas clave 0 s, preajuste P5, ajuste de calidad alta, dos
 pasos, perfil `main`, mirar hacia adelante y cuantización adaptativa activados,
 2 B-frames sin referencia. Audio AAC 320 kbps. Peso medido: unos 10 MB por
-minuto.
+minuto. Color en *Ajustes → Avanzado*: NV12, Rec. 709 y gama de colores
+Limitado. Un reproductor puede mostrar el video con más contraste que la vista
+previa de OBS sin que el archivo esté mal.
 
 ## 8. Cómo grabar un video
 
@@ -209,7 +211,6 @@ instrumento suma su archivo con los ajustes de estilo.
      misma posición.
   4. Verificar que el layout no se rompa (unidades `vw`/`vh` de la UI) y mirar
      los fotogramas perdidos en *Ver → Estadísticas*.
-- Revisar el color (NV12, Rec. 709, rango parcial) en los ajustes avanzados de OBS.
 - Fondo transparente por parámetro de URL (`?transparent=1`) en la UI, en vez
   de CSS en OBS; evaluar un `?theme=` por instrumento.
 - Comprobar si la posición de la ventana del plugin se conserva al reabrir el
