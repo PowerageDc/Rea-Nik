@@ -7,3 +7,5 @@ Desktop.ini
 .vscode/*.log
 
 config.local.js
+
+MusicVideo/masks/*.psd

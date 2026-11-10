@@ -79,12 +79,17 @@
             "name": "Ample Guitar Luthier"
         }
     ],
-    "current_scene": "MODO Bass",
-    "current_program_scene": "MODO Bass",
+    "current_scene": "Ample Guitar Luthier",
+    "current_program_scene": "Ample Guitar Luthier",
     "canvases": [],
     "current_transition": "Desvanecimiento",
     "transition_duration": 200,
     "transitions": [
+        {
+            "name": "Diapositiva",
+            "id": "slide_transition",
+            "settings": {}
+        },
         {
             "name": "Luma Wipe",
             "id": "wipe_transition",
@@ -106,11 +111,6 @@
                 "direction": "left",
                 "swipe_in": true
             }
-        },
-        {
-            "name": "Diapositiva",
-            "id": "slide_transition",
-            "settings": {}
         }
     ],
     "quick_transitions": [
@@ -189,14 +189,14 @@
             "id": "scene",
             "versioned_id": "scene",
             "settings": {
-                "id_counter": 5,
+                "id_counter": 7,
                 "custom_size": false,
                 "items": [
                     {
                         "name": "Imagen 2",
                         "source_uuid": "5263dcae-c64f-4afc-af73-e70c0e64ecea",
                         "visible": true,
-                        "locked": false,
+                        "locked": true,
                         "rot": 0.0,
                         "scale_ref": {
                             "x": 1920.0,
@@ -306,7 +306,7 @@
                         "name": "ScrCap: Ample Guitar Luthier",
                         "source_uuid": "e223c7d5-7c7a-420f-bce3-3f179d011146",
                         "visible": true,
-                        "locked": false,
+                        "locked": true,
                         "rot": 0.0,
                         "scale_ref": {
                             "x": 1920.0,
@@ -411,6 +411,61 @@
                             "duration": 300
                         },
                         "private_settings": {}
+                    },
+                    {
+                        "name": "ASIO Input Capture",
+                        "source_uuid": "f975ed23-ccf4-4d71-9787-ac73c63c3132",
+                        "visible": true,
+                        "locked": false,
+                        "rot": 0.0,
+                        "scale_ref": {
+                            "x": 1920.0,
+                            "y": 1080.0
+                        },
+                        "align": 5,
+                        "bounds_type": 0,
+                        "bounds_align": 0,
+                        "bounds_crop": false,
+                        "crop_left": 0,
+                        "crop_top": 0,
+                        "crop_right": 0,
+                        "crop_bottom": 0,
+                        "id": 7,
+                        "group_item_backup": false,
+                        "pos": {
+                            "x": 0.0,
+                            "y": 0.0
+                        },
+                        "pos_rel": {
+                            "x": -1.7777777910232544,
+                            "y": -1.0
+                        },
+                        "scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "scale_rel": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "bounds": {
+                            "x": 0.0,
+                            "y": 0.0
+                        },
+                        "bounds_rel": {
+                            "x": 0.0,
+                            "y": 0.0
+                        },
+                        "scale_filter": "disable",
+                        "blend_method": "default",
+                        "blend_type": "normal",
+                        "show_transition": {
+                            "duration": 300
+                        },
+                        "hide_transition": {
+                            "duration": 300
+                        },
+                        "private_settings": {}
                     }
                 ]
             },
@@ -434,7 +489,9 @@
                 "libobs.show_scene_item.5": [],
                 "libobs.hide_scene_item.5": [],
                 "libobs.show_scene_item.3": [],
-                "libobs.hide_scene_item.3": []
+                "libobs.hide_scene_item.3": [],
+                "libobs.show_scene_item.7": [],
+                "libobs.hide_scene_item.7": []
             },
             "deinterlace_mode": 0,
             "deinterlace_field_order": 0,
@@ -1027,6 +1084,33 @@
                         "top": 91,
                         "right": 46,
                         "bottom": 459
+                    },
+                    "mixers": 0,
+                    "sync": 0,
+                    "flags": 0,
+                    "volume": 1.0,
+                    "balance": 0.5,
+                    "enabled": true,
+                    "muted": false,
+                    "push-to-mute": false,
+                    "push-to-mute-delay": 0,
+                    "push-to-talk": false,
+                    "push-to-talk-delay": 0,
+                    "hotkeys": {},
+                    "deinterlace_mode": 0,
+                    "deinterlace_field_order": 0,
+                    "monitoring_type": 0,
+                    "monitoring_enabled": false,
+                    "private_settings": {}
+                },
+                {
+                    "prev_ver": 553648129,
+                    "name": "Imagen máscara/mezcla",
+                    "uuid": "ae2cf290-d57f-408d-bf3b-3293a45bc299",
+                    "id": "mask_filter",
+                    "versioned_id": "mask_filter_v2",
+                    "settings": {
+                        "image_path": "C:/Dev/Rea-Nik/MusicVideo/masks/mascara_agl.png"
                     },
                     "mixers": 0,
                     "sync": 0,
