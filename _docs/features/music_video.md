@@ -161,6 +161,15 @@ instrumento suma su archivo con los ajustes de estilo.
   degradado suave (smoothstep) de 2, 4 o 6 px arriba y abajo; con *expandir* se
   estiran al recorte. Se usa la de 2 px. `MusicVideo_MakeMask.ps1` las regenera
   (parámetros `-Width`, `-Height`, `-Feather`, `-OutDir`).
+- **Por VSTi:** `mascara_<codigo>[_<variante>].png`, con el código corto del
+  VSTi. El tamaño no va en el nombre; se anota en esta tabla. El PSD lleva el
+  mismo nombre, está junto al PNG y lo ignora git (`.gitignore`): no se
+  respalda con el repo.
+
+  | Archivo | Escena | Recorte (ancho × alto) | PSD |
+  |---|---|---|---|
+  | `mascara_agl.png` | Ample Guitar Luthier | 1340 × 530 | `mascara_agl.psd` |
+
 - **A medida** (Ample Guitar): exportar un frame a 1:1 del recorte, trazar la
   forma en Photoshop (Pluma con trazados, o *Seleccionar sujeto* y *Seleccionar
   y aplicar máscara*), suavizar 1–2 px y guardar PNG blanco/negro de las mismas
@@ -187,8 +196,7 @@ instrumento suma su archivo con los ajustes de estilo.
 
 ## 13. Pendientes
 
-- **Ample Guitar:** máscara en Photoshop (mango curvo y comienzo del clavijero),
-  luego Browser Source y su `chords_AmpleGuitar.css`.
+- **Ample Guitar:** Browser Source de acordes y su `chords_AmpleGuitar.css`.
 - **Videos de letra:** escena con fondo, UI del cantante transparente y
   `lyrics.css` (ver qué variable de fondo usa); fades iguales.
 - **Fondo de KeySight:** ver si se puede exportar como video corto y repetirlo
