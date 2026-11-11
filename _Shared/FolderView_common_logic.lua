@@ -79,12 +79,27 @@ end
 -- (-EncodedCommand), así que tildes y ñ no pasan por la codepage ANSI.
 -- Devuelve (código de salida como string, salida de texto) o (nil, nil).
 function M.run_powershell(psCommand, timeoutMs)
+  psCommand = "$ProgressPreference = 'SilentlyContinue'\n" .. psCommand
   local encoded = base64Encode(codepointsToUtf16LE(utf8ToCodepoints(psCommand)))
   local cmd = 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ' .. encoded
   local ret = reaper.ExecProcess(cmd, timeoutMs or 0)
   if not ret then return nil, nil end
   local code, out = ret:match("^(%-?%d+)\r?\n?(.*)$")
   return code, out or ret
+end
+
+-- Lanza un comando PowerShell oculto sin esperar a que termine ni capturar su
+-- salida. Devuelve true, o false y el motivo si el comando no entra en la línea
+-- de comandos de Windows.
+function M.start_powershell(psCommand)
+  psCommand = "$ProgressPreference = 'SilentlyContinue'\n" .. psCommand
+  local encoded = base64Encode(codepointsToUtf16LE(utf8ToCodepoints(psCommand)))
+  local cmd = 'powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand ' .. encoded
+  if #cmd > 30000 then
+    return false, "El comando es demasiado largo para lanzarlo (" .. #cmd .. " caracteres): empaquetar menos proyectos por vez."
+  end
+  reaper.ExecProcess(cmd, -1)
+  return true
 end
 
 -- Crea la carpeta (y los padres que falten) y, si todavía no tiene
