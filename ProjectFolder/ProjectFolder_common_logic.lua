@@ -31,35 +31,10 @@ local M = {}
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Config = dofile(script_dir .. "ProjectFolder_config.lua")
+local Paths = dofile(script_dir .. "../_Shared/ProjectPaths_common_logic.lua")
 local is_win = reaper.GetOS():find("Win") ~= nil
-local SEP = is_win and "\\" or "/"
-
-local function norm(p)
-  if is_win then p = p:gsub("/", "\\") else p = p:gsub("\\", "/") end
-  p = p:gsub("[/\\]+$", "")
-  if p:match("^%a:$") then p = p .. SEP end
-  return p
-end
-
-local function is_absolute(p)
-  if is_win then return p:match("^%a:[/\\]") or p:match("^[/\\][/\\]") end
-  return p:sub(1, 1) == "/"
-end
-
-local function dir_exists(p)
-  if p:match("^%a:[/\\]$") then return true end
-  local parent, name = p:match("^(.*)[/\\]([^/\\]+)$")
-  if not parent then return false end
-  if parent:match("^%a:$") then parent = parent .. SEP end
-  reaper.EnumerateSubdirectories(parent, -1)
-  local i = 0
-  while true do
-    local sub = reaper.EnumerateSubdirectories(parent, i)
-    if not sub then return false end
-    if sub:lower() == name:lower() then return true end
-    i = i + 1
-  end
-end
+local norm = Paths.norm
+local dir_exists = Paths.dir_exists
 
 local function open_folder(p)
   if reaper.CF_ShellExecute then
@@ -69,21 +44,6 @@ local function open_folder(p)
   else
     os.execute('open "' .. p .. '"')
   end
-end
-
-local function resolve_setting(raw, projdir, default)
-  local clean = {}
-  for seg in raw:gmatch("[^/\\]+") do
-    if seg:find("%$") then break end
-    clean[#clean + 1] = seg
-  end
-  local rel = table.concat(clean, SEP)
-  if rel == "" then
-    if default == "" then return projdir end
-    return projdir .. SEP .. default
-  end
-  if is_absolute(raw) then return (raw:match("^([/\\]*)") or "") .. rel end
-  return projdir .. SEP .. rel
 end
 
 local function apply_documents_view(p)
@@ -105,8 +65,7 @@ function M.run(mode)
     return
   end
 
-  local _, projfile = reaper.EnumProjects(-1, "")
-  local projdir = projfile ~= "" and projfile:match("^(.*)[/\\]") or nil
+  local projdir = Paths.project_dir(nil)
 
   local path
   if not projdir then
@@ -116,11 +75,9 @@ function M.run(mode)
   elseif mode == "root" then
     path = projdir
   elseif mode == "media" then
-    local _, rp = reaper.GetSetProjectInfo_String(0, "RECORD_PATH", "", false)
-    path = resolve_setting(rp, projdir, "")
+    path = Paths.media_dir(nil, projdir)
   else
-    local _, rf = reaper.GetSetProjectInfo_String(0, "RENDER_FILE", "", false)
-    path = resolve_setting(rf, projdir, Config.render_default)
+    path = Paths.render_dir(nil, projdir, Config.render_default)
   end
 
   if not path or path == "" then
