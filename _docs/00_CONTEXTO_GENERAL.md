@@ -130,9 +130,9 @@ render, pero conviven en el mismo proyecto/entorno):
   Render del proyecto activo desde el Action List y copia a `Media\Samples` los
   archivos que usan los FX (sample del Count In), para que viajen en el zip de la
   sala. Ver `features/project_folder.md`.
-- **ProjectPack (zip con clave para la sala)**: acción de menú contextual de
-  Windows que comprime las carpetas de proyecto con clave, para subirlas a Drive.
-  Herramienta de escritorio, no script de REAPER. Ver `features/project_pack.md`.
+- **ProjectPack (zip con clave para la sala)**: comprime con clave las carpetas de
+  proyecto para subirlas a Drive, en lote desde las pestañas abiertas de REAPER o
+  con una acción de menú contextual de Windows. Ver `features/project_pack.md`.
 - **MusicVideo (videos de instrumento y letra)**: pipeline para grabar videos de
   práctica de VSTi sin equivalente a KeySight (MODO Bass, Ample Guitar) y de letra:
   OBS compone la escena (captura del plugin con recorte y máscara, fondo y la UI de
@@ -163,7 +163,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | FxWindow                  | Apply validado con Modo Bass 2; Capture con Modo Bass 2 y Ample Guitar L. Pendientes en `features/fxwindow.md` §6 |
 | SubtitleExport            | Export de SRT con armonía transpuesta, perfiles de estilo y efectos. Pendientes en `features/subtitle_export.md` §10 |
 | ProjectFolder             | Abrir carpetas del proyecto y juntar samples de los FX en `Media\Samples`. Pendientes en `features/project_folder.md` §7 |
-| ProjectPack               | Zip con clave por menú contextual, clave fuera del repo. Pendientes en `features/project_pack.md` §6 |
+| ProjectPack               | Zip con clave en lote desde REAPER y por menú contextual, clave fuera del repo. Pendientes en `features/project_pack.md` §6 |
 | MusicVideo                | Escena de OBS, audio por ReaRoute y máscara validados con MODO Bass; Pendientes en `features/music_video.md` §13 |
 
 ## Pendientes generales (horizonte, no bloqueantes)
@@ -233,8 +233,8 @@ Docs en `_docs/features/`; código en `ProjectFolder/`, `ProjectPack/` y `_Share
 
 | Tarea | Docs | Código |
 |---|---|---|
-| Abrir carpetas, juntar samples, vista de Explorer | `project_folder.md` | `ProjectFolder/*`, `_Shared/FolderView_common_logic.lua` |
-| Menú contextual, clave, empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `ProjectFolder_common_logic.lua` |
+| Abrir carpetas, juntar samples, vista de Explorer | `project_folder.md` | `ProjectFolder/*`, `_Shared/ProjectPaths_common_logic.lua`, `_Shared/ProjectSamples_common_logic.lua`, `_Shared/FolderView_common_logic.lua` |
+| Menú contextual, clave, empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `_Shared/ProjectPaths_common_logic.lua`, `_Shared/ProjectSamples_common_logic.lua`, `_Shared/FolderView_common_logic.lua` |
 
 ## Qué adjuntar según la tarea (MusicVideo)
 

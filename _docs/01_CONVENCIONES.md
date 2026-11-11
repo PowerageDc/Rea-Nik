@@ -183,7 +183,7 @@ C:\dev\Rea-Nik\
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
 ├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List y juntar en Media\Samples los archivos que usan los FX
-├── ProjectPack/ zip con clave por menú contextual de Windows (`.bat`, `.vbs` y `.reg`, no scripts de REAPER: no siguen `Nik_<Dominio>_<Acción>`)
+├── ProjectPack/ zip con clave de las carpetas de proyecto: acción de lote de REAPER (`Nik_ProjectPack_*.lua`) y menú contextual de Windows (`.bat`, `.vbs` y `.reg`, que no siguen `Nik_<Dominio>_<Acción>`)
 ├── FxWindow/ posición y tamaño de la ventana flotante de un VSTi según config, para la captura de OBS
 ├── SubtitleExport/ SRT con la armonía del proyecto, para quemar en los videos de piano de KeySight
 ├── MusicVideo/ pipeline de videos de instrumento y letra: escenas de OBS, máscaras, CSS de los Browser Source y fades con ffmpeg (`.bat`, `.ps1` y archivos de OBS, no scripts de REAPER: no siguen `Nik_<Dominio>_<Acción>`)
@@ -212,8 +212,10 @@ confirmación: patrones de ReaImGui, hoy solo en el Helper de `MusicState/`;
 las tabs del Helper; `MusicTranspose_common_logic.lua`, port a Lua de `nikTranspose`:
 transposición de acordes y tonalidad, hoy solo en `SubtitleExport/`; 
 `FolderView_common_logic.lua`, vista de Explorer de una carpeta y PowerShell sin 
-ventana, hoy solo en `ProjectFolder/`). Un módulo usado por un solo dominio se queda 
-dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
+ventana, hoy en `ProjectFolder/` y `ProjectPack/`; `ProjectPaths_common_logic.lua`, 
+rutas de un proyecto, y `ProjectSamples_common_logic.lua`, recolección de samples de
+sus FX, también por ambos). Un módulo usado por un solo dominio se queda dentro de la
+carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
 `ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de 
 `RemoteControl/`, y `MusicStateBridge_common_logic.lua` y `MusicStateRowInputs_common_logic.lua` 
 dentro de `MusicState/`, y `MidiNav_common_logic.lua`, `MidiNavGap_common_logic.lua` y 

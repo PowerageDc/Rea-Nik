@@ -1,16 +1,22 @@
 # ProjectPack
 
-Acción de menú contextual de Windows que comprime con clave (WinRAR) las
-carpetas de proyecto de REAPER, para subirlas a la carpeta de Drive compartida
-que consume ReapFetch (documentado en el repo de ese proyecto). No es parte del
-stack de ReapFetch: es la herramienta previa e independiente, en la punta
-contraria del mismo flujo. ReapFetch resuelve la descarga y apertura; ProjectPack,
-la preparación y subida del lado de quien comparte.
+Comprime con clave (WinRAR) las carpetas de proyecto de REAPER, para subirlas a la
+carpeta de Drive compartida que consume ReapFetch (documentado en el repo de ese
+proyecto). No es parte del stack de ReapFetch: es la herramienta previa e
+independiente, en la punta contraria del mismo flujo. ReapFetch resuelve la descarga
+y apertura; ProjectPack, la preparación y subida del lado de quien comparte.
 
-No son scripts de REAPER (son `.bat`, `.vbs` y `.reg`), por eso no siguen la
-convención `Nik_<Dominio>_<Acción>`.
+Tiene dos entradas: una acción de REAPER que empaqueta en lote las pestañas abiertas
+(`Nik_ProjectPack_PackTabs.lua`, §4) y una acción de menú contextual de Windows para
+una selección del Explorador. El menú contextual (`.bat`, `.vbs` y `.reg`) no son
+scripts de REAPER, por eso no siguen la convención `Nik_<Dominio>_<Acción>`.
 
 ## 1. Flujo de uso
+
+**Desde REAPER:** correr `Nik_ProjectPack_PackTabs.lua` con las pestañas del día
+abiertas (detalle en §4).
+
+**Desde el Explorador**, para una carpeta o una selección:
 
 1. Con las pestañas del día abiertas, correr la recolección de samples (ver
    `features/project_folder.md` §4) y revisar que la consola no muestre `DIFF` ni
@@ -31,6 +37,10 @@ convención `Nik_<Dominio>_<Acción>`.
 | `ProjectPack.bat` | Toda la lógica: cola y lock de invocaciones, nombre del zip, llamada a WinRAR. |
 | `ProjectPack_Hidden.vbs` | Relay: reenvía los argumentos al `.bat` y oculta la consola. Lo busca en su propia carpeta. |
 | `ProjectPack_ContextMenu.reg` | Registra la acción en `HKCU\Software\Classes\AllFilesystemObjects\shell\ProjectPackZip`. Borra antes las claves viejas (`StemsZipWithPassword` bajo `*`, `Directory` y `AllFilesystemObjects`, y la nueva). |
+| `ProjectPack_config.lua` | Valores editables del lote: clave, WinRAR, perfil, destino, exclusiones y espera máxima. |
+| `ProjectPack_common_logic.lua` | Lote: chequeos previos, destino, plan de proyectos y zipeo asíncrono con validación. |
+| `Nik_ProjectPack_PackTabs.lua` | Acción de REAPER: orquesta el lote sobre las pestañas abiertas. |
+| `Tests-Debug/Nik_ProjectPack_Probe*.lua` | Sondas de rutas, del plan, del zipeo de la pestaña activa y del lanzamiento sin bloqueo. |
 
 La clave del zip no está en el repo: vive en `C:\Scripts\ProjectPack.key`, junto
 al `.bat` instalado. El `.bat` la lee al arrancar, antes de encolar y de tomar el
@@ -44,7 +54,7 @@ lock; si falta, sale sin hacer nada.
    espacios finales y sin comillas dobles ni `!`. Con PowerShell:
    `[IO.File]::WriteAllText('C:\Scripts\ProjectPack.key', 'LA_CLAVE')`.
 3. Verificar WinRAR en `C:\Program Files\WinRAR\WinRAR.exe`. Si está en otra ruta,
-   ajustar `set "WINRAR=..."` en el `.bat`.
+   ajustar `set "WINRAR=..."` en el `.bat` y `winrar` en `ProjectPack_config.lua`.
 4. Crear en WinRAR (GUI) un perfil de compresión llamado `RPPStems`, que el `.bat`
    invoca con `-cpRPPStems`. Es un paso manual por PC.
 5. Importar el `.reg` con doble click.
@@ -62,7 +72,49 @@ nombre. En una PC con la versión vieja, al importar el `.reg` nuevo se borra la
 entrada vieja; después se pueden borrar `Stems Zipper.bat` y
 `Stems Zipper Hidden.vbs` de `C:\Scripts\`.
 
-## 4. Decisiones y gotchas
+## 4. Empaquetado en lote desde REAPER
+
+`Nik_ProjectPack_PackTabs.lua` empaqueta cada proyecto guardado de las pestañas
+abiertas. Flujo:
+
+1. Chequeos previos: la clave (`key_file`, la misma de §2), WinRAR y el destino.
+2. Plan: una entrada por pestaña guardada. Se omiten las sin guardar, el mismo `.rpp`
+   en otra pestaña, una carpeta de proyecto repetida y un destino dentro del proyecto.
+3. Si hay proyectos con cambios sin guardar: Sí los guarda, No empaqueta lo que hay
+   en disco, Cancelar aborta.
+4. Recolección de samples de cada proyecto (`features/project_folder.md` §4).
+5. Confirmación con el resumen: proyectos, destino, notas, avisos de samples y
+   pestañas omitidas.
+6. Zipeo asíncrono.
+
+- **Zip:** uno por proyecto, con el nombre de su carpeta y el contenido en la raíz,
+  con el formato del perfil `RPPStems`. Se genera como `<nombre>.tmp.zip`, se valida
+  y solo entonces reemplaza al `.zip` anterior; si falla, el anterior queda intacto.
+- **Validación:** cantidad de archivos y suma de bytes del zip contra los esperados
+  en disco, calculados con las mismas exclusiones. Un código de salida de WinRAR
+  distinto de 0 también falla el proyecto. El mensaje lista algunos faltantes (con
+  acentos pueden ser falsos positivos).
+- **Exclusiones:** `exclude_files` (patrones de nombre, en cualquier subcarpeta) y
+  `exclude_dirs` (nombre o ruta relativa al proyecto, literal, en la raíz o en 
+  cualquier nivel). A las carpetas se suman siempre `render_default`
+  (`ProjectFolder_config.lua`) y la carpeta de render configurada en el proyecto si
+  está dentro de él (`features/project_folder.md` §3); un render configurado fuera
+  del proyecto no excluye nada, pero la carpeta por defecto sí. Las reglas van a
+  WinRAR como `-x` e incluyen la entrada de carpeta, para que no quede vacía en el
+  zip. Los `.reapeaks` entran.
+- **Destino:** `dest_dir`; vacío es Descargas del usuario (`shell:Downloads`).
+- **Ejecución:** un solo script de PowerShell, lanzado oculto sin esperar
+  (`FolderView.start_powershell`), procesa los proyectos en secuencia y escribe
+  `START`, `OK`, `FAIL` y `END` en `%TEMP%\ProjectPack_run.log`. Un `reaper.defer`
+  lee el log una vez por segundo y se detiene al recibir `END`, ante un error, si
+  PowerShell no responde en 30 s o al superar `max_wait_s`. Un flag en `ExtState`
+  impide dos empaquetados a la vez, y el script lo chequea antes de preguntar nada.
+  La línea de comandos de Windows admite unos 20 proyectos por lanzamiento; si no
+  entra, se avisa.
+
+## 5. Decisiones y gotchas
+
+**Menú contextual:**
 
 - **Multiselección**: Explorer agrupa la selección por tipo y dispara el comando una
   vez por grupo (archivos y carpetas), incluso con `MultiSelectModel=Player`, que
@@ -83,45 +135,39 @@ entrada vieja; después se pueden borrar `Stems Zipper.bat` y
   distingue porque `cmd` corta por el último punto y truncaría "Artista ft. Otro".
 - **Expansión retardada**: toda la construcción de rutas la usa, para que `&`,
   espacios y acentos no se interpreten como comandos.
+
+**Todo ProjectPack:**
+
 - **Clave fuera del repo**: aunque el repo es privado, se trata como público.
 - **ReaPack no indexa `ProjectPack/`**: es una herramienta de la PC de desarrollo y
   no se distribuye a las salas.
-
-## 5. Diagnóstico abierto: `desktop.ini` pierde atributos
-
-Los `desktop.ini` llegan al zip con el atributo de archivo pero sin oculto y
-sistema. No es un problema de compresión: uno comprimido con este `.bat` y
-descomprimido con el propio WinRAR conserva los atributos. El problema está del lado
-de la extracción, a revisar en `extract_zip` y el crate `zip` de Rust en ReapFetch
-(documentación de arquitectura en el repo de ese proyecto). En la sala, la carpeta 
-`Samples` pierde la vista Documentos por lo mismo. Alternativa simple: excluir 
-`desktop.ini` con `-x`.
+- **La clave viaja en la línea de comandos de WinRAR** y se ve en la lista de
+  procesos mientras corre. Se acepta para este uso.
+- **`desktop.ini` no se excluye del zip.** Llega con sus atributos (comprimido con
+  el `.bat` y extraído con WinRAR los conserva); al extraer con ReapFetch se pierden,
+  así que en la sala el archivo queda visible y `Samples` sin la vista Documentos.
+  Se acepta así.
 
 ## 6. Pendientes
 
-- **Empaquetado en lote desde REAPER** (`Nik_ProjectPack_*.lua`): recorrer las
-  pestañas, correr la recolección de samples y zipear cada proyecto sin su carpeta de
-  render. No puede pasar por la cola del `.bat`, que fusionaría todos los proyectos
-  en un solo zip: Lua llamaría a WinRAR directo, uno por proyecto, leyendo
-  `ProjectPack.key`. A definir: guardar o saltear pestañas con cambios; la carpeta de
-  render se deriva de `RENDER_FILE` de cada proyecto con la lógica de ProjectFolder
-  (hoy local en `ProjectFolder_common_logic.lua`; habría que moverla a `_Shared/`),
-  más una lista de exclusiones en `ProjectPack_config.lua`; evaluar excluir los
-  `.reapeaks` y backups.
-- **Aviso por samples fuera del proyecto**: antes de zipear, detectar en el `.rpp`
-  rutas absolutas de samples fuera de la carpeta del proyecto.
-- **Decidir qué hacer con `desktop.ini`**: excluirlo con `-x` o preservar sus
-  atributos en la extracción de ReapFetch.
-- **Recuperación automática del lock** colgado por un corte abrupto (hoy expira solo
-  tras unos 10 s en la siguiente corrida).
+- **Menú contextual: archivos que quedan fuera del zip.** A veces falta alguno (por
+  ejemplo el `.rpp`); no se logró reproducir. Sospecha: una invocación hermana que
+  llega después de que la ganadora leyó la cola. El lote valida cantidad y bytes; el
+  `.bat` no.
+- **Aviso por samples fuera del proyecto** en el menú contextual, que no corre la
+  recolección: detectar en el `.rpp` rutas absolutas fuera de la carpeta del proyecto.
+- **Atributos de `desktop.ini` al extraer**, del lado de ReapFetch (`extract_zip` y
+  el crate `zip` de Rust).
+- **Recuperación automática del lock** colgado por un corte abrupto del menú
+  contextual (hoy expira solo tras unos 10 s en la siguiente corrida).
 - **Desacoplar del preset `RPPStems`**: antes de reintentar `-afzip`, confirmar si el
   preset tiene activada la ejecución inmediata.
-- **Clave visible en la lista de procesos** mientras corre WinRAR. Se acepta para este
-  uso.
+- **Parpadeo de una ventana** al lanzar el lote; se evitaría lanzando PowerShell
+  desde un `.vbs` oculto.
 
 ## 7. Qué adjuntar según la tarea
 
 | Tarea | Docs | Código |
 |---|---|---|
 | Menú contextual, cola, nombre del zip, clave | `project_pack.md` | `ProjectPack/*` |
-| Empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `ProjectFolder_common_logic.lua` |
+| Empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `_Shared/ProjectPaths_common_logic.lua`, `_Shared/ProjectSamples_common_logic.lua`, `_Shared/FolderView_common_logic.lua` |

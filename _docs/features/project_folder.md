@@ -18,14 +18,19 @@ siguen `01_CONVENCIONES.md`.
 |---|---|
 | `ProjectFolder/ProjectFolder_common_logic.lua` | Módulo de las acciones de abrir carpeta: `run(modo)`. Su cabecera lista lo aprendido con sondas. |
 | `ProjectFolder/ProjectFolder_config.lua` | Valores editables. Hoy: `render_default`, la carpeta de render cuando el proyecto no tiene una configurada. |
-| `ProjectFolder/Nik_ProjectFolder_CollectSamples.lua` | Recolección de samples. Constantes editables al inicio. |
-| `_Shared/FolderView_common_logic.lua` | Crear una carpeta y fijar su vista de Explorer; ejecutar PowerShell sin ventana. |
+| `ProjectFolder/Nik_ProjectFolder_CollectSamples.lua` | Acción: recorre las pestañas y llama al módulo de samples. Constante editable: `RELINK`. |
+| `_Shared/ProjectSamples_common_logic.lua` | Recolección de samples de un proyecto: `collect(proj, projfn, log, opts)`. |
+| `_Shared/ProjectPaths_common_logic.lua` | Rutas de un proyecto (carpeta del `.rpp`, Media y Render) para cualquier pestaña. |
+| `_Shared/FolderView_common_logic.lua` | Crear una carpeta y fijar su vista de Explorer; ejecutar PowerShell sin ventana, con o sin esperar el resultado. |
 | `Tests-Debug/Nik_ProjectFolder_Probe*.lua` | Sondas con las que se resolvieron las rutas y la verificación de existencia. |
 
 ## 3. Abrir carpetas
 
 La ruta sale de la configuración del proyecto (`RECORD_PATH` para Media,
-`RENDER_FILE` para Render), sin consultar nada que cree carpetas. Si el
+`RENDER_FILE` para Render), sin consultar nada que cree carpetas. El cálculo vive en
+`_Shared/ProjectPaths_common_logic.lua` y sirve para cualquier pestaña abierta:
+`project_dir(proj)`, `media_dir`, `render_dir` y `relative(path, dir)` (`""` si es
+la misma ruta, `nil` si está fuera), con los segmentos `.` y `..` colapsados. Si el
 proyecto no tiene render configurado se usa `render_default`. Si la carpeta no
 existe se ofrece crearla y, en Windows, se le escribe un `desktop.ini` con vista
 Documentos. El detalle de los gotchas (tildes en rutas, caché de
@@ -56,11 +61,15 @@ La carpeta de destino se deriva de la ruta del `.rpp`, no de `GetProjectPath`,
 que puede apuntar a otro lado según las opciones del proyecto. `Samples` se crea
 con vista Documentos.
 
-`RELINK` (constante al inicio, `false`) apunta además el FX a la copia con
-`TrackFX_SetNamedConfigParm` (`FILE<n>` seguido de `DONE`). No está probado; con
-`false` el script no modifica ningún proyecto.
+`RELINK` (constante del script, `false`; `opts.relink` en el módulo) apunta además
+el FX a la copia con `TrackFX_SetNamedConfigParm` (`FILE<n>` seguido de `DONE`). 
+No está probado; con `false` el script no modifica ningún proyecto.
 
-Se corre a mano antes de empaquetar, con las pestañas del día abiertas.
+`collect` escribe el detalle con `log` y devuelve los conteos `COPIED`, `SAME`,
+`DIFF`, `ERROR` y `MISSING` (samples inexistentes). El script recorre las pestañas y
+lo llama; el lote de ProjectPack hace lo mismo antes de zipear
+(`features/project_pack.md` §4). Al empaquetar desde el menú contextual se corre a
+mano, con las pestañas del día abiertas.
 
 ## 5. FolderView
 
@@ -71,7 +80,11 @@ Pone ReadOnly y System en la carpeta, y Hidden y System en el ini. Solo la carpe
 final recibe vista; los padres nuevos quedan con la vista por defecto.
 `folder_type` es `Documents`, `Generic`, etc. `FolderView.run_powershell` ejecuta
 un comando por `-EncodedCommand` (Base64 de UTF-16LE), para que tildes y ñ no
-pasen por la codepage ANSI.
+pasen por la codepage ANSI. Antepone `$ProgressPreference = 'SilentlyContinue'` para
+que la salida no traiga registros CLIXML. `FolderView.start_powershell` lanza el
+comando oculto sin esperar (`ExecProcess` con timeout `-1` vuelve de inmediato;
+`cmd /C start /B` bloquea hasta que termina) y devuelve `false` si el comando supera
+los 30000 caracteres de la línea de comandos.
 
 ## 6. Decisiones y gotchas
 
@@ -88,13 +101,6 @@ pasen por la codepage ANSI.
 
 - **Verificar el flujo completo en la PC de la sala**: zip con clave, descarga,
   extracción y apertura, confirmando que el sample se resuelve.
-- **Empaquetado en lote desde REAPER**: pasó a `features/project_pack.md` §6. De
-  este dominio va a consumir la lógica que calcula la carpeta de render, que hoy
-  es local en `ProjectFolder_common_logic.lua` y habría que mover a `_Shared/`, y
-  la recolección de samples.
-- **Aviso en el empaquetado**: detectar en el `.rpp` rutas absolutas de samples
-  fuera de la carpeta del proyecto, para cubrir el olvido de correr la
-  recolección.
 - **Migrar a `FolderView`** la vista de Explorer y el ejecutor de PowerShell de
   `MvsepImporter_common_logic.lua` y de `ProjectFolder_common_logic.lua`. Dejar un
   único tipo de vista por carpeta (hoy Media queda en Generic si la crea el
@@ -102,15 +108,15 @@ pasen por la codepage ANSI.
   `features/mvsep_importer.md` §7.
 - **Probar `RELINK`** y decidir si hace falta.
 - **Cobertura**: pista master, FX de entrada y FX de items.
-- **ReaPack**: decidir si `CollectSamples` y `FolderView` entran al paquete
-  publicado de ProjectFolder, ya que la recolección solo tiene sentido en la PC
-  de desarrollo. Ver `05_REAPACK_DEPLOY.md`.
+- **ReaPack**: decidir si `CollectSamples`, `ProjectSamples` y `FolderView` entran
+  al paquete publicado de ProjectFolder, ya que la recolección solo tiene sentido
+  en la PC de desarrollo. Ver `05_REAPACK_DEPLOY.md`.
 
 ## 8. Qué adjuntar según la tarea
 
 | Tarea | Docs | Código |
 |---|---|---|
-| Abrir carpetas | `project_folder.md` | `ProjectFolder_common_logic.lua`, `ProjectFolder_config.lua` |
-| Recolección de samples | `project_folder.md` | `Nik_ProjectFolder_CollectSamples.lua`, `_Shared/FolderView_common_logic.lua` |
-| Empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `ProjectFolder_common_logic.lua` |
+| Abrir carpetas | `project_folder.md` | `ProjectFolder_common_logic.lua`, `ProjectFolder_config.lua`, `_Shared/ProjectPaths_common_logic.lua` |
+| Recolección de samples | `project_folder.md` | `Nik_ProjectFolder_CollectSamples.lua`, `_Shared/ProjectSamples_common_logic.lua`, `_Shared/FolderView_common_logic.lua` |
+| Empaquetado en lote | `project_pack.md`, `project_folder.md` | `ProjectPack/*`, `_Shared/ProjectPaths_common_logic.lua`, `_Shared/ProjectSamples_common_logic.lua`, `_Shared/FolderView_common_logic.lua` |
 | Migrar la vista de carpetas | `project_folder.md`, `mvsep_importer.md` | `_Shared/FolderView_common_logic.lua`, `MvsepImporter_common_logic.lua` |
