@@ -15,6 +15,8 @@ Carpeta `C:\dev\Rea-Nik\MidiEdit\`.
 | `Nik_MidiEdit_AlignChord.lua` | Iguala inicios y/o finales de las notas seleccionadas |
 | `Nik_MidiEdit_MoveSelCcToCursor.lua` | Mueve los CC seleccionados al cursor, con el primero como ancla |
 | `Nik_MidiEdit_MoveSelCcEndToCursor.lua` | Igual, con el último como ancla |
+| `Nik_MidiEdit_Strum.lua` | Rasguea los acordes seleccionados (o el del cursor) con el último estado del panel |
+| `Nik_MidiEdit_StrumPanel.lua` | Panel ReaImGui para elegir y ajustar el rasguido, con aplicar y re-aplicar en vivo |
 
 Módulo de soporte (solo `dofile`, no se registra):
 - `MidiEditCc_common_logic.lua`: `run(anchor)` con `"first"` o `"last"`. Los dos
@@ -22,8 +24,15 @@ Módulo de soporte (solo `dofile`, no se registra):
 
 `AlignChord` no usa módulo: es un único script sin dirección.
 
-Registro: sección **MIDI Editor** del Action List. Los tres necesitan un editor
-activo y salen sin hacer nada si no lo hay.
+Strum: `MidiEditStrum_common_logic.lua` (solo `dofile`) con `resolve`, `run`,
+`rerun`, `can_rerun`, `save`, `load` y `preset_text`. El panel usa además
+`_Shared/ImGuiButtonStyle_common_logic.lua` y
+`_Shared/ImGuiEditorFocus_common_logic.lua`.
+
+Registro: sección **MIDI Editor** del Action List (`Nik_MidiEdit_StrumPanel.lua`
+va en **Main**: es una ventana flotante). Los scripts one-shot necesitan un
+editor activo y salen sin hacer nada si no lo hay; el panel apunta al último
+editor visto.
 
 ## 2. Comportamiento
 
@@ -65,12 +74,40 @@ activo y salen sin hacer nada si no lo hay.
   `SelectCcFromCursor`, `SelectCcToCursor` y `SelectCcInTimeSel` en
   `features/midi_nav.md`.
 
+### Strum (rasguido)
+- Notas: las seleccionadas; sin selección, las no muteadas que arrancan a
+  `chord_window_ms` del cursor. Se agrupan en acordes por cercanía de inicio
+  respecto de la primera nota; un grupo de una sola nota se saltea.
+- Tiempo: `total_ms` se reparte entre las notas según `curva` (menor a 1
+  acelera, mayor a 1 frena), con `jitter_ms` determinista por posición. Ancla
+  `"first"`, `"last"` o `"center"`. Los milisegundos se convierten a ticks por
+  tiempo de proyecto, sin depender del timebase ni del mapa de tempo.
+- Dirección: `"down"` va de grave a agudo, `"up"` al revés, `"alternate"`
+  alterna por acorde.
+- Finales: `"keep"` conserva el final original, `"duration"` conserva la
+  duración. Una nota solo se modifica si el nuevo inicio queda antes del final;
+  si algún inicio quedara antes del origen del take, ese acorde no se toca.
+- Velocities: factor `from` a `to` interpolado por orden de ataque con `curve`,
+  `up_scale` en los upstrokes y `jitter`, sobre la velocity original y con
+  límite 1 a 127.
+- Estado: ExtState `Nik_MidiEdit_Strum` (persistente), compartido por el panel
+  y el one-shot; pisa los valores del config hasta elegir un estilo o apretar
+  Restaurar.
+- Panel: combo de estilo, botones por eje y `DragInt`/`DragDouble`. Un `*`
+  marca lo modificado respecto del preset (ancla y finales no cuentan).
+  **Copiar preset** deja en el portapapeles el texto Lua para el config.
+  **En vivo** re-aplica al soltar un slider o elegir un preset, partiendo de
+  las notas originales; la sesión se descarta si cambia el hash del take. El
+  foco vuelve al editor tras cada interacción, salvo con un item activo o un
+  popup abierto.
+
 ## 3. Config (`MidiEdit_config.lua`)
 
 | Sección | Valores |
 |---|---|
 | `undo` | `enabled` |
 | `align_chord` | `starts` (`"earliest"`, `"cursor"`, `false`), `ends` (`"latest"`, `"earliest"`, `false`) |
+| `strum` | `default_style`, `chord_window_ms`, `anchor`, `ends`, `timings`, `dynamics`, `styles` |
 
 Los scripts de CC solo usan `undo.enabled`.
 
@@ -94,6 +131,16 @@ Los scripts de CC solo usan `undo.enabled`.
   `MIDI_Sort` al final, para no reordenar el take en cada nota o evento.
 - **Undo:** el bloque se abre solo si hay algo para cambiar, así que una
   ejecución sin efecto no deja punto de undo.
+- **Strum en milisegundos:** el rasguido es un gesto físico y no debe cambiar con
+  el tempo; solo los arpegios largos justificarían una unidad musical.
+- **Strum con UI:** elegir y ajustar presets de tres ejes (tiempo, dinámica,
+  dirección) pide ver los valores, así que el panel es la forma de elegir y el
+  one-shot aplica lo último elegido, para usarlo por atajo sin la ventana.
+- **Velocities relativas:** el strum escala la velocity escrita en vez de fijar
+  una absoluta, para no perder la dinámica del acorde original.
+- **Re-aplicar desde el original:** cada re-aplicación es un punto de undo
+  propio (no se fusionan) y la sesión se descarta si el take cambió por otro
+  lado, para no pisar ediciones manuales.
 
 ## 5. Pendientes
 
@@ -104,3 +151,7 @@ Los scripts de CC solo usan `undo.enabled`.
 - Cuando haya un segundo script que lea notas seleccionadas, extraer esa lectura
   a un módulo común del dominio (hoy vive dentro de `AlignChord`).
 - Alta en ReaPack si MidiEdit llega a otras PCs.
+- Helper de curvas CC (campana, oscilador y otros presets) sobre selección de
+  tiempo, notas o cursor: en diseño.
+- Migrar la devolución de foco de `VstiControlUi_common_logic.lua` a
+  `_Shared/ImGuiEditorFocus_common_logic.lua` cuando termine su desarrollo.

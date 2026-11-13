@@ -217,13 +217,15 @@ uno solo (`ImGuiInputCommit_common_logic.lua`, patrones de input;
 REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un modal de 
 confirmación: patrones de ReaImGui, hoy solo en el Helper de `MusicState/`; 
 `ImGuiButtonStyle_common_logic.lua`, estilo semántico de botones por tipo, hoy en 
-las tabs del Helper; `MusicTranspose_common_logic.lua`, port a Lua de `nikTranspose`:
-transposición de acordes y tonalidad, hoy solo en `SubtitleExport/`; 
-`FolderView_common_logic.lua`, vista de Explorer de una carpeta y PowerShell sin 
-ventana, hoy en `ProjectFolder/` y `ProjectPack/`; `ProjectPaths_common_logic.lua`, 
-rutas de un proyecto, y `ProjectSamples_common_logic.lua`, recolección de samples de
-sus FX, también por ambos). Un módulo usado por un solo dominio se queda dentro de la
-carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
+las tabs del Helper y en el panel de Strum de `MidiEdit/`;
+`ImGuiEditorFocus_common_logic.lua`, devolución del foco a un MIDI Editor tras
+interactuar con un panel, hoy en ese panel; `MusicTranspose_common_logic.lua`,
+port a Lua de `nikTranspose`: transposición de acordes y tonalidad, hoy solo 
+en `SubtitleExport/`; `FolderView_common_logic.lua`, vista de Explorer de una 
+carpeta y PowerShell sin ventana, hoy en `ProjectFolder/` y `ProjectPack/`; 
+`ProjectPaths_common_logic.lua`, rutas de un proyecto, y `ProjectSamples_common_logic.lua`, 
+recolección de samples de sus FX, también por ambos). Un módulo usado por un 
+solo dominio se queda dentro de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 
 `ProjectTabs_common_logic.lua` y `MarkerBars_common_logic.lua` viven dentro de 
 `RemoteControl/`, y `MusicStateBridge_common_logic.lua` y `MusicStateRowInputs_common_logic.lua` 
 dentro de `MusicState/`, y `MidiNav_common_logic.lua`, `MidiNavGap_common_logic.lua` y 

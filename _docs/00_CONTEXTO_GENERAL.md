@@ -115,8 +115,9 @@ render, pero conviven en el mismo proyecto/entorno):
   en código. Ver `features/midi_nav.md`.
 - **MidiEdit (edición MIDI sobre la selección)**: acciones one-shot que
   modifican lo seleccionado (igualar inicios y finales de un acorde, mover
-  CC al cursor). Se combinan con las de selección de MidiNav. Sin UI, con
-  config en código. Ver `features/midi_edit.md`.
+  CC al cursor) y un rasguido de acordes con panel ReaImGui (presets de
+  tiempo y dinámica). Se combinan con las de selección de MidiNav. Config
+  en código. Ver `features/midi_edit.md`.
 - **FxWindow (ventana flotante de VSTi para grabar en OBS)**: acomoda la
   ventana flotante de un VSTi según un config por nombre de FX, para que el
   recorte de la captura de OBS caiga siempre igual en cualquier proyecto.
@@ -160,7 +161,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | A/B de tracks (ABPair)    | Funcional, uso local (contrato en el encabezado de los scripts) |
 | MidiNav                   | Doce acciones funcionando y validadas (cursor, selección de notas y de CC, y el toggle de foco). Pendientes en `features/midi_nav.md` |
-| MidiEdit                  | Tres acciones funcionando y validadas (alinear acordes y mover CC al cursor). Pendientes en `features/midi_edit.md` |
+| MidiEdit                  | Alinear acordes, mover CC al cursor y rasguido de acordes con panel, funcionando y validados. Pendientes en `features/midi_edit.md` |
 | Control remoto web        | Funcional. Pendientes por capa en `features/remote_control.md` §5 |
 | MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
@@ -222,6 +223,7 @@ Docs en `_docs/features/`; código en `MidiNav/` y `MidiEdit/`.
 |---|---|---|
 | Navegación y selección (cursor, gaps, notas, CC) | `midi_nav.md` | `MidiNav/*.lua`, `MidiNav_config.lua` |
 | Edición sobre la selección (alinear notas, mover CC) | `midi_edit.md`, `midi_nav.md` | `MidiEdit/*.lua`, `MidiEdit_config.lua` |
+| Panel de Strum (ReaImGui) | `midi_edit.md`, `08_REAIMGUI_PATTERNS.md` | `MidiEdit/Nik_MidiEdit_StrumPanel.lua`, `MidiEdit/MidiEditStrum_common_logic.lua`, `_Shared/ImGuiEditorFocus_common_logic.lua`, `_Shared/ImGuiButtonStyle_common_logic.lua` |
 
 ## Qué adjuntar según la tarea (SubtitleExport)
 
