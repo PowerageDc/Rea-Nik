@@ -141,7 +141,8 @@ los existentes en otra sesión, sin apuro.
 `Tests-Debug/ImGui/`) — `Template` no es una acción/verbo, no sigue
 `Nik_<Dominio>_<Acción>` al pie de la letra. Detalle de la infraestructura
 de testing de ImGui (módulos, workflow, gotchas del lenguaje) en
-`02_IMGUI_LUA_NOTAS.md`.
+`02_IMGUI_LUA_NOTAS.md`; patrones y gotchas de ReaImGui para paneles nativos
+en `08_REAIMGUI_PATTERNS.md`.
 
 **Otra excepción documentada:** los wrappers de `VstiControl/`
 (`Nik_VstiControl_<Vsti>.lua`): `<Acción>` es el nombre del VSTi y no un
