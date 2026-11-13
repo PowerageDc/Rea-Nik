@@ -29,6 +29,22 @@ function M.toReaper()
   return false
 end
 
+-- ImGui -> ventana por HWND (por ejemplo un MIDI Editor). SWS primero,
+-- js_ReaScriptAPI de respaldo. false si hwnd es nil o no hay API.
+function M.toHwnd(hwnd)
+  if not hwnd then return false end
+  if reaper.BR_Win32_SetFocus then
+    local ok = pcall(reaper.BR_Win32_SetFocus, hwnd)
+    if ok then return true end
+  end
+  if reaper.JS_Window_SetFocus then
+    local ok = pcall(reaper.JS_Window_SetFocus, hwnd)
+    if ok then return true end
+  end
+  warnOnce('Hace falta SWS (BR_Win32_SetFocus) o js_ReaScriptAPI para enfocar una ventana.')
+  return false
+end
+
 -- REAPER -> ImGui: enfoca la ventana flotante con ese titulo exacto (el
 -- titulo que se le pasa a ImGui_Begin). false si no esta abierta.
 function M.toWindow(title)
