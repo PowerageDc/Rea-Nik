@@ -126,7 +126,9 @@ ventana flotante de cada VSTi; ver `features/fxwindow.md`) y
 `MidiEdit_config.lua` (opciones de las acciones de edición MIDI sobre la
 selección; ver `features/midi_edit.md`). Y `SubtitleExport_config.lua` 
 (perfiles de estilo, efectos y formato de acordes del SRT de armonía; ver 
-`features/subtitle_export.md`).
+`features/subtitle_export.md`). Y `VstiControl_<Vsti>_config.lua`, uno por VSTi
+(`VstiControl_ModoBass_config.lua`, `VstiControl_AmpleGuitar_config.lua`: controles,
+octavas y rangos propios de cada VSTi; ver `features/vsti_control.md`).
 
 ### Pendiente (no bloqueante)
 Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
@@ -140,6 +142,10 @@ los existentes en otra sesión, sin apuro.
 `Nik_<Dominio>_<Acción>` al pie de la letra. Detalle de la infraestructura
 de testing de ImGui (módulos, workflow, gotchas del lenguaje) en
 `02_IMGUI_LUA_NOTAS.md`.
+
+**Otra excepción documentada:** los wrappers de `VstiControl/`
+(`Nik_VstiControl_<Vsti>.lua`): `<Acción>` es el nombre del VSTi y no un
+verbo, porque hay un wrapper por VSTi que abre la UI con su config.
 
 ### Scripts de sonda y diagnóstico (`Tests-Debug/`)
 
@@ -187,6 +193,7 @@ C:\dev\Rea-Nik\
 ├── FxWindow/ posición y tamaño de la ventana flotante de un VSTi según config, para la captura de OBS
 ├── SubtitleExport/ SRT con la armonía del proyecto, para quemar en los videos de piano de KeySight
 ├── MusicVideo/ pipeline de videos de instrumento y letra: escenas de OBS, máscaras, CSS de los Browser Source y fades con ffmpeg (`.bat`, `.ps1` y archivos de OBS, no scripts de REAPER: no siguen `Nik_<Dominio>_<Acción>`)
+├── VstiControl/ UI ReaImGui que inserta keyswitches y curvas CC de un VSTi en el MIDI Editor activo, con un config por VSTi (wrappers `Nik_VstiControl_<Vsti>.lua`)
 ├── ABPair/ alternar por solo entre dos tracks (par guardado en el proyecto)
 ├── AutoColor/ auto-color de tracks
 ├── StemFragment/ captura/UI de fragmentos de stem

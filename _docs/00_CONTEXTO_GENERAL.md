@@ -139,6 +139,11 @@ render, pero conviven en el mismo proyecto/entorno):
   acordes o de letra como Browser Source), el audio entra por ReaRoute y `ffmpeg`
   agrega los fades. Herramienta de escritorio, no script de REAPER. Ver
   `features/music_video.md`.
+- **VstiControl (keyswitches y curvas CC por VSTi)**: UI ReaImGui que inserta en
+  el MIDI Editor activo keyswitches y curvas de CC o pitch wheel de un VSTi
+  (hoy MODO Bass 2 y Ample Guitar), según el cursor y la selección de tiempo o
+  de notas. Los controles de cada VSTi salen de un config propio. Ver
+  `features/vsti_control.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de scripts 
   (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a
   PCs de ensayo sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. 
@@ -165,6 +170,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | ProjectFolder             | Abrir carpetas del proyecto y juntar samples de los FX en `Media\Samples`. Pendientes en `features/project_folder.md` §7 |
 | ProjectPack               | Zip con clave en lote desde REAPER y por menú contextual, clave fuera del repo. Pendientes en `features/project_pack.md` §6 |
 | MusicVideo                | Escena de OBS, audio por ReaRoute y máscara validados con MODO Bass; Pendientes en `features/music_video.md` §13 |
+| VstiControl               | MODO Bass 2 y Ample Guitar funcionando y validados (keyswitches en tres modos, curvas con escala, posiciones, variantes por velocity). Pendientes en `features/vsti_control.md` §7 |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -246,3 +252,14 @@ Docs en `_docs/features/`; código en `MusicVideo/` y `web/musicstate-ui/`.
 | Fades y mp4 final | `music_video.md` | `MusicVideo/MusicVideo_Fades.bat` |
 | CSS del Browser Source de acordes | `music_video.md`, `musicstate_instrumentista.md`, `musicstate_shared_ui.md` | `MusicVideo/obs/css/chords_*.css`, `web/musicstate-ui/instrumentista/` |
 | Videos de letra | `music_video.md`, `musicstate_cantante.md` | `MusicVideo/obs/css/lyrics.css`, `web/musicstate-ui/cantante/`, `nsaudio_cantante.html` |
+
+## Qué adjuntar según la tarea (VstiControl)
+
+Docs en `_docs/features/`; código en `VstiControl/` y `_Shared/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Inserción (keyswitches, CC, pitch wheel, modos) | `vsti_control.md` | `VstiControl/VstiControl_common_logic.lua`, `Tests-Debug/Nik_VstiControl_ProbeInsert.lua` |
+| Escala y posiciones | `vsti_control.md` | `VstiControl/VstiControlMap_common_logic.lua`, config del VSTi |
+| UI (controles, estado, foco) | `vsti_control.md`, `08_REAIMGUI_PATTERNS.md` | `VstiControl/VstiControlUi_common_logic.lua`, `_Shared/ImGuiButtonStyle_common_logic.lua`, `_Shared/ImGuiHostFocus_common_logic.lua` |
+| VSTi nuevo o ajuste de uno existente | `vsti_control.md` | `VstiControl/VstiControl_<Vsti>_config.lua`, `VstiControl/Nik_VstiControl_<Vsti>.lua` |
