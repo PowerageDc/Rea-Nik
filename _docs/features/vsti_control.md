@@ -127,6 +127,9 @@ motor.
 - `scale_to_raw`: con `u >= 0`, `center + (u / pos) * (max - center)`; con
   `u < 0`, `center + (u / neg) * (center - min)`. Se redondea y se limita a
   `min` y `max`. `raw_to_scale` es la inversa. Los presets quedan en valor crudo.
+  Los eventos se guardan en valor crudo: las unidades solo valen mientras el
+  rango del VSTi coincida con `neg` y `pos`, y si el rango cambia después, las
+  curvas ya insertadas se reescalan.
 - `position` vía `cc`: un punto de CC con el centro del tramo de la posición,
   `round((p - 0.5) * step)`; `step` por defecto es `128 / count`. `values` fija
   los valores a mano.
@@ -174,8 +177,9 @@ vez de `InputInt`, IDs con `PushID`, líneas reservadas, `BeginDisabled`):
   como apretado hasta su próxima aparición. Se usa en off, así que un keyswitch
   vale mientras suena. Para forzar una cuerda hay dos formas: uno corto por nota
   (modo `per_note`) o uno largo sobre toda la frase (modo `range`).
-- Bend (CC 5): 4 semitonos fijos, centro en 64. Slide (pitch wheel): 12
-  semitonos equivalen a 8192 hacia cada lado.
+- Bend (CC 5): 4 semitonos fijos, centro en 64. Slide (pitch wheel): el rango es
+  configurable en el plugin y está en 12 semitonos, que equivalen a 8192 hacia
+  cada lado; tiene que coincidir con `scale.neg` y `scale.pos`.
 - Posición de mano izquierda (CC 4): cada posición abarca unos 5,3 valores de CC
   (`posición = min(17, floor(CC / 5.3) + 1)`) y la 17 arranca en CC 85, de ahí
   `step = 5.3`. Medido con las posiciones 3, 5, 7, 9, 11 y 13.
@@ -241,12 +245,16 @@ vez de `InputInt`, IDs con `PushID`, líneas reservadas, `BeginDisabled`):
 - Verificar las velocities de las variantes de Ample (40 mantiene y 100 cambia la
   posición; 100 y 30 en Open String First) y el `stagger` del par de posición en
   otros modelos.
-- Definir el rango de semitonos del Bend de Ample (hoy 4 en `scale.neg` y
-  `scale.pos`) y alinearlo con el plugin.
+- Fijar el rango del Slide de MODO Bass en el estado guardado del plugin de la
+  plantilla (12 en el config; el valor por defecto del plugin puede diferir).
+- Definir el rango de semitonos del Bend de Ample (hoy 4 en el config, estimado)
+  y fijar el mismo valor en el plugin.
 - Alta en ReaPack si el dominio llega a otras PCs.
 
 ### Ideas
 
+- Leer el rango de semitonos del plugin (si lo expone como parámetro) y avisar
+  en la UI cuando difiera de `scale.neg` y `scale.pos`.
 - Mostrar el valor crudo resultante junto a cada slider con `scale`, para
   cruzarlo con el lane.
 - Validar el config al cargarlo (pitch inválido, tipo desconocido, campos que
