@@ -2,10 +2,10 @@
 
 Catálogo técnico de "cómo hacer X sin el bug conocido Y" en ReaImGui. No
 es documentación de una feature: aplica a cualquier panel nativo del
-proyecto, presente o futuro (hoy: `Nik_MusicState_Helper.lua`; también
-relevante para `ReaPitchBus/Nik_ReaPitchBus_Knob.lua` y cualquier panel
-nuevo). Primer caso donde se resolvió cada patrón: la tab Armonía del
-MusicState Helper (`features/musicstate_helper.md`).
+proyecto, presente o futuro (hoy: `Nik_MusicState_Helper.lua` y la UI de
+`VstiControl/`; también relevante para `ReaPitchBus/Nik_ReaPitchBus_Knob.lua`
+y cualquier panel nuevo). Primer caso donde se resolvió cada patrón: la 
+tab Armonía del MusicState Helper (`features/musicstate_helper.md`).
 
 ## 1. Sticky header sin romper Nav (tablas con scroll)
 
@@ -317,8 +317,21 @@ y `WindowFlags_NoNav` en la raíz.
   pero el teclado no le llega hasta hacer clic. Sirve buscar la ventana por su
   título exacto (el de `ImGui_Begin`) y darle el foco del sistema:
   `BR_Win32_FindWindowEx` + `BR_Win32_SetFocus` (SWS) o `JS_Window_Find` +
-  `JS_Window_SetFocus`. En el otro sentido,
-  `BR_Win32_SetFocus(BR_Win32_GetMainHwnd())`.
+  `JS_Window_SetFocus`. En el otro sentido, `BR_Win32_SetFocus(BR_Win32_GetMainHwnd())`.
+- **Devolver el foco a otra ventana (un MIDI Editor) sin declarar teclas.** Un
+  panel que se usa mientras se edita en otra ventana puede devolverle el foco
+  del teclado al terminar cada interacción, y así los atajos de esa ventana
+  siguen funcionando sin reenviar teclas una por una. Regla de la UI de
+  VstiControl (`return_focus_if_idle`): devolver el foco cuando
+  `IsAnyItemActive` pasa de `true` a `false` (soltar un slider, un botón o un
+  radio, Enter tras tipear, elegir en un combo) o cuando la ventana tiene el
+  foco y el mouse salió de ella; nunca con un ítem activo ni con un popup
+  abierto (`IsPopupOpen` con `PopupFlags_AnyPopupId`), porque el popup vive en
+  la misma ventana del sistema y se cerraría. La ventana destino se resuelve en
+  cada devolución (el handle de un MIDI Editor cambia al cerrarlo y
+  reabrirlo): `MIDIEditor_GetActive` sigue devolviendo el editor aunque el foco
+  esté en la ventana de ImGui, y `toHwnd` de `_Shared/ImGuiHostFocus_common_logic.lua` 
+  le da el foco.
 - **Auto-repeat de la tecla que mueve el foco.** Si la tecla sigue apretada
   tras el cambio, Windows manda repeticiones a la ventana que recibe el foco y
   ImGui las lee como un press nuevo: la devuelve de inmediato. Una ventana de
