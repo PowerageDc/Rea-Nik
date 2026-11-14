@@ -17,6 +17,7 @@
 --   MusicStateRowInputs_common_logic.lua
 --   MusicStateTonalidad_common_logic.lua
 --   MusicStateRoles_common_logic.lua
+--   MusicStateRoles_config.lua
 --   MusicStateArmonia_common_logic.lua
 --   MusicStateCues_common_logic.lua
 --   MusicStateCuesEdit_common_logic.lua
@@ -46,6 +47,7 @@ local ButtonStyle = dofile(script_dir .. "../_Shared/ImGuiButtonStyle_common_log
 local RowInputs = dofile(script_dir .. "MusicStateRowInputs_common_logic.lua")
 local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
+local Json = dofile(script_dir .. "MusicStateJson_common_logic.lua")
 local Armonia = dofile(script_dir .. "MusicStateArmonia_common_logic.lua")
 local Cues = dofile(script_dir .. "MusicStateCues_common_logic.lua")
 local CuesData = dofile(script_dir .. "MusicStateCuesData_common_logic.lua")
@@ -186,12 +188,15 @@ local function nikMusicStateLoadFromProjExtState(proj)
   local ok_roles, roles_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'project_roles')
   if ok_roles > 0 and roles_json ~= '' then
     local roles = {}
-    for role in roles_json:gmatch('"([^"]*)"') do
-      table.insert(roles, role)
+    local arr = Json.decode(roles_json)
+    if type(arr) == 'table' then
+      for _, role in ipairs(arr) do
+        if type(role) == 'string' then table.insert(roles, role) end
+      end
     end
     H.roles = roles
   else
-    H.roles = {}
+    H.roles = Roles.defaultRoles()
   end
 
   local ok_harmony, harmony_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'harmony_data')
@@ -370,7 +375,7 @@ local function nikMusicStateSaveAndPublish()
 
   local roles_parts = {}
   for _, r in ipairs(H.roles) do
-    table.insert(roles_parts, string.format('"%s"', r))
+    table.insert(roles_parts, Json.jsonString(r))
   end
   local roles_json = '[' .. table.concat(roles_parts, ',') .. ']'
 
