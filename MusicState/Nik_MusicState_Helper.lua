@@ -19,6 +19,7 @@
 --   MusicStateRoles_common_logic.lua
 --   MusicStateArmonia_common_logic.lua
 --   MusicStateCues_common_logic.lua
+--   MusicStateCuesEdit_common_logic.lua
 --   MusicStateCuesModel_common_logic.lua
 --   MusicStateCuesData_common_logic.lua
 --   MusicStateJson_common_logic.lua

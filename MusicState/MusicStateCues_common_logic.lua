@@ -6,6 +6,7 @@
 
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Model = dofile(script_dir .. "MusicStateCuesModel_common_logic.lua")
+local Edit = dofile(script_dir .. "MusicStateCuesEdit_common_logic.lua")
 
 local M = {}
 
@@ -94,6 +95,7 @@ local function addCue(S, H)
   Model.insert(H.cues, cue)
   S.sel_uid = cue.uid
   S.scroll_sel = true
+  S.focus_text = true
 end
 
 local function listHasRole(list, role)
@@ -195,6 +197,8 @@ function M.draw(ctx, H, helpers)
   else
     reaper.ImGui_TextDisabled(ctx, string.format('%d cues', #H.cues))
   end
+  reaper.ImGui_Spacing(ctx)
+  Edit.draw(ctx, S, H, helpers, { selectTimeRange = selectTimeRange, clearTimeRange = clearTimeRange })
   reaper.ImGui_Spacing(ctx)
 
   -- Cues activos en la posicion de referencia (reproduccion o cursor). Puede
