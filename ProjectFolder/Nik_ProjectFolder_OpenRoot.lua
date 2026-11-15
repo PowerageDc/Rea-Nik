@@ -1,5 +1,7 @@
 -- @description Nik ProjectFolder - Abrir carpetas del proyecto (raiz, Media, Render)
--- @version 1.1
+-- @version 1.2
+-- @changelog
+--   Modificado: las rutas del proyecto (raíz, Media, Render) pasan a un módulo compartido, sin cambios visibles
 -- @author Nik
 -- @metapackage
 -- @provides
