@@ -11,6 +11,6 @@ Se vacía al publicar. Reglas y uso en `05_REAPACK_DEPLOY.md`, sección
 
 ## MonitorMix (scripts) — publicado 1.2
 
-## ProjectFolder (scripts) — publicado 1.0
+## ProjectFolder (scripts) — publicado 1.2
 
 ## Interfaz web (.www) — publicado 1.10
