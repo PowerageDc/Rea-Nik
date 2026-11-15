@@ -148,7 +148,8 @@ render, pero conviven en el mismo proyecto/entorno):
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de scripts 
   (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a
   PCs de ensayo sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. 
-  Ver `05_REAPACK_DEPLOY.md`.
+  Ver `05_REAPACK_DEPLOY.md`; los cambios en espera de deploy viven en
+  `_docs/DEPLOY_PENDIENTE.md`.
 
 ## Estado general (ver detalle en cada doc de feature)
 | Funcionalidad           | Estado                                        |
@@ -265,3 +266,14 @@ Docs en `_docs/features/`; código en `VstiControl/` y `_Shared/`.
 | Escala y posiciones | `vsti_control.md` | `VstiControl/VstiControlMap_common_logic.lua`, config del VSTi |
 | UI (controles, estado, foco) | `vsti_control.md`, `08_REAIMGUI_PATTERNS.md` | `VstiControl/VstiControlUi_common_logic.lua`, `_Shared/ImGuiButtonStyle_common_logic.lua`, `_Shared/ImGuiHostFocus_common_logic.lua` |
 | VSTi nuevo o ajuste de uno existente | `vsti_control.md` | `VstiControl/VstiControl_<Vsti>_config.lua`, `VstiControl/Nik_VstiControl_<Vsti>.lua` |
+
+## Qué adjuntar según la tarea (Deploy ReaPack)
+
+Docs en `_docs/`; código en la raíz del repo.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Terminar un cambio en un dominio deployable (agregar su línea) | `DEPLOY_PENDIENTE.md` | — |
+| Deployar (bumps, `@changelog`, índice) | `05_REAPACK_DEPLOY.md`, `DEPLOY_PENDIENTE.md` | anclas de los paquetes afectados, `Tests-Debug/check_deploy.ps1` |
+| Archivo nuevo, movido o borrado en un dominio deployable | `05_REAPACK_DEPLOY.md` | ancla del paquete (`@provides`) |
+| UI web que dispara un script nuevo por Command ID | `05_REAPACK_DEPLOY.md`, `remote_control.md` | `RemoteControl/Nik_RemoteControl_GenerateConfig.lua`, `web/config.js` |

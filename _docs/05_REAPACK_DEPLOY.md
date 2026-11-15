@@ -201,16 +201,54 @@ reapack-index --rebuild
 - Push manual después (`reapack-index` no pushea).
 
 **Regla dura, sin excepción:** `reapack-index` versiona por el tag
-`@version` del header, no por contenido ni por commit. **Cualquier
-cambio a un archivo ya indexado exige bump de `@version` en el mismo
-commit** — sin esto, el `index.xml` sigue sirviendo la versión anterior
-en silencio, sin error.
+`@version` del header, no por contenido ni por commit. Un cambio a un
+archivo ya indexado solo llega a destino si el `@version` de su paquete
+sube antes de indexar — sin bump, el `index.xml` sigue sirviendo la
+versión anterior en silencio, sin error.
+
+El bump se hace **una vez por paquete, en un commit dedicado al deploy**,
+no en cada cambio mientras se desarrolla (ver "Cuándo bumpear"). Cada
+versión queda atada al commit donde aparece su `@version`, así que ese
+commit publica el estado completo del paquete en ese momento; cualquier
+cambio posterior al paquete necesita otro bump.
 
 **Squash merge de una rama de deploy a `main`:** el `index.xml` de la
 rama queda inválido después del squash (sus `<source>` apuntan a hashes
 de commit que el squash elimina). Correr `reapack-index --rebuild` **de
 nuevo, parado en `main`** — no reusar el `index.xml` de la rama — y
 comitear ese resultado ahí.
+
+## Cuándo bumpear
+
+Un bump por paquete, en un commit dedicado al deploy, junto con el
+`@changelog` de esa versión (ver "Deploy pendiente"). Mientras se
+desarrolla no se bumpea: en la PC de dev los scripts corren desde
+`C:\dev\Rea-Nik\` y la `.www` por el junction, sin ReaPack de por medio.
+Probar en una PC de destino sí exige bump; para eso, rama temporal (ver
+"Rama temporal + squash para deploys iterativos").
+
+Lo que decide si hay bump es si el archivo figura en el `@provides` de
+algún paquete. "Synchronize packages" no reemplaza al bump: ReaPack solo
+baja archivos cuando el índice trae una versión nueva del paquete.
+
+| Cambio | Acción |
+|---|---|
+| Se modifica un archivo que está en un `@provides` | Bump del paquete que lo lista |
+| Archivo nuevo en el dominio (script o `common_logic`), aunque no se lance desde el Action List | Línea en el `@provides` del ancla, al crearlo; bump en el deploy |
+| Se renombra, mueve o borra un archivo del `@provides` | Ajustar el `@provides`; bump |
+| `.html` nuevo en la raíz de `web/` | A mano en el `@provides` del `.www`; bump del `.www` |
+| Archivo web nuevo cubierto por un wildcard | Bump del `.www` |
+| Módulo de `_Shared/` | Bump del paquete que lo lista; los consumidores solo si cambió su propio código; anotar "instalar juntos" |
+| UI web que dispara un script nuevo por Command ID | Entrada en `SCRIPTS` del generador y key en `config.js` (ver "Mecanismo de config por PC"); bump de RemoteControl y del `.www`; re-correr el generador en destino |
+| Config en el `@provides` | Bump; avisar que pisa la edición local en destino |
+| Archivo fuera de todo `@provides` (`_docs/`, `Tests-Debug/`, dominios de uso local, `config.local.js`) | Sin bump |
+| Cambio cosmético en un archivo provisto | Sin bump obligatorio: viaja con el próximo |
+
+El commit de bump publica todo lo comiteado del paquete en ese momento,
+incluida una feature a medias. Lo que no esté listo no se comitea en
+`main` (rama de feature o sin comitear), o el bump espera. Los commits
+posteriores al bump no entran en la versión publicada: quedan para el
+próximo.
 
 ## Import en una PC de destino
 
@@ -266,9 +304,9 @@ duplicada en `Scripts/Rea-Nik/...`, separada de la que se edita en
 Cuando un deploy requiere varias iteraciones de prueba en destino real
 (sala de ensayo, PC de test) antes de confirmar que todo funciona, no
 conviene iterar directo en `main` — cada fix intermedio exige su propio
-bump de `@version` (regla dura, ver más abajo), y esos bumps transitorios
-quedan como ruido permanente en el `index.xml` de producción aunque el
-bug que los motivó ya no exista.
+bump de `@version` (regla dura, ver "Generar y publicar el índice"), y
+esos bumps transitorios quedan como ruido permanente en el `index.xml`
+de producción aunque el bug que los motivó ya no exista.
 
 Patrón: rama temporal para toda la iteración, squash merge a `main` al
 confirmar.
@@ -311,6 +349,25 @@ deploy ni quién depende de qué. La fuente confiable es git, contra el
 commit del último deploy publicado (visible en el propio `index.xml`: el
 hash va en la URL de los `<source>` de la versión más reciente de cada
 paquete afectado, con la forma `.../raw/<hash>/...`).
+
+Con `_docs/DEPLOY_PENDIENTE.md` al día, este proceso es verificación y no
+descubrimiento: se compara el diff de cada paquete contra la lista y lo
+que no encaje se investiga. Todo `A` o `D` debe figurar en la lista; todo
+archivo provisto con `M` debe pertenecer a un cambio descrito; todo módulo
+cargado por `dofile` desde un script provisto debe estar en algún
+`@provides`.
+
+`Tests-Debug\check_deploy.ps1` hace esta verificación en solo lectura:
+por paquete compara el header de `HEAD` contra el índice, lista los
+archivos provistos con `M`, `A` y `D` desde el commit de ese paquete y
+detecta altas en la carpeta del ancla que ningún `@provides` cubre,
+cambios posteriores a un bump ya hecho, módulos cargados por `dofile`
+que no están en ningún `@provides`, `@changelog` faltante y desfases
+contra `_docs/DEPLOY_PENDIENTE.md`. Lee `HEAD`: se corre con todo
+comiteado y, para el bump final, parado en `main`. Los archivos de un
+dominio deployable que son de uso local a propósito se declaran en
+`$Locales`, al inicio del script, para que no se marquen como altas sin
+paquete.
 
 1. **Diff sin acotar carpeta, primero.** Acotar de entrada a las
    carpetas "esperadas" puede esconder un dominio nuevo entero:
@@ -360,21 +417,60 @@ paquete afectado, con la forma `.../raw/<hash>/...`).
    `git log -S "texto"` con espacio: pegado (`-S"texto"`) dio error de
    consola en este entorno.
 
-## Versiones publicadas (último deploy)
+## Paquetes publicados
 
-Versiones en `main`:
+| Paquete | Ancla |
+|---------|-------|
+| RemoteControl (scripts) | `Nik_RemoteState_Poll.lua` |
+| MusicState (scripts) | `Nik_MusicState_Helper.lua` |
+| MonitorMix (scripts) | `Nik_MonitorMix_Publish.lua` |
+| Interfaz web (`.www`) | `web/Nik_RemoteControl_WebUI.www` |
+| ProjectFolder (scripts) | `Nik_ProjectFolder_OpenRoot.lua` |
 
-| Paquete | Versión | Ancla |
-|---------|---------|-------|
-| RemoteControl (scripts) | 1.11 | `Nik_RemoteState_Poll.lua` |
-| MusicState (scripts) | 1.7 | `Nik_MusicState_Helper.lua` |
-| MonitorMix (scripts) | 1.2 | `Nik_MonitorMix_Publish.lua` |
-| Interfaz web (`.www`) | 1.10 | `web/Nik_RemoteControl_WebUI.www` |
-| ProjectFolder (scripts) | 1.0 | `Nik_ProjectFolder_OpenRoot.lua` |
+La versión publicada de cada uno vive en el título de su sección de
+`_docs/DEPLOY_PENDIENTE.md`; la fuente de verdad es el `index.xml`.
 
 En destino se instalan juntos los cuatro primeros y después se corre
 `Nik_RemoteControl_GenerateConfig.lua` una vez. ProjectFolder es
 independiente: no depende de otros paquetes ni usa el generador.
+
+## Deploy pendiente
+
+Los cambios comiteados o en curso de los paquetes deployables, desde el
+último deploy, viven en `_docs/DEPLOY_PENDIENTE.md`, aparte de este doc:
+cambia con cada feature y este es de referencia. Se comitea junto con el
+cambio que describe y se vacía al publicar, sin historia (la historia es
+git y el `@changelog`).
+
+- Una sección por paquete, una línea por cambio, escrita al terminar el
+  cambio, en lenguaje de usuario (qué se agregó, corrigió o modificó), no
+  el nombre del archivo tocado. Un refactor sin efecto visible también
+  lleva línea ("Refactor interno de X"): es lo que permite verificar el
+  diff.
+- Cada línea empieza con el tipo: `A` agregado, `M` modificado o
+  corregido, `D` baja.
+- Al final, `→ acción` solo cuando hace falta algo que el diff no
+  muestra: línea de `@provides`, entrada del generador, "instalar juntos
+  con X", config que se pisa en destino.
+- Un cambio que toca dos paquetes (Lua y `.www`) lleva una línea en cada
+  sección.
+- No va en los archivos de proyecto de Claude: es una foto que se
+  desactualiza. Se adjunta al deployar.
+
+Al deployar: las líneas de cada sección pasan al `@changelog` de su ancla
+(y del `.www`), se actualiza la versión publicada en el título de cada
+sección y se vacía el archivo, dejando los títulos. El `@changelog` va en
+el header, junto al `@version`, y se reemplaza en cada bump:
+
+```lua
+-- @version 1.8
+-- @changelog
+--   Agregado: atajos de teclado configurables en el Helper
+--   Corregido: el prompter no sincronizaba al cambiar de tab
+```
+
+Mismas restricciones de header que `@about`: ninguna línea `--` vacía. El
+`@changelog` también pasa por `pandoc`.
 
 ## Pendientes
 
