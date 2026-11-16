@@ -145,8 +145,8 @@ de parsear: repetir la prueba de §5.1 ante cualquier cambio de versión.
 Convenciones comunes: los compases son **1-indexed**; las posiciones
 dentro de un compás se expresan en **`qn_offset`** (negras desde el
 downbeat del compás) con grilla de 0.25 (semicorchea, independiente del
-compás). **Excepción:** `lyrics_data` (§4.7) no usa la grilla, su
-`qn_offset` es libre.
+compás). **Excepción:** `lyrics_data` (§4.7) y `cues_data` (§4.4) no
+usan la grilla, su `qn_offset` es libre.
 
 ### 4.1. `harmony_data`
 
@@ -196,18 +196,25 @@ puede diferir.
 
 ### 4.3. `project_roles`
 
-Array de strings, lista de roles de intérprete **configurable por
-proyecto**:
+Array de strings con los roles de intérprete del proyecto. Salen de un
+**catálogo en config** (`MusicStateRoles_config.lua`: `bajo`, `bateria`,
+`guitarra`, `guitarra 2`, `teclado`, `teclado 2`, `voz`): cada proyecto
+tilda los que participan y se publican en el orden del catálogo, con los
+roles sueltos al final. El id es el mismo en todos los proyectos, así que
+funciona como identificador estable. Un rol fuera del catálogo es la
+excepción: se agrega a mano y se conserva.
 
 ```json
-["coordinador","cantantes","guitarristas","bajistas","bateria","organo"]
+["bajo","bateria","guitarra","teclado","voz"]
 ```
 
 No está atada a los nombres de track de los stems: el stem `Other` varía
-de canción a canción (puede ser órgano, vientos, etc.), y por lo tanto el
-rol también. `"todos"` **no** forma parte de la lista: es un valor
-reservado, siempre disponible como destinatario de una indicación sin
-configurarlo por proyecto.
+de canción a canción (puede ser órgano, vientos, etc.), y el rol es quien
+lo toca (`teclado`), no el sonido. Un músico con varios sonidos es un solo
+rol; dos músicos del mismo instrumento se resuelven con el segundo rol del
+catálogo (`teclado 2`). `"todos"` **no** forma parte de la lista: es un
+valor reservado, siempre disponible como destinatario de una indicación
+sin configurarlo por proyecto.
 
 ### 4.4. `cues_data`
 
@@ -216,11 +223,11 @@ vigente"), cada una es un evento con inicio y fin propios. Mismo keyed por
 compás que `harmony_data`:
 
 ```json
-{"12":[{"qn_offset":0.0,"roles":["cantantes"],"text":"respirar","duration_qn":2.0}]}
+{"12":[{"qn_offset":0.000,"roles":["voz"],"text":"respirar","duration_qn":2.000}]}
 ```
 
 - `roles`: array de strings; puede apuntar a más de un rol
-  (`["guitarristas","bajistas"]`) o a `["todos"]`.
+  (`["guitarra","bajo"]`) o a `["todos"]`.
 - `duration_qn`: duración en negras desde `qn_offset`. La indicación está
   activa en el intervalo `[inicio, inicio + duration_qn)`, medido en QN
   **absoluto**, así que puede cruzar el límite de un compás sin caso
@@ -230,9 +237,14 @@ compás que `harmony_data`:
 - El apagado es **por duración explícita**, fijada al crear la
   indicación. Se descartaron "hasta la próxima indicación del mismo rol" y
   "hasta el siguiente marker".
-- La grilla de 0.25 es un requisito de **posición** (`qn_offset`), no de
-  duración: `duration_qn` es libre. Ningún consumidor asume que caiga en
-  la grilla.
+- `qn_offset` y `duration_qn` son **libres**, sin grilla de 0.25. El Helper
+  guarda el QN absoluto de cada cue redondeado a 3 decimales y lo parte en
+  compás y offset al publicar. Los cues escritos antes con la posición en
+  grilla se leen sin migración: una posición en grilla es un caso
+  particular de una libre.
+- Formato: ambos números se escriben con 3 decimales fijos (`2.000`).
+  `text` y cada rol se escapan con el mismo criterio que `lyrics_data`
+  (`\"`, `\\` y `\uXXXX` para los caracteres de control).
 
 ### 4.5. Mapas de tempo y de compás
 
@@ -389,8 +401,9 @@ Helper y el puente juntos.
 Sin bugs de protocolo ni de modelo de datos sin corregir. Falta verificar:
 
 - **`cues_data` y el escape de barras (§3):** el texto de una cue es libre
-  y puede llevar comillas o barras. Revisar cómo las escapa el Helper al
-  guardar y si el cliente aplica el des-escape antes del `JSON.parse` en
+  y puede llevar comillas o barras. El Helper ya lo escapa al guardar, con
+  el mismo `jsonString` que `lyrics_data`. Falta verificar que el cliente
+  aplique el des-escape antes del `JSON.parse` en
   `nikMusicStateSetCuesData`; hoy solo está verificado para `lyrics_data`.
 - **Tamaño máximo de `EXTSTATE`:** la documentación del web control solo
   menciona un tope de ~16k para `PROJEXTSTATE`; el de `EXTSTATE` no está

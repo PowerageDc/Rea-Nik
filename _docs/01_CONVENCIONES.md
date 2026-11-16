@@ -121,8 +121,10 @@ comportamiento de las acciones de navegación; ver `features/midi_nav.md`),
 `MvsepImporter_config.lua` (patrones de nombres de MVSEP y recetas de import;
 ver `features/mvsep_importer.md`), `MusicStateKeys_config.lua` (atajos de
 teclado del Helper, con los ids de binding como `<área>.<acción>`; ver
-`features/musicstate_keys.md`), `FxWindow_config.lua` (posición y tamaño 
-de la ventana flotante de cada VSTi; ver `features/fxwindow.md`) y
+`features/musicstate_keys.md`), `MusicStateRoles_config.lua` (catálogo de
+roles del proyecto y cuáles arrancan tildados; ver
+`features/musicstate_helper.md`), `FxWindow_config.lua` (posición y tamaño de
+la ventana flotante de cada VSTi; ver `features/fxwindow.md`) y
 `MidiEdit_config.lua` (opciones de las acciones de edición MIDI sobre la
 selección y presets de las curvas de CC y pitch bend; ver 
 `features/midi_edit.md`). Y `SubtitleExport_config.lua` (perfiles de estilo, 

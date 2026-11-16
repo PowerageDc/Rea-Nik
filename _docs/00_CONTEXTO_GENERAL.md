@@ -166,7 +166,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | MidiNav                   | Doce acciones funcionando y validadas (cursor, selección de notas y de CC, y el toggle de foco). Pendientes en `features/midi_nav.md` |
 | MidiEdit                  | Alinear acordes, mover CC al cursor, rasguido de acordes con panel y curvas de CC y pitch bend con panel (cuatro motores, bend en tres etapas, punto en el cursor, En vivo). Pendientes en `features/midi_edit.md` |
 | Control remoto web        | Funcional. Pendientes por capa en `features/remote_control.md` §5 |
-| MusicState / Prompter     | Helper, prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
+| MusicState / Prompter     | Helper (cues con posición y duración libres, roles desde un catálogo), prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_helper.md` §8, `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
 | Monitor Mix               | Ruteo, filtro, bus y sends, canal de datos (ExtState más feed nativo), UI web del baterista (layout según el espacio), capa PA con modo PA en el remoto principal. Pendientes en sus docs. Ver `features/monitor_mix.md`, `features/monitor_mix_ui.md` y `features/monitor_mix_pa.md` |
 | FxWindow                  | Apply validado con Modo Bass 2; Capture con Modo Bass 2 y Ample Guitar L. Pendientes en `features/fxwindow.md` §6 |
@@ -204,6 +204,7 @@ Punto de partida: el doc principal de la tarea y lo que ese doc cita como depend
 | Capa PA (corte del PA, modo PA del remoto) | `monitor_mix_pa.md`, `monitor_mix.md` | `MonitorMix/MonitorMixPa_common_logic.lua`, `MonitorMix/Nik_MonitorMix_PaRoute.lua`, `core/pa-mode.js`, `core/wwr-dispatch.js`, `config.js` |
 | Reutilizar la tira de acordes | `musicstate_instrumentista.md`, `musicstate_shared_ui.md`, `musicstate_sync.md`, `musicstate_client.md` | `instrumentista/`, `shared/ms-beat.js`, `shared/ms-section-row.js` (ejemplo de extracción) |
 | Key nueva publicada desde el Helper | `musicstate_data_model.md`, `musicstate_bridge.md`, `musicstate_helper.md` | `MusicState/*.lua` |
+| Cues y roles (tabs del Helper) | `musicstate_helper.md`, `musicstate_data_model.md` | `MusicState/MusicStateCues*_common_logic.lua`, `MusicState/MusicStateRoles*`, `MusicState/MusicStateJson_common_logic.lua`, `Tests-Debug/Nik_Test_Cues*.lua` |
 | Letras (ingreso y publicación) | `musicstate_lyrics.md`, `musicstate_lyrics_helper.md` | `MusicState/Nik_MusicState_PublishLyrics.lua` |
 
 ## Qué adjuntar según la tarea (Control remoto)
