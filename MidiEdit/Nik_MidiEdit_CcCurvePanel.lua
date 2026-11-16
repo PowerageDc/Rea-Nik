@@ -343,6 +343,107 @@ local function draw_preview(kind, dur_ms)
   end
 end
 
+local function draw_shape(dur_ms)
+  if P.engine == "bend" then
+    draw_bend(dur_ms)
+    return
+  end
+  if P.engine == "osc" then
+    osc_controls(P, dur_ms)
+  else
+    combo("shape", "Forma de REAPER", SHAPE_OPTS, P.shape or 1, function(v)
+      P.shape = v
+      changed_live()
+    end)
+    if P.engine == "swell" then
+      slider_dbl("Pico###peak", P, "peak", 0.01, 0.99, "%.2f")
+    end
+  end
+  local ch, closed = reaper.ImGui_Checkbox(ctx, "Cerrar al valor base###close", P.close and true or false)
+  if ch then
+    P.close = closed
+    changed_live()
+  end
+end
+
+local function draw_values(kind)
+  local vals = P[kind]
+  if kind == "pitchbend" then
+    reaper.ImGui_Text(ctx, "Valores (pitch bend, en cents)")
+    slider_int("Bend range###bend", P, "bend_range_st", 1, 24, "%d st")
+  else
+    reaper.ImGui_Text(ctx, "Valores (CC)")
+  end
+  if not vals then
+    reaper.ImGui_Text(ctx, "El preset no define valores para esta lane")
+    return
+  end
+  for _, f in ipairs(value_fields()) do
+    slider_val(f[2] .. "###v_" .. f[1], vals, f[1], kind, f[3])
+  end
+  if P.engine == "ramp" and ButtonStyle.button(ctx, "Invertir###invert", "neutral", { pad = 8 }) then
+    for _, k in ipairs({ "cc", "pitchbend" }) do
+      local t = P[k]
+      if t then t.from, t.to = t.to, t.from end
+    end
+    changed_live()
+  end
+end
+
+local function draw_target()
+  reaper.ImGui_Text(ctx, "Lane")
+  local lane_cur = (P.lane == "active" or P.lane == "pitchbend") and P.lane or "cc"
+  choice_row("lane", LANE_OPTS, lane_cur, function(v)
+    if v == "cc" then
+      P.lane = type(P.lane) == "number" and P.lane or 1
+    else
+      P.lane = v
+    end
+  end, true)
+  local cc_fixed = type(P.lane) == "number"
+  local cc_tmp = { n = cc_fixed and P.lane or 1 }
+  if not cc_fixed then reaper.ImGui_BeginDisabled(ctx) end
+  slider_int("Numero###cc_num", cc_tmp, "n", 0, 127, "CC %d", true)
+  if not cc_fixed then reaper.ImGui_EndDisabled(ctx) end
+  if cc_fixed then P.lane = cc_tmp.n end
+
+  -- chan_fixed se calcula despues del choice_row: un clic cambia P.channel ahi
+  reaper.ImGui_Text(ctx, "Canal")
+  choice_row("chan", CHAN_OPTS, type(P.channel) == "number" and "fixed" or "active", function(v)
+    P.channel = (v == "fixed") and (type(P.channel) == "number" and P.channel or 1) or "active"
+  end, true)
+  local chan_fixed = type(P.channel) == "number"
+  local ch_tmp = { n = chan_fixed and P.channel or 1 }
+  if not chan_fixed then reaper.ImGui_BeginDisabled(ctx) end
+  slider_int("Numero###chan_num", ch_tmp, "n", 1, 16, "%d", true)
+  if not chan_fixed then reaper.ImGui_EndDisabled(ctx) end
+  if chan_fixed then P.channel = ch_tmp.n end
+
+  reaper.ImGui_Text(ctx, "Modo")
+  choice_row("mode", MODE_OPTS, P.mode, function(v) P.mode = v end)
+  reaper.ImGui_Text(ctx, "Resolucion")
+  choice_row("res", RES_OPTS, P.resolution, function(v) P.resolution = v end)
+end
+
+local function draw_point(take, kind)
+  reaper.ImGui_Text(ctx, "Punto en el cursor")
+  choice_row("pt_mode", POINT_OPTS, point.mode, function(v) point.mode = v end, true)
+  if point.mode ~= "value" then reaper.ImGui_BeginDisabled(ctx) end
+  slider_val("Valor###pt_val", point, "value", kind, false, true)
+  if point.mode ~= "value" then reaper.ImGui_EndDisabled(ctx) end
+  if not take then reaper.ImGui_BeginDisabled(ctx) end
+  if ButtonStyle.button(ctx, "Insertar punto###point", "neutral", { pad = 8 }) and last_editor then
+    local v, lane_label = CcCurve.insert_point(last_editor, P, point.mode, point.value)
+    if v then
+      local shown = (kind == "pitchbend") and string.format("%.0f cents", v) or tostring(v)
+      status = string.format("Punto en %s: %s", lane_label, shown)
+    else
+      status = tostring(lane_label)
+    end
+  end
+  if not take then reaper.ImGui_EndDisabled(ctx) end
+end
+
 local function draw()
   need_save, need_live = false, false
   local take = target_take()
@@ -373,104 +474,28 @@ local function draw()
     or "Rango: sin time selection ni notas seleccionadas")
 
   reaper.ImGui_Separator(ctx)
-  reaper.ImGui_Text(ctx, "Lane")
-  local lane_cur = (P.lane == "active" or P.lane == "pitchbend") and P.lane or "cc"
-  choice_row("lane", LANE_OPTS, lane_cur, function(v)
-    if v == "cc" then
-      P.lane = type(P.lane) == "number" and P.lane or 1
-    else
-      P.lane = v
-    end
-  end, true)
-  local cc_fixed = type(P.lane) == "number"
-  local cc_tmp = { n = cc_fixed and P.lane or 1 }
-  if not cc_fixed then reaper.ImGui_BeginDisabled(ctx) end
-  slider_int("Numero###cc_num", cc_tmp, "n", 0, 127, "CC %d", true)
-  if not cc_fixed then reaper.ImGui_EndDisabled(ctx) end
-  if cc_fixed then P.lane = cc_tmp.n end
-
-  reaper.ImGui_Text(ctx, "Canal")
-  local chan_fixed = type(P.channel) == "number"
-  choice_row("chan", CHAN_OPTS, chan_fixed and "fixed" or "active", function(v)
-    P.channel = (v == "fixed") and (chan_fixed and P.channel or 1) or "active"
-  end, true)
-  local ch_tmp = { n = chan_fixed and P.channel or 1 }
-  if not chan_fixed then reaper.ImGui_BeginDisabled(ctx) end
-  slider_int("Numero###chan_num", ch_tmp, "n", 1, 16, "%d", true)
-  if not chan_fixed then reaper.ImGui_EndDisabled(ctx) end
-  if chan_fixed then P.channel = ch_tmp.n end
-
-  reaper.ImGui_Text(ctx, "Modo")
-  choice_row("mode", MODE_OPTS, P.mode, function(v) P.mode = v end)
-  reaper.ImGui_Text(ctx, "Resolucion")
-  choice_row("res", RES_OPTS, P.resolution, function(v) P.resolution = v end)
-
-  reaper.ImGui_Separator(ctx)
-  reaper.ImGui_Text(ctx, "Forma (" .. P.engine .. ")")
-  if P.engine == "bend" then
-    draw_bend(dur_ms)
-  elseif P.engine == "osc" then
-    osc_controls(P, dur_ms)
-  else
-    combo("shape", "Forma de REAPER", SHAPE_OPTS, P.shape or 1, function(v)
-      P.shape = v
-      changed_live()
-    end)
-    if P.engine == "swell" then
-      slider_dbl("Pico###peak", P, "peak", 0.01, 0.99, "%.2f")
-    end
-  end
-  if P.engine ~= "bend" then
-    local ch, closed = reaper.ImGui_Checkbox(ctx, "Cerrar al valor base###close", P.close and true or false)
-    if ch then
-      P.close = closed
-      changed_live()
-    end
-  end
-
-  reaper.ImGui_Separator(ctx)
-  local vals = P[kind]
-  if kind == "pitchbend" then
-    reaper.ImGui_Text(ctx, "Valores (pitch bend, en cents)")
-    slider_int("Bend range###bend", P, "bend_range_st", 1, 24, "%d st")
-  else
-    reaper.ImGui_Text(ctx, "Valores (CC)")
-  end
-  if vals then
-    for _, f in ipairs(value_fields()) do
-      slider_val(f[2] .. "###v_" .. f[1], vals, f[1], kind, f[3])
-    end
-    if P.engine == "ramp" and ButtonStyle.button(ctx, "Invertir###invert", "neutral", { pad = 8 }) then
-      for _, k in ipairs({ "cc", "pitchbend" }) do
-        local t = P[k]
-        if t then t.from, t.to = t.to, t.from end
-      end
-      changed_live()
-    end
-  else
-    reaper.ImGui_Text(ctx, "El preset no define valores para esta lane")
-  end
-
-  reaper.ImGui_Separator(ctx)
   draw_preview(kind, dur_ms)
-
   reaper.ImGui_Separator(ctx)
-  reaper.ImGui_Text(ctx, "Punto en el cursor")
-  choice_row("pt_mode", POINT_OPTS, point.mode, function(v) point.mode = v end, true)
-  if point.mode ~= "value" then reaper.ImGui_BeginDisabled(ctx) end
-  slider_val("Valor###pt_val", point, "value", kind, false, true)
-  if point.mode ~= "value" then reaper.ImGui_EndDisabled(ctx) end
-  if not take then reaper.ImGui_BeginDisabled(ctx) end
-  if ButtonStyle.button(ctx, "Insertar punto###point", "neutral", { pad = 8 }) and last_editor then
-    local v, lane_label = CcCurve.insert_point(last_editor, P, point.mode, point.value)
-    if v then
-      local shown = (kind == "pitchbend") and string.format("%.0f cents", v) or tostring(v)
-      status = string.format("Punto en %s: %s", lane_label, shown)
-    else
-      status = tostring(lane_label)
+
+  if reaper.ImGui_BeginTabBar(ctx, "tabs") then
+    if reaper.ImGui_BeginTabItem(ctx, "Forma###tab_shape") then
+      draw_shape(dur_ms)
+      reaper.ImGui_EndTabItem(ctx)
     end
+    if reaper.ImGui_BeginTabItem(ctx, "Valores###tab_values") then
+      draw_values(kind)
+      reaper.ImGui_EndTabItem(ctx)
+    end
+    if reaper.ImGui_BeginTabItem(ctx, "Destino###tab_target") then
+      draw_target()
+      reaper.ImGui_EndTabItem(ctx)
+    end
+    if reaper.ImGui_BeginTabItem(ctx, "Punto###tab_point") then
+      draw_point(take, kind)
+      reaper.ImGui_EndTabItem(ctx)
+    end
+    reaper.ImGui_EndTabBar(ctx)
   end
-  if not take then reaper.ImGui_EndDisabled(ctx) end
 
   reaper.ImGui_Separator(ctx)
   if not take then reaper.ImGui_BeginDisabled(ctx) end
@@ -507,7 +532,7 @@ local function draw()
 end
 
 local function loop()
-  reaper.ImGui_SetNextWindowSize(ctx, 430, 780, reaper.ImGui_Cond_FirstUseEver())
+  reaper.ImGui_SetNextWindowSize(ctx, 430, 820, reaper.ImGui_Cond_FirstUseEver())
   local visible, open = reaper.ImGui_Begin(ctx, TITLE, true, reaper.ImGui_WindowFlags_NoNav())
   if visible then
     draw()
