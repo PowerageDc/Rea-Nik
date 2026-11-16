@@ -210,11 +210,9 @@ notas muteadas y tolerancia de acorde). Los CC no pasan por `notes`.
 
 ## 5. Pendientes
 
-- Verificar `channel_filter = "active"`: el canal activo se lee con
-  `MIDIEditor_GetSetting_int(editor, "default_note_chan")` y no se contrastó
-  contra la documentación de la versión instalada.
-- `MidiGen/` (glissandos, curvas CC) y `ScorePrep/` (limpieza del duplicado de
-  take pre-Dorico): dominios planeados, sin código todavía. La edición para
+- `MidiGen/` (glissandos) y `ScorePrep/` (limpieza del duplicado de
+  take pre-Dorico): dominios planeados, sin código todavía. Las curvas CC
+  viven en `MidiEdit/` (ver `features/midi_edit.md`). La edición para
   Dorico (solapes, markers y text events) se evalúa en `MidiEdit/`
   (ver `features/midi_edit.md`). Cuando haya un segundo consumidor, extraer
   los helpers de take (enumerar notas, PPQ y tiempo, selección) a

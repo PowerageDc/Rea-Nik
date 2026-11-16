@@ -1,6 +1,6 @@
 -- MidiEditCcCurve_common_logic.lua
 -- Curvas de CC y pitch bend sobre un take. Las formas son funciones puras que
--- devuelven puntos (t de 0 a 1, valor nativo de la lane); write() los pasa al
+-- devuelven puntos (t de 0 a 1, valor nativo de la lane); apply() los pasa al
 -- take. Patron dofile + M={}.
 
 local M = {}
@@ -350,7 +350,8 @@ end
 
 -- Puntos de la curva de p (t de 0 a 1, valor nativo de la lane) para una lane
 -- de tipo kind ("cc" o "pitchbend"). Los valores del preset en pitch bend
--- estan en cents. nil y un mensaje si el preset no sirve.
+-- estan en cents. start: valor nativo desde el que parte la subida del bend
+-- (por defecto, base). nil y un mensaje si el preset no sirve.
 function M.build_points(p, kind, duration_ms, start)
   local engine = ENGINES[p.engine]
   if not engine then return nil, "Motor inexistente en el preset: " .. tostring(p.engine) end

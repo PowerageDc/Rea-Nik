@@ -1,11 +1,12 @@
 # ReaImGui — Patrones y gotchas para paneles nativos
 
-Catálogo técnico de "cómo hacer X sin el bug conocido Y" en ReaImGui. No
-es documentación de una feature: aplica a cualquier panel nativo del
+Catálogo técnico de "cómo hacer X sin el bug conocido Y" en ReaImGui.
+No es documentación de una feature: aplica a cualquier panel nativo del
 proyecto, presente o futuro (hoy: `Nik_MusicState_Helper.lua` y la UI de
-`VstiControl/`; también relevante para `ReaPitchBus/Nik_ReaPitchBus_Knob.lua`
-y cualquier panel nuevo). Primer caso donde se resolvió cada patrón: la 
-tab Armonía del MusicState Helper (`features/musicstate_helper.md`).
+`VstiControl/` y los paneles de `MidiEdit/`; también relevante
+para `ReaPitchBus/Nik_ReaPitchBus_Knob.lua` y cualquier panel nuevo).
+Primer caso donde se resolvió cada patrón: la tab Armonía del MusicState
+Helper (`features/musicstate_helper.md`).
 
 ## 1. Sticky header sin romper Nav (tablas con scroll)
 
@@ -407,3 +408,43 @@ ButtonStyle.push(ctx, 'subtle')
 local changed, v = reaper.ImGui_InputInt(ctx, '##campo', v, 1, 10)
 ButtonStyle.pop(ctx)
 ```
+
+## 9. Paneles con vista previa: pestañas, sliders y estado derivado
+
+Primer caso: `MidiEdit/Nik_MidiEdit_CcCurvePanel.lua` (ver
+`features/midi_edit.md`).
+
+- **Estado derivado: calcularlo después del widget que lo cambia.** Un valor
+  derivado de otro (`chan_fixed = type(P.channel) == 'number'`) que se calcula
+  antes del `choice_row` que modifica la fuente queda viejo en ese frame: el
+  clic pone `P.channel = 'active'` y el slider siguiente recibe un texto como
+  número (`bad argument #3 to 'ImGui_SliderInt' (number expected, got
+  string)`). Se calcula justo antes de usarlo, después del widget que puede
+  cambiarlo. El estado se guarda al final del frame (`need_save`): un error en
+  medio del draw se lleva el guardado y el panel reabre con el valor anterior.
+- **Slider, no drag, para rangos acotados.** `DragInt` y `DragDouble` mueven una
+  cantidad fija por píxel sin relación con el ancho del control y no dibujan
+  barra: con rangos de 1 a 24 o de ±200 cuesta controlarlos. `SliderInt` y
+  `SliderDouble` mapean el rango completo al ancho. `SetNextItemWidth(ctx,
+  -ancho_de_etiqueta)` lo extiende a todo el ancho disponible menos la
+  etiqueta (negativo = medido desde la derecha), `SliderFlags_AlwaysClamp`
+  hace que el valor tipeado con Ctrl+clic respete los límites, y Ctrl+clic
+  permite escribir un valor exacto. Se persiste con `IsItemDeactivatedAfterEdit`
+  (§4), igual que con los drags.
+- **Pestañas con lo importante siempre visible.** Para que un panel con muchos
+  controles entre en una altura fija, se deja fuera de la barra lo que se mira
+  mientras se ajusta (vista previa, botones de acción, línea de estado) y se
+  reparten los controles en pestañas. `EndTabItem` se llama solo si
+  `BeginTabItem` devolvió `true`, y `EndTabBar` solo si `BeginTabBar` devolvió
+  `true`: el patrón de `BeginTable` (§1), no el de `BeginChild`. Los `###id`
+  de las pestañas mantienen su ID estable (§2).
+- **Vista previa con `DrawList`.** Se reserva el espacio con `Dummy` y se toma
+  `GetCursorScreenPos` **antes** del `Dummy`; `GetWindowDrawList` junto con
+  `DrawList_AddLine`, `AddRectFilled` y `AddText` dibujan en coordenadas de
+  pantalla. Conviene que la vista previa llame a las mismas funciones que
+  escriben el resultado, para que no pueda divergir.
+- **Valor opcional editado con un slider.** Si un valor solo aplica en cierto
+  modo (el número de CC cuando la lane es fija), el slider edita una tabla
+  temporal y el valor real se vuelca solo si el modo está activo. Con el modo
+  apagado, el slider va dentro de `BeginDisabled` y `EndDisabled`, siempre
+  balanceados.
