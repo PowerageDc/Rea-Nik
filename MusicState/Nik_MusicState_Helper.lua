@@ -19,6 +19,9 @@
 --   MusicStateRoles_common_logic.lua
 --   MusicStateArmonia_common_logic.lua
 --   MusicStateCues_common_logic.lua
+--   MusicStateCuesModel_common_logic.lua
+--   MusicStateCuesData_common_logic.lua
+--   MusicStateJson_common_logic.lua
 --   MusicStateLyrics_common_logic.lua
 --   MusicStateLyricsTab_common_logic.lua
 --   MusicStateLyricsSync_common_logic.lua
@@ -44,6 +47,7 @@ local Tonalidad = dofile(script_dir .. "MusicStateTonalidad_common_logic.lua")
 local Roles = dofile(script_dir .. "MusicStateRoles_common_logic.lua")
 local Armonia = dofile(script_dir .. "MusicStateArmonia_common_logic.lua")
 local Cues = dofile(script_dir .. "MusicStateCues_common_logic.lua")
+local CuesData = dofile(script_dir .. "MusicStateCuesData_common_logic.lua")
 local Lyrics = dofile(script_dir .. "MusicStateLyrics_common_logic.lua")
 local LyricsTab = dofile(script_dir .. "MusicStateLyricsTab_common_logic.lua")
 local LyricsSync = dofile(script_dir .. "MusicStateLyricsSync_common_logic.lua")
@@ -61,7 +65,7 @@ local H = {
   roles = {},
   new_role_buf = '',
   harmony = {},  -- array de {measure, beat, hundredths, chord}; chord == '' -> sentinel null
-  cues = {},  -- array de {measure, beat, hundredths, roles_str, text, duration_qn}
+  cues = {},  -- lista ordenada de cues {uid, qn, dur_qn, roles, text}
   save_status = '',
   last_proj = nil,  -- detecta cambio de project tab, ver loop()
 }
@@ -208,51 +212,10 @@ local function nikMusicStateLoadFromProjExtState(proj)
     end
   end
 
-  -- cues_data: formato con array anidado (roles) dentro de cada evento --
-  -- el regex simple de harmony_data (no-greedy hasta el primer "]") no
-  -- alcanza aca, se rompe con el "]" de roles. Se usa %b[]/%b{} (balance
-  -- nativo de Lua) para el array por compas y para cada objeto.
   local ok_cues, cues_json = reaper.GetProjExtState(proj, Bridge.NAMESPACE, 'cues_data')
-  H.cues = {}
-  if ok_cues > 0 and cues_json ~= '' then
-    local search_pos = 1
-    while true do
-      local s, bracket_pos, measure_str = cues_json:find('"(%d+)"%s*:%s*%[', search_pos)
-      if not s then break end
-      local array_str = cues_json:match('%b[]', bracket_pos)
-      if not array_str then break end
-      local measure = tonumber(measure_str)
-      local beat_unit_qn = nikMusicStateBeatUnitQN(proj, measure)
-      local inner = array_str:sub(2, -2)
-      local obj_pos = 1
-      while true do
-        local obj_start = inner:find('{', obj_pos)
-        if not obj_start then break end
-        local obj_str = inner:match('%b{}', obj_start)
-        if not obj_str then break end
-        local qn_str = obj_str:match('"qn_offset"%s*:%s*([%d%.]+)')
-        local roles_block = obj_str:match('"roles"%s*:%s*%[(.-)%]')
-        local text = obj_str:match('"text"%s*:%s*"([^"]*)"')
-        local dur_str = obj_str:match('"duration_qn"%s*:%s*([%d%.]+)')
-        local qn_offset = tonumber(qn_str) or 0
-        local beat, hundredths = nikMusicStateQnOffsetToBeat(qn_offset, beat_unit_qn)
-        local roles_list = {}
-        if roles_block then
-          for r in roles_block:gmatch('"([^"]*)"') do table.insert(roles_list, r) end
-        end
-        table.insert(H.cues, {
-          measure = measure,
-          beat = beat,
-          hundredths = hundredths,
-          roles_str = table.concat(roles_list, ','),
-          text = text or '',
-          duration_qn = tonumber(dur_str) or 0,
-        })
-        obj_pos = obj_start + #obj_str
-      end
-      search_pos = bracket_pos + #array_str
-    end
-  end
+  local cues, cues_err = CuesData.decode(ok_cues > 0 and cues_json or '', proj)
+  H.cues = cues
+  H.cues_load_error = cues_err
 end
 
 local function nikMusicStateCaptureCursorPosition()
@@ -395,6 +358,7 @@ Keys.init(keys_config, {
 
 LyricsSync.register_keys(Keys)
 LyricsTab.register_keys(Keys, H)
+Cues.register_keys(Keys, H)
 
 -- Arma los JSON compactos y los escribe en ProjExtState + puente a ExtState.
 local function nikMusicStateSaveAndPublish()
@@ -435,35 +399,7 @@ local function nikMusicStateSaveAndPublish()
   for _, m in ipairs(measure_parts) do table.insert(measure_jsons, m.json) end
   local harmony_json = '{' .. table.concat(measure_jsons, ',') .. '}'
 
-  -- Mismo criterio que harmony_data (agrupar por compas, ordenar por
-  -- qn_offset dentro de cada compas), con los campos propios de cues.
-  local cues_by_measure = {}
-  for _, row in ipairs(H.cues) do
-    local beat_unit_qn = nikMusicStateBeatUnitQN(proj, row.measure)
-    local qn_offset = nikMusicStateBeatToQnOffset(row.beat, row.hundredths, beat_unit_qn)
-    local roles_parts = {}
-    for role in (row.roles_str or ''):gmatch('[^,]+') do
-      table.insert(roles_parts, string.format('"%s"', role:match('^%s*(.-)%s*$')))
-    end
-    local roles_json = '[' .. table.concat(roles_parts, ',') .. ']'
-    local event_json = string.format('{"qn_offset":%.4g,"roles":%s,"text":"%s","duration_qn":%.4g}',
-      qn_offset, roles_json, row.text or '', row.duration_qn or 0)
-    cues_by_measure[row.measure] = cues_by_measure[row.measure] or {}
-    table.insert(cues_by_measure[row.measure], { qn_offset = qn_offset, json = event_json })
-  end
-
-  local cues_measure_parts = {}
-  for measure, events in pairs(cues_by_measure) do
-    table.sort(events, function(a, b) return a.qn_offset < b.qn_offset end)
-    local event_jsons = {}
-    for _, e in ipairs(events) do table.insert(event_jsons, e.json) end
-    table.insert(cues_measure_parts, { measure = measure,
-      json = string.format('"%d":[%s]', measure, table.concat(event_jsons, ',')) })
-  end
-  table.sort(cues_measure_parts, function(a, b) return a.measure < b.measure end)
-  local cues_measure_jsons = {}
-  for _, m in ipairs(cues_measure_parts) do table.insert(cues_measure_jsons, m.json) end
-  local cues_json = '{' .. table.concat(cues_measure_jsons, ',') .. '}'
+  local cues_json = CuesData.encode(H.cues, proj)
 
   H.publish_version = (H.publish_version or 0) + 1
 
@@ -494,7 +430,9 @@ local function loop()
     nikMusicStateLoadFromProjExtState(current_proj)
     H.last_proj = current_proj
     H._armonia_paste_pending = nil
-    H.save_status = 'Proyecto activo cambio -- datos recargados.'
+    H.save_status = H.cues_load_error
+      and ('cues_data ilegible, no se cargaron los cues: ' .. H.cues_load_error)
+      or 'Proyecto activo cambio -- datos recargados.'
   end
 
   reaper.ImGui_SetNextWindowSize(ctx, 774, 894, reaper.ImGui_Cond_FirstUseEver())
