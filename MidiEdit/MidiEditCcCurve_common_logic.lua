@@ -177,7 +177,90 @@ function M.osc(p)
   return pts
 end
 
-local ENGINES = { swell = M.swell, ramp = M.ramp, osc = M.osc }
+-- Sosten plano en center.
+local function flat(p)
+  return {
+    { t = 0, v = p.center, shape = 0, tension = 0 },
+    { t = 1, v = p.center, shape = 0, tension = 0 },
+  }
+end
+
+local HOLDS = { flat = flat, swell = M.swell, ramp = M.ramp, osc = M.osc }
+
+-- Valores por lane (ademas de base) que necesita cada sosten.
+M.HOLD_KEYS = {
+  flat = { "center" },
+  osc = { "center", "depth" },
+  swell = { "lo", "hi" },
+  ramp = { "from", "to" },
+}
+
+-- Puntos de una transicion de v_a a v_b entre t_a y t_b, sin el punto final.
+-- Nativa: un punto con la forma de REAPER. Densa: muestras cada step_ms.
+local function transition(p, st, t_a, t_b, v_a, v_b)
+  local shape, tension = st.shape or 2, st.tension or 0
+  if p.resolution ~= "dense" then
+    return { { t = t_a, v = v_a, shape = shape, tension = tension } }
+  end
+  local n = math.max(1, math.ceil((t_b - t_a) * p.duration_ms / p.step_ms))
+  local pts = {}
+  for i = 0, n - 1 do
+    local u = i / n
+    pts[#pts + 1] = {
+      t = t_a + (t_b - t_a) * u,
+      v = v_a + (v_b - v_a) * shape_curve(shape, u),
+      shape = 1, tension = 0,
+    }
+  end
+  return pts
+end
+
+-- Bend en tres etapas: subida de base (o del valor previo, p.start) al inicio
+-- del sosten, sosten con la forma de p.hold y bajada a base al final del rango.
+-- Cada etapa dura ms o un porcentaje del rango; si subida y bajada no entran,
+-- se escalan y el sosten queda en cero.
+function M.bend(p)
+  local dur = math.max(p.duration_ms, 1)
+  local function ms_of(st)
+    local a = math.max(0, st.amount or 0)
+    return (st.unit == "pct") and dur * a / 100 or a
+  end
+  local rise_ms, fall_ms = ms_of(p.rise), ms_of(p.fall)
+  if rise_ms + fall_ms > dur then
+    local k = dur / (rise_ms + fall_ms)
+    rise_ms, fall_ms = rise_ms * k, fall_ms * k
+  end
+  local t_rise, t_fall = rise_ms / dur, 1 - fall_ms / dur
+
+  local q = {}
+  for k, v in pairs(p) do q[k] = v end
+  for k, v in pairs(p.hold) do q[k] = v end
+  q.close = false
+  q.shape = q.shape or 2
+  q.tension = q.tension or 0
+  q.peak = q.peak or 0.5
+  q.duration_ms = math.max(dur - rise_ms - fall_ms, 1)
+  local hold = HOLDS[p.hold.engine](q)
+  if t_fall - t_rise <= EPS then hold = { hold[1] } end
+
+  -- el ultimo punto del sosten pasa a ser el inicio de la bajada
+  local last = table.remove(hold)
+  local rise_to = hold[1] and hold[1].v or last.v
+  local pts = transition(p, p.rise, 0, t_rise, p.start or p.base, rise_to)
+  for _, pt in ipairs(hold) do
+    pts[#pts + 1] = {
+      t = t_rise + pt.t * (t_fall - t_rise),
+      v = pt.v, shape = pt.shape, tension = pt.tension,
+    }
+  end
+  for _, pt in ipairs(transition(p, p.fall, t_fall, 1, last.v, p.base)) do
+    pts[#pts + 1] = pt
+  end
+  pts[#pts + 1] = { t = 1, v = p.base, shape = 0, tension = 0 }
+  return pts
+end
+
+local ENGINES = { swell = M.swell, ramp = M.ramp, osc = M.osc, bend = M.bend }
 
 -- Rango en tiempo de proyecto: time selection; si no hay, de la primera nota
 -- seleccionada al final de la ultima. El tercer valor dice el origen.
@@ -268,16 +351,27 @@ end
 -- Puntos de la curva de p (t de 0 a 1, valor nativo de la lane) para una lane
 -- de tipo kind ("cc" o "pitchbend"). Los valores del preset en pitch bend
 -- estan en cents. nil y un mensaje si el preset no sirve.
-function M.build_points(p, kind, duration_ms)
+function M.build_points(p, kind, duration_ms, start)
   local engine = ENGINES[p.engine]
   if not engine then return nil, "Motor inexistente en el preset: " .. tostring(p.engine) end
   local vals = p[kind]
   if not vals then return nil, "El preset no define valores para " .. kind .. "." end
+  if p.engine == "bend" then
+    local keys = p.hold and M.HOLD_KEYS[p.hold.engine]
+    if not (p.rise and p.fall and keys) then
+      return nil, "El bend necesita rise, fall y un hold valido."
+    end
+    if vals.base == nil then return nil, "El preset no define base para esta lane." end
+    for _, k in ipairs(keys) do
+      if vals[k] == nil then return nil, "El preset no define " .. k .. " para esta lane." end
+    end
+  end
   local q = {}
   for k, v in pairs(p) do q[k] = v end
   local f = native_factor(kind, p)
   for k, v in pairs(vals) do q[k] = v * f end
   q.duration_ms = duration_ms
+  q.start = start
   return engine(q)
 end
 
@@ -300,12 +394,35 @@ function M.sample(points, n)
   return out
 end
 
+-- Valor nativo de un evento de la lane (inverso de encode).
+local function decode(info, msg2, msg3)
+  if info.kind == "pitchbend" then return msg3 * 128 + msg2 - 8192 end
+  return msg3
+end
+
+-- Valor del ultimo evento de la lane y el canal antes de ppq; nil si no hay.
+local function value_before(take, info, chan, ppq)
+  local best_p, best_v
+  local _, _, cc_count = reaper.MIDI_CountEvts(take)
+  for i = 0, cc_count - 1 do
+    local _, _, _, p, chanmsg, ch, m2, m3 = reaper.MIDI_GetCC(take, i)
+    if p < ppq and matches(info, chan, chanmsg, ch, m2) and (not best_p or p >= best_p) then
+      best_p, best_v = p, decode(info, m2, m3)
+    end
+  end
+  return best_v
+end
+
 -- Eventos listos para insertar en [ppq0, ppq1]. tg: { info, chan }. Sin tocar
 -- el take. Dos puntos en el mismo tick: el anterior retrocede un tick.
 local function curve_events(take, tg, ppq0, ppq1, p)
   local t0 = reaper.MIDI_GetProjTimeFromPPQPos(take, ppq0)
   local t1 = reaper.MIDI_GetProjTimeFromPPQPos(take, ppq1)
-  local points, err = M.build_points(p, tg.info.kind, (t1 - t0) * 1000)
+  local start
+  if p.rise and p.rise.from_previous then
+    start = value_before(take, tg.info, tg.chan, ppq0)
+  end
+  local points, err = M.build_points(p, tg.info.kind, (t1 - t0) * 1000, start)
   if not points then return nil, err end
 
   local events = {}
@@ -402,25 +519,6 @@ function M.rerun(take, p)
   return #events
 end
 
--- Valor nativo de un evento de la lane (inverso de encode).
-local function decode(info, msg2, msg3)
-  if info.kind == "pitchbend" then return msg3 * 128 + msg2 - 8192 end
-  return msg3
-end
-
--- Valor del ultimo evento de la lane y el canal antes de ppq; nil si no hay.
-local function value_before(take, info, chan, ppq)
-  local best_p, best_v
-  local _, _, cc_count = reaper.MIDI_CountEvts(take)
-  for i = 0, cc_count - 1 do
-    local _, _, _, p, chanmsg, ch, m2, m3 = reaper.MIDI_GetCC(take, i)
-    if p < ppq and matches(info, chan, chanmsg, ch, m2) and (not best_p or p >= best_p) then
-      best_p, best_v = p, decode(info, m2, m3)
-    end
-  end
-  return best_v
-end
-
 -- Inserta un evento de forma cuadrada en el cursor, en la lane y el canal de
 -- p. mode: "base", "previous" (sin evento anterior, base) o "value" (en las
 -- unidades del preset: valor de CC o cents). Reemplaza el evento de esa lane
@@ -476,6 +574,9 @@ function M.resolve(config, preset_name)
   local p = copy(preset)
   p.cc = preset.cc and copy(preset.cc)
   p.pitchbend = preset.pitchbend and copy(preset.pitchbend)
+  p.rise = preset.rise and copy(preset.rise)
+  p.fall = preset.fall and copy(preset.fall)
+  p.hold = preset.hold and copy(preset.hold)
   p.name = preset_name
   p.lane, p.channel, p.mode = cfg.lane, cfg.channel, cfg.mode
   p.resolution = preset.resolution or cfg.resolution
@@ -487,12 +588,18 @@ end
 
 local function num(v) return string.format("%.4g", v) end
 
+local function lua_value(v)
+  if type(v) == "string" then return '"' .. v .. '"' end
+  if type(v) == "number" then return num(v) end
+  return tostring(v)
+end
+
 local function kind_text(t)
   local keys = {}
   for k in pairs(t) do keys[#keys + 1] = k end
   table.sort(keys)
   local out = {}
-  for _, k in ipairs(keys) do out[#out + 1] = k .. " = " .. num(t[k]) end
+  for _, k in ipairs(keys) do out[#out + 1] = k .. " = " .. lua_value(t[k]) end
   return "{ " .. table.concat(out, ", ") .. " }"
 end
 
@@ -503,12 +610,19 @@ function M.preset_text(p)
   for _, k in ipairs({ "peak", "hz", "cycles", "phase", "fade_in" }) do
     if p[k] ~= nil then head[#head + 1] = k .. " = " .. num(p[k]) end
   end
-  head[#head + 1] = "close = " .. tostring(p.close and true or false)
-  head[#head + 1] = "shape = " .. num(p.shape or 1)
-  head[#head + 1] = "tension = " .. num(p.tension or 0)
+  if p.engine ~= "bend" then
+    head[#head + 1] = "close = " .. tostring(p.close and true or false)
+    head[#head + 1] = "shape = " .. num(p.shape or 1)
+    head[#head + 1] = "tension = " .. num(p.tension or 0)
+  end
   head[#head + 1] = 'resolution = "' .. p.resolution .. '"'
 
   local lines = { "-- en cc_curve.presets:", '["Custom"] = {', "    " .. table.concat(head, ", ") .. "," }
+  for _, name in ipairs({ "rise", "hold", "fall" }) do
+    if p.engine == "bend" and p[name] then
+      lines[#lines + 1] = "    " .. name .. " = " .. kind_text(p[name]) .. ","
+    end
+  end
   if p.cc then lines[#lines + 1] = "    cc = " .. kind_text(p.cc) .. "," end
   if p.pitchbend then lines[#lines + 1] = "    pitchbend = " .. kind_text(p.pitchbend) .. "," end
   lines[#lines + 1] = "},"
@@ -518,6 +632,13 @@ end
 local STATE_SEC, STATE_KEY = "Nik_MidiEdit_CcCurve", "state_v2"
 local SCALARS = { "peak", "shape", "tension", "phase", "fade_in", "bend_range_st" }
 local RATES = { "hz", "cycles" }
+-- Claves de valores por lane que puede necesitar el sosten de un bend, y claves
+-- numericas de las etapas.
+local HOLD_VALUE_KEYS = { center = true, depth = true, lo = true, hi = true, from = true, to = true }
+local STAGE_NUMBERS = {
+  amount = true, shape = true, tension = true, phase = true, fade_in = true,
+  peak = true, hz = true, cycles = true,
+}
 
 -- Guarda los params vigentes (persistente entre sesiones).
 function M.save(p)
@@ -535,7 +656,7 @@ function M.save(p)
       if p[k] ~= nil then parts[#parts + 1] = k .. "=" .. tostring(p[k]) end
     end
   end
-  for _, kind in ipairs({ "cc", "pitchbend" }) do
+  for _, kind in ipairs({ "cc", "pitchbend", "rise", "fall", "hold" }) do
     for k, v in pairs(p[kind] or {}) do
       parts[#parts + 1] = kind .. "." .. k .. "=" .. tostring(v)
     end
@@ -585,7 +706,34 @@ function M.load(config)
   for key, val in pairs(saved) do
     local kind, k = key:match("^(%w+)%.(.+)$")
     local v = tonumber(val)
-    if kind and v and p[kind] and p[kind][k] ~= nil then p[kind][k] = v end
+    local t = kind and p[kind]
+    if type(t) == "table" and v then
+      if kind == "cc" or kind == "pitchbend" then
+        if t[k] ~= nil or (p.engine == "bend" and HOLD_VALUE_KEYS[k]) then t[k] = v end
+      elseif STAGE_NUMBERS[k] then
+        t[k] = v
+      end
+    end
+  end
+
+  for _, name in ipairs({ "rise", "fall" }) do
+    local unit = saved[name .. ".unit"]
+    if p[name] and (unit == "ms" or unit == "pct") then p[name].unit = unit end
+  end
+  local from_prev = saved["rise.from_previous"]
+  if p.rise and (from_prev == "true" or from_prev == "false") then
+    p.rise.from_previous = from_prev == "true"
+  end
+  if p.hold then
+    local e, w = saved["hold.engine"], saved["hold.wave"]
+    if e and HOLDS[e] then p.hold.engine = e end
+    if w and WAVES[w] then p.hold.wave = w end
+    local hz, cy = tonumber(saved["hold.hz"]), tonumber(saved["hold.cycles"])
+    if hz then
+      p.hold.hz, p.hold.cycles = hz, nil
+    elseif cy then
+      p.hold.cycles, p.hold.hz = cy, nil
+    end
   end
   return p
 end

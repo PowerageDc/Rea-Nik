@@ -61,6 +61,33 @@ return {
                 cc = { center = 60, depth = 40, base = 0 },
                 pitchbend = { center = 0, depth = 25, base = 0 },
             },
+            -- bend: rise (subida), hold (sosten: flat, osc, swell o ramp) y fall
+            -- (bajada a base al final del rango). unit "ms" o "pct" (% del rango);
+            -- from_previous sube desde el valor anterior de la lane en vez de base.
+            ["Bend"] = {
+                engine = "bend",
+                rise = { unit = "ms", amount = 120, shape = 2 },
+                fall = { unit = "ms", amount = 60, shape = 2 },
+                hold = { engine = "flat" },
+                cc = { base = 0, center = 80 },
+                pitchbend = { base = 0, center = 100 },
+            },
+            ["Bend + vibrato"] = {
+                engine = "bend",
+                rise = { unit = "ms", amount = 120, shape = 2 },
+                fall = { unit = "ms", amount = 60, shape = 2 },
+                hold = { engine = "osc", wave = "sine", hz = 5.5, phase = 0, fade_in = 0.4 },
+                cc = { base = 0, center = 80, depth = 20 },
+                pitchbend = { base = 0, center = 100, depth = 12 },
+            },
+            ["Bend lento"] = {
+                engine = "bend",
+                rise = { unit = "pct", amount = 40, shape = 2 },
+                fall = { unit = "ms", amount = 60, shape = 2 },
+                hold = { engine = "flat" },
+                cc = { base = 0, center = 100 },
+                pitchbend = { base = 0, center = 150 },
+            },
         },
     },
 

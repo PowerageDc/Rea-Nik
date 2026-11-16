@@ -28,6 +28,25 @@ local MODE_OPTS = { { "replace", "Reemplazar" }, { "merge", "Mezclar" } }
 local RES_OPTS = { { "native", "Nativa" }, { "dense", "Densa" } }
 local RATE_OPTS = { { "hz", "Hz" }, { "cycles", "Ciclos" } }
 local POINT_OPTS = { { "base", "Base" }, { "previous", "Anterior" }, { "value", "Valor" } }
+local UNIT_OPTS = { { "ms", "ms" }, { "pct", "% del rango" } }
+local HOLD_OPTS = {
+  { "flat", "Plano" }, { "osc", "Oscilador" }, { "swell", "Campana" }, { "ramp", "Rampa" },
+}
+local VALUE_LABELS = {
+  base = "Base", center = "Centro", depth = "Profundidad",
+  lo = "Minimo", hi = "Maximo", from = "Desde", to = "Hasta",
+}
+-- Valores que se completan al elegir otro sosten (por lane, en cents para
+-- pitch bend) y parametros propios de cada sosten.
+local HOLD_DEFAULTS = {
+  cc = { center = 80, depth = 20, lo = 0, hi = 100, from = 0, to = 100 },
+  pitchbend = { center = 100, depth = 12, lo = 0, hi = 100, from = 0, to = 100 },
+}
+local HOLD_EXTRAS = {
+  osc = { wave = "sine", hz = 5.5, phase = 0, fade_in = 0.4 },
+  swell = { peak = 0.5, shape = 2 },
+  ramp = { shape = 2 },
+}
 local WAVE_OPTS = {
   { "sine", "Seno" }, { "triangle", "Triangulo" }, { "square", "Cuadrada" },
   { "saw_up", "Sierra +" }, { "saw_down", "Sierra -" },
@@ -43,6 +62,22 @@ local VALUE_FIELDS = {
 }
 local SCALAR_KEYS = { "peak", "shape", "tension", "phase", "fade_in", "hz", "cycles" }
 
+local function stage_differs(a, b)
+  if not a or not b then return a ~= b end
+  for k, v in pairs(a) do
+    local w = b[k]
+    if type(v) == "number" and type(w) == "number" then
+      if math.abs(v - w) > 1e-6 then return true end
+    elseif v ~= w then
+      return true
+    end
+  end
+  for k in pairs(b) do
+    if a[k] == nil then return true end
+  end
+  return false
+end
+
 local function modified()
   local base = cfg.presets[P.name]
   if not base then return true end
@@ -52,6 +87,9 @@ local function modified()
     if a and math.abs(a - b) > 1e-6 then return true end
   end
   if P.wave ~= base.wave or (P.close == true) ~= (base.close == true) then return true end
+  for _, name in ipairs({ "rise", "fall", "hold" }) do
+    if stage_differs(P[name], base[name]) then return true end
+  end
   for _, kind in ipairs({ "cc", "pitchbend" }) do
     for k, v in pairs(P[kind] or {}) do
       local b = base[kind] and base[kind][k]
@@ -97,11 +135,11 @@ local function select_preset(name)
   changed_live()
 end
 
-local function set_rate_unit(unit, dur_ms)
-  if unit == "hz" and not P.hz then
-    P.hz, P.cycles = (P.cycles or 1) * 1000 / dur_ms, nil
-  elseif unit == "cycles" and not P.cycles then
-    P.cycles, P.hz = (P.hz or 1) * dur_ms / 1000, nil
+local function set_rate_unit(t, unit, dur_ms)
+  if unit == "hz" and not t.hz then
+    t.hz, t.cycles = (t.cycles or 1) * 1000 / dur_ms, nil
+  elseif unit == "cycles" and not t.cycles then
+    t.cycles, t.hz = (t.hz or 1) * dur_ms / 1000, nil
   end
 end
 
@@ -173,6 +211,105 @@ local function slider_val(label, tbl, key, kind, amp, quiet)
   end
   local max_c = P.bend_range_st * 100
   slider_dbl(label, tbl, key, amp and 0 or -max_c, max_c, "%.0f cents", quiet)
+end
+
+local function osc_controls(t, dur_ms)
+  choice_row("wave", WAVE_OPTS, t.wave, function(v) t.wave = v end)
+  choice_row("rate", RATE_OPTS, t.hz and "hz" or "cycles", function(u) set_rate_unit(t, u, dur_ms) end)
+  if t.hz then
+    slider_dbl("Frecuencia###rate_hz", t, "hz", 0.1, 30, "%.2f Hz")
+  else
+    t.cycles = t.cycles or 1
+    slider_dbl("Ciclos###rate_cy", t, "cycles", 0.25, 60, "%.2f")
+  end
+  slider_dbl("Fase###phase", t, "phase", 0, 1, "%.2f")
+  slider_dbl("Fade-in###fade", t, "fade_in", 0, 1, "%.2f")
+end
+
+local function stage_ms(st, dur_ms)
+  local a = math.max(0, st.amount or 0)
+  return (st.unit == "pct") and dur_ms * a / 100 or a
+end
+
+-- Completa lo que falta tras elegir otro sosten.
+local function ensure_hold()
+  local h = P.hold
+  for k, v in pairs(HOLD_EXTRAS[h.engine] or {}) do
+    if h[k] == nil and not (k == "hz" and h.cycles) then h[k] = v end
+  end
+  for _, kind in ipairs({ "cc", "pitchbend" }) do
+    local vals = P[kind]
+    if vals then
+      for _, k in ipairs(CcCurve.HOLD_KEYS[h.engine] or {}) do
+        if vals[k] == nil then vals[k] = HOLD_DEFAULTS[kind][k] end
+      end
+    end
+  end
+end
+
+-- Subida o bajada: unidad, duracion y forma de REAPER.
+local function stage_controls(id, label, st, with_prev, dur_ms)
+  reaper.ImGui_Text(ctx, label)
+  choice_row(id .. "_unit", UNIT_OPTS, st.unit or "ms", function(v)
+    local cur = stage_ms(st, dur_ms)
+    st.unit = v
+    st.amount = (v == "pct") and math.min(100, cur * 100 / dur_ms) or cur
+  end)
+  if st.unit == "pct" then
+    slider_dbl("Duracion###" .. id .. "_amt", st, "amount", 0, 100, "%.0f %%")
+  else
+    slider_dbl("Duracion###" .. id .. "_amt", st, "amount", 0, 2000, "%.0f ms")
+  end
+  combo(id .. "_shape", "Forma de REAPER", SHAPE_OPTS, st.shape or 2, function(v)
+    st.shape = v
+    changed_live()
+  end)
+  if with_prev then
+    local c, v = reaper.ImGui_Checkbox(ctx, "Desde el valor anterior###" .. id .. "_prev",
+      st.from_previous and true or false)
+    if c then
+      st.from_previous = v
+      changed_live()
+    end
+  end
+end
+
+local function draw_bend(dur_ms)
+  stage_controls("rise", "Subida", P.rise, true, dur_ms)
+
+  reaper.ImGui_Separator(ctx)
+  reaper.ImGui_Text(ctx, "Sosten")
+  choice_row("hold", HOLD_OPTS, P.hold.engine, function(v)
+    P.hold.engine = v
+    ensure_hold()
+  end)
+  local h = P.hold
+  if h.engine == "osc" then
+    local hold_ms = math.max(dur_ms - stage_ms(P.rise, dur_ms) - stage_ms(P.fall, dur_ms), dur_ms * 0.1)
+    osc_controls(h, hold_ms)
+  elseif h.engine == "swell" or h.engine == "ramp" then
+    combo("hold_shape", "Forma de REAPER", SHAPE_OPTS, h.shape or 2, function(v)
+      h.shape = v
+      changed_live()
+    end)
+    if h.engine == "swell" then
+      slider_dbl("Pico###peak", h, "peak", 0.01, 0.99, "%.2f")
+    end
+  end
+
+  reaper.ImGui_Separator(ctx)
+  stage_controls("fall", "Bajada", P.fall, false, dur_ms)
+end
+
+-- Campos de valores de la lane segun el motor (en bend, segun el sosten).
+local function value_fields()
+  if P.engine ~= "bend" then return VALUE_FIELDS[P.engine] or {} end
+  local fields = { { "base", "Base" } }
+  local flat = P.hold.engine == "flat"
+  for _, k in ipairs(CcCurve.HOLD_KEYS[P.hold.engine] or {}) do
+    fields[#fields + 1] = { k, (flat and k == "center") and "Nivel" or VALUE_LABELS[k], k == "depth" }
+  end
+  return fields
 end
 
 local function draw_preview(kind, dur_ms)
@@ -270,17 +407,10 @@ local function draw()
 
   reaper.ImGui_Separator(ctx)
   reaper.ImGui_Text(ctx, "Forma (" .. P.engine .. ")")
-  if P.engine == "osc" then
-    choice_row("wave", WAVE_OPTS, P.wave, function(v) P.wave = v end)
-    choice_row("rate", RATE_OPTS, P.hz and "hz" or "cycles", function(u) set_rate_unit(u, dur_ms) end)
-    if P.hz then
-      slider_dbl("Frecuencia###rate_hz", P, "hz", 0.1, 30, "%.2f Hz")
-    else
-      P.cycles = P.cycles or 1
-      slider_dbl("Ciclos###rate_cy", P, "cycles", 0.25, 60, "%.2f")
-    end
-    slider_dbl("Fase###phase", P, "phase", 0, 1, "%.2f")
-    slider_dbl("Fade-in###fade", P, "fade_in", 0, 1, "%.2f")
+  if P.engine == "bend" then
+    draw_bend(dur_ms)
+  elseif P.engine == "osc" then
+    osc_controls(P, dur_ms)
   else
     combo("shape", "Forma de REAPER", SHAPE_OPTS, P.shape or 1, function(v)
       P.shape = v
@@ -290,10 +420,12 @@ local function draw()
       slider_dbl("Pico###peak", P, "peak", 0.01, 0.99, "%.2f")
     end
   end
-  local ch, closed = reaper.ImGui_Checkbox(ctx, "Cerrar al valor base###close", P.close and true or false)
-  if ch then
-    P.close = closed
-    changed_live()
+  if P.engine ~= "bend" then
+    local ch, closed = reaper.ImGui_Checkbox(ctx, "Cerrar al valor base###close", P.close and true or false)
+    if ch then
+      P.close = closed
+      changed_live()
+    end
   end
 
   reaper.ImGui_Separator(ctx)
@@ -305,7 +437,7 @@ local function draw()
     reaper.ImGui_Text(ctx, "Valores (CC)")
   end
   if vals then
-    for _, f in ipairs(VALUE_FIELDS[P.engine] or {}) do
+    for _, f in ipairs(value_fields()) do
       slider_val(f[2] .. "###v_" .. f[1], vals, f[1], kind, f[3])
     end
     if P.engine == "ramp" and ButtonStyle.button(ctx, "Invertir###invert", "neutral", { pad = 8 }) then
