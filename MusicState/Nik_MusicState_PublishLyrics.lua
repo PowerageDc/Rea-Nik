@@ -23,18 +23,9 @@ local function round3(x)
   return math.floor(x * 1000 + 0.5) / 1000
 end
 
-local function fmtNumber(x)
-  return (string.format("%.3f", x):gsub(",", "."))
-end
-
-local function jsonString(s)
-  s = s:gsub('[%c"\\]', function(c)
-    if c == '"' then return '\\"' end
-    if c == "\\" then return "\\\\" end
-    return string.format("\\u%04x", c:byte())
-  end)
-  return '"' .. s .. '"'
-end
+local Json = dofile(script_dir .. "MusicStateJson_common_logic.lua")
+local fmtNumber = Json.fmtNumber
+local jsonString = Json.jsonString
 
 local findLyricsTrack = Lyrics.FindLyricsTrack
 
