@@ -461,7 +461,8 @@ duplicada en `Scripts/Rea-Nik/...`, separada de la que se edita en
 
 - Configs en código que ReaPack pisa en cada update: `MonitorMix_config.lua`
   (filtro de tracks), `MusicStateKeys_config.lua` (atajos del Helper, ver
-  `features/musicstate_keys.md`) y `ProjectFolder_config.lua`
+  `features/musicstate_keys.md`), `MusicStateRoles_config.lua` (catálogo de
+  roles, ver `features/musicstate_helper.md`) y `ProjectFolder_config.lua`
   (`render_default`) van en el `@provides` de su paquete, así que cualquier
   edición local en una PC de destino se pierde. Decidir si pasan a un
   archivo local aparte (estilo `config.local.js`, gitignoreado y fuera del
