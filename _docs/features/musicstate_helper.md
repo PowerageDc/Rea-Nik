@@ -336,6 +336,10 @@ y sin modificar el proyecto.
   en Lyrics, intervalos solapados en Cues). La lista de Armonía (agrupado con
   `CollapsingHeader`, copiar/pegar) queda fuera salvo que use alguna de estas
   piezas.
+- **Recarga al cambiar de pestaña de proyecto:** el Helper no recarga sus
+  datos al abrir una pestaña nueva sin guardar ni al cerrar la única pestaña;
+  cambiar entre pestañas sí funciona. Hipótesis sin medir: el puntero del
+  proyecto (`H.last_proj`) se reutiliza. Medir antes de tocar.
 - Calibración cosmética del highlight de fila activa (colores hardcodeados a
   ojo) y de que los widgets de la fila no tapen el highlight de fondo.
 - **Fuente centralizada del diccionario color/traducción de secciones**,

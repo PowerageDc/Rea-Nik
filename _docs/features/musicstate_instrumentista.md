@@ -63,10 +63,11 @@ FLIP de `01_CONVENCIONES.md`; anima solo `transform`/`opacity`):
 
 **Rol.** Vive en `localStorage` (`nikInstrumentistaRole`), por
 dispositivo (el eje es "de quién es este celular", no el proyecto, por eso
-no se usa `tab-ui-memory.js`). `"todos"` es válido siempre; sin rol se
-muestra `(sin rol)`. Para filtrar cues, `"todos"` o sin rol equivalen a no
-filtrar. No hay selector en la UI: se setea por consola con
-`nikInstrumentistaSetRole("...")`.
+no se usa `tab-ui-memory.js`). El valor es un id del catálogo de roles
+(`musicstate_data_model.md` §4.3), igual en todos los proyectos. `"todos"` es
+válido siempre; sin rol se muestra `(sin rol)`. Para filtrar cues, `"todos"`
+o sin rol equivalen a no filtrar: se ven las cues de todos los roles. No hay
+selector en la UI: se setea por consola con `nikInstrumentistaSetRole("...")`.
 
 **Landscape.** Activo por proporción de viewport
 (`@media (min-aspect-ratio: 1/1)`, no por `orientation`), solo CSS: mismo
@@ -150,7 +151,16 @@ wrapper). El contrato de las globales compartidas está en
 
 Ninguno bloqueante.
 
-- Selector de rol en la UI.
+- Selector de rol en la UI: hoy el rol se setea por consola y, sin rol, se
+  ven las cues de todos los roles. Pensado para poblarse desde
+  `project_roles` (ids del catálogo, estables entre proyectos) y filtrar con
+  la regla del Helper: con un rol elegido, una cue se ve si su `roles` lo
+  incluye o incluye `"todos"`. A definir: cómo rotular la opción sin filtro
+  (distinta de `"todos"`, que es un destinatario) y qué pasa con el rol
+  guardado si el proyecto abierto no lo tiene. Depende del refactor
+  responsivo de la UI, que puede cambiar el espacio de la banda de cue e
+  influir en qué pasa cuando se solapa una cue de `"todos"` con una de rol
+  asignado.
 - Extraer la tira de acordes (`nikInstrumentistaRenderChordStrip`,
   `ShiftChordSlots` y su estado) a `shared/`: la usaría el control remoto
   y, a futuro, la UI de cantante si el cantante también toca. A resolver:
