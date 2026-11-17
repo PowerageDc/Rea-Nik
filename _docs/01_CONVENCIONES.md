@@ -124,14 +124,15 @@ teclado del Helper, con los ids de binding como `<área>.<acción>`; ver
 `features/musicstate_keys.md`), `MusicStateRoles_config.lua` (catálogo de
 roles del proyecto y cuáles arrancan tildados; ver
 `features/musicstate_helper.md`), `FxWindow_config.lua` (posición y tamaño de
-la ventana flotante de cada VSTi; ver `features/fxwindow.md`) y
+la ventana flotante de cada VSTi; ver `features/fxwindow.md`),
 `MidiEdit_config.lua` (opciones de las acciones de edición MIDI sobre la
-selección y presets de las curvas de CC y pitch bend; ver 
-`features/midi_edit.md`). Y `SubtitleExport_config.lua` (perfiles de estilo, 
-efectos y formato de acordes del SRT de armonía; ver `features/subtitle_export.md`).
+selección; ver `features/midi_edit.md`) y `MidiGen_config.lua` (opciones y 
+presets de las curvas de CC y pitch bend; ver `features/midi_gen.md`). 
+Y `SubtitleExport_config.lua` (perfiles de estilo, efectos y formato de acordes
+del SRT de armonía; ver `features/subtitle_export.md`). 
 Y `VstiControl_<Vsti>_config.lua`, uno por VSTi (`VstiControl_ModoBass_config.lua`, 
-`VstiControl_AmpleGuitar_config.lua`: controles, octavas y rangos propios 
-de cada VSTi; ver `features/vsti_control.md`).
+`VstiControl_AmpleGuitar_config.lua`: controles, octavas y rangos propios de
+cada VSTi; ver `features/vsti_control.md`).
 
 ### Pendiente (no bloqueante)
 Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
@@ -189,7 +190,8 @@ C:\dev\Rea-Nik\
 ├── MusicState/ Helper ReaImGui (armonía, cues, roles) y publicación a ExtState
 ├── MonitorMix/ mezcla de monitoreo por músico (filtro de tracks, bus y sends de monitoreo)
 ├── MidiNav/ acciones de navegación en el MIDI Editor (cursor, gaps, CC, selección de notas y de CC, foco entre ventanas)
-├── MidiEdit/ acciones de edición MIDI sobre la selección (alinear notas, mover CC al cursor, rasguido de acordes) y curvas de CC y pitch bend
+├── MidiEdit/ acciones de edición MIDI sobre la selección (alinear notas, mover CC al cursor, rasguido de acordes)
+├── MidiGen/ generación de eventos MIDI nuevos: curvas de CC y pitch bend
 ├── RenderWorkflow/ generación de regiones + batch render
 ├── TempoTools/ utilidades de tempo/compás
 ├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List y juntar en Media\Samples los archivos que usan los FX
@@ -220,7 +222,7 @@ uno solo (`ImGuiInputCommit_common_logic.lua`, patrones de input;
 REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un modal de 
 confirmación: patrones de ReaImGui, hoy solo en el Helper de `MusicState/`; 
 `ImGuiButtonStyle_common_logic.lua`, estilo semántico de botones por tipo, hoy en 
-las tabs del Helper y en los paneles de Strum y de curvas de `MidiEdit/`;
+las tabs del Helper y en los paneles de Strum (`MidiEdit/`) y de curvas (`MidiGen/`);
 `ImGuiEditorFocus_common_logic.lua`, devolución del foco a un MIDI Editor tras
 interactuar con un panel; `MusicTranspose_common_logic.lua`, port a Lua de 
 `nikTranspose`: transposición de acordes y tonalidad, hoy solo en `SubtitleExport/`; 

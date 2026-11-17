@@ -3,7 +3,8 @@
 Acciones one-shot para el MIDI Editor, pensadas para asignar a atajos de
 teclado. Sin UI. Todo el comportamiento se ajusta en `MidiNav_config.lua`
 (config en código, ver `01_CONVENCIONES.md`). Las acciones que modifican
-notas o eventos viven en `MidiEdit/` (ver `features/midi_edit.md`); MidiNav
+notas o eventos viven en `MidiEdit/` (ver `features/midi_edit.md`), las que
+crean eventos nuevos en `MidiGen/` (ver `features/midi_gen.md`); MidiNav
 solo mueve el cursor y cambia la selección.
 
 ## 1. Scripts
@@ -174,7 +175,7 @@ notas muteadas y tolerancia de acorde). Los CC no pasan por `notes`.
 - **Undo:** mover el cursor solo genera punto si está activada en las
   preferencias de undo la opción de incluir la posición del cursor; igual se
   envuelve en un bloque para consolidarlo en ambos casos.
-- **Dominios planos por propósito** (`MidiNav/`, `MidiEdit/`, y a futuro `MidiGen/` y
+- **Dominios planos por propósito** (`MidiNav/`, `MidiEdit/`, `MidiGen/` y, a futuro,
   `ScorePrep/`) en vez de una carpeta `Midi/` única: permite filtrar el Action
   List por prefijo, publicar por separado y mantener un config por dominio.
 - **Script propio para el foco, no `_S&M_WNFOCUS9`:** la acción de SWS (Cycle
@@ -210,13 +211,12 @@ notas muteadas y tolerancia de acorde). Los CC no pasan por `notes`.
 
 ## 5. Pendientes
 
-- `MidiGen/` (glissandos) y `ScorePrep/` (limpieza del duplicado de
-  take pre-Dorico): dominios planeados, sin código todavía. Las curvas CC
-  viven en `MidiEdit/` (ver `features/midi_edit.md`). La edición para
-  Dorico (solapes, markers y text events) se evalúa en `MidiEdit/`
-  (ver `features/midi_edit.md`). Cuando haya un segundo consumidor, extraer
-  los helpers de take (enumerar notas, PPQ y tiempo, selección) a
-  `_Shared/MidiTake_common_logic.lua`.
+- `ScorePrep/` (limpieza del duplicado de take pre-Dorico): dominio
+  planeado, sin código todavía. `MidiGen/` genera eventos nuevos (ver
+  `features/midi_gen.md`). La edición para Dorico (solapes, markers y
+  text events) se evalúa en `MidiEdit/` (ver `features/midi_edit.md`). 
+  Cuando haya un segundo consumidor, extraer los helpers de take (enumerar
+  notas, PPQ y tiempo, selección) a `_Shared/MidiTake_common_logic.lua`.
 - Lanes de program change y channel pressure en `lane_mode = "visible"`: los
   códigos del chunk no están verificados y hoy se ignoran.
 - Ciclar la lane activa por código: no hay API de escritura. Alternativa

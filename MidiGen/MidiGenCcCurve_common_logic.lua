@@ -1,4 +1,4 @@
--- MidiEditCcCurve_common_logic.lua
+-- MidiGenCcCurve_common_logic.lua
 -- Curvas de CC y pitch bend sobre un take. Las formas son funciones puras que
 -- devuelven puntos (t de 0 a 1, valor nativo de la lane); apply() los pasa al
 -- take. Patron dofile + M={}.
@@ -604,7 +604,7 @@ local function kind_text(t)
   return "{ " .. table.concat(out, ", ") .. " }"
 end
 
--- Texto Lua del preset vigente, para pegar en MidiEdit_config.lua.
+-- Texto Lua del preset vigente, para pegar en MidiGen_config.lua.
 function M.preset_text(p)
   local head = { 'engine = "' .. p.engine .. '"' }
   if p.wave then head[#head + 1] = 'wave = "' .. p.wave .. '"' end
@@ -630,7 +630,7 @@ function M.preset_text(p)
   return table.concat(lines, "\n")
 end
 
-local STATE_SEC, STATE_KEY = "Nik_MidiEdit_CcCurve", "state_v2"
+local STATE_SEC, STATE_KEY = "Nik_MidiGen_CcCurve", "state_v2"
 local SCALARS = { "peak", "shape", "tension", "phase", "fade_in", "bend_range_st" }
 local RATES = { "hz", "cycles" }
 -- Claves de valores por lane que puede necesitar el sosten de un bend, y claves

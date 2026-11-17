@@ -3,7 +3,7 @@
 Catálogo técnico de "cómo hacer X sin el bug conocido Y" en ReaImGui.
 No es documentación de una feature: aplica a cualquier panel nativo del
 proyecto, presente o futuro (hoy: `Nik_MusicState_Helper.lua` y la UI de
-`VstiControl/` y los paneles de `MidiEdit/`; también relevante
+`VstiControl/` y los paneles de `MidiEdit/` y `MidiGen/`; también relevante
 para `ReaPitchBus/Nik_ReaPitchBus_Knob.lua` y cualquier panel nuevo).
 Primer caso donde se resolvió cada patrón: la tab Armonía del MusicState
 Helper (`features/musicstate_helper.md`).
@@ -411,8 +411,8 @@ ButtonStyle.pop(ctx)
 
 ## 9. Paneles con vista previa: pestañas, sliders y estado derivado
 
-Primer caso: `MidiEdit/Nik_MidiEdit_CcCurvePanel.lua` (ver
-`features/midi_edit.md`).
+Primer caso: `MidiGen/Nik_MidiGen_CcCurvePanel.lua` (ver
+`features/midi_gen.md`).
 
 - **Estado derivado: calcularlo después del widget que lo cambia.** Un valor
   derivado de otro (`chan_fixed = type(P.channel) == 'number'`) que se calcula

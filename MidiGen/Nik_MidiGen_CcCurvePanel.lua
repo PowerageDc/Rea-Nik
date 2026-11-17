@@ -1,10 +1,10 @@
 local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
-local Config = dofile(script_dir .. "MidiEdit_config.lua")
-local CcCurve = dofile(script_dir .. "MidiEditCcCurve_common_logic.lua")
+local Config = dofile(script_dir .. "MidiGen_config.lua")
+local CcCurve = dofile(script_dir .. "MidiGenCcCurve_common_logic.lua")
 local ButtonStyle = dofile(script_dir .. "../_Shared/ImGuiButtonStyle_common_logic.lua")
 local EditorFocus = dofile(script_dir .. "../_Shared/ImGuiEditorFocus_common_logic.lua")
 
-local TITLE = "MidiEdit Curva CC"
+local TITLE = "MidiGen Curva CC"
 local RETURN_FOCUS_TO_EDITOR = true
 local PREVIEW_MS = 2000
 local PREVIEW_H = 110
@@ -13,7 +13,7 @@ local cfg = Config.cc_curve
 
 local P, err = CcCurve.load(Config)
 if not P then
-  reaper.ShowConsoleMsg("[MidiEdit CcCurve] " .. err .. "\n")
+  reaper.ShowConsoleMsg("[MidiGen CcCurve] " .. err .. "\n")
   return
 end
 P.bend_range_st = P.bend_range_st or 2
@@ -511,7 +511,7 @@ local function draw()
   reaper.ImGui_SameLine(ctx)
   if ButtonStyle.button(ctx, "Copiar preset###copy", "neutral", { pad = 8, h = 28 }) then
     reaper.ImGui_SetClipboardText(ctx, CcCurve.preset_text(P))
-    status = "Preset copiado: pegalo en MidiEdit_config.lua"
+    status = "Preset copiado: pegalo en MidiGen_config.lua"
   end
   reaper.ImGui_SameLine(ctx)
   local lv_changed, lv = reaper.ImGui_Checkbox(ctx, "En vivo###live", live)
