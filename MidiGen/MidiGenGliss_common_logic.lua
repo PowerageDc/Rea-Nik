@@ -54,10 +54,10 @@ local function between(set, lo, hi)
   return out
 end
 
--- Hasta count pitches del conjunto a partir de from (excluido) en la
--- direccion dir (1 o -1), del mas cercano al mas lejano.
-local function walk(set, from, dir, count)
-  local out, p = {}, from
+-- Hasta count pitches del conjunto a partir de from en la direccion dir (1 o
+-- -1), del mas cercano al mas lejano. from entra solo con include_from.
+local function walk(set, from, dir, count, include_from)
+  local out, p = {}, include_from and from - dir or from
   while #out < count do
     p = p + dir
     if p < 0 or p > 127 then break end
@@ -81,36 +81,69 @@ function M.resolve(config, preset_name)
     velocity = copy(preset.velocity),
     channel = cfg.channel,
     single = copy(cfg.single),
+    range = copy(cfg.range),
+    mode = cfg.mode,
     undo = config.undo.enabled,
   }
 end
 
--- Origen del glissando segun la seleccion. Con dos o mas notas, rellena el
--- hueco entre la primera y la ultima (por inicio). Con una, esa nota es el
--- destino y el glissando llega a ella desde single.count notas del conjunto.
--- gap indica que las generadas quedan entre dos notas existentes.
+-- Origen del glissando segun la time selection y las notas seleccionadas.
+-- Con time selection, ella fija el tiempo (de su inicio a su final) y las
+-- notas los pitches (primera y ultima por inicio; una sola nota es el
+-- destino; sin notas, range del config). Sin time selection: dos o mas
+-- notas rellenan el hueco entre la primera y la ultima; una nota es el
+-- destino y el glissando llega a ella (desde single.from_pitch, o desde
+-- single.count notas del conjunto). gap indica que las generadas quedan
+-- entre dos notas existentes.
 local function plan_source(take, p, notes)
+  local function ppq_of(t) return floor_ppq(reaper.MIDI_GetPPQPosFromProjTime(take, t)) end
+  local function proj_of(ppq) return reaper.MIDI_GetProjTimeFromPPQPos(take, ppq) end
+
   local dest = notes[#notes]
-  local src = {
-    dest = dest,
-    ppq_end = dest.s,
-    t1 = reaper.MIDI_GetProjTimeFromPPQPos(take, dest.s),
-  }
+  local away = (p.single.direction == "down") and 1 or -1
+  local ts, te = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
+
+  if te > ts then
+    local src = { t0 = ts, t1 = te, ppq_end = ppq_of(te), label = "time selection" }
+    if #notes >= 2 or not dest then
+      local from = (#notes >= 2) and notes[1].pitch or p.range.from_pitch
+      local to = (#notes >= 2) and dest.pitch or p.range.to_pitch
+      src.pitches = between(p.set, math.min(from, to) - 1, math.max(from, to) + 1)
+      if from > to then reverse(src.pitches) end
+    else
+      src.pitches = walk(p.set, dest.pitch, away, p.single.count, true)
+      reverse(src.pitches)
+    end
+    src.dest = dest or { s = ppq_of(ts), vel = p.range.velocity }
+    return src
+  end
+
+  if not dest then
+    return nil, "Selecciona el destino (una nota), origen y destino (dos o mas), o arma una time selection."
+  end
+  local src = { dest = dest, ppq_end = dest.s, t1 = proj_of(dest.s) }
 
   if #notes >= 2 then
     local origin = notes[1]
     src.gap = true
     src.ppq_start = origin.s
-    src.t0 = reaper.MIDI_GetProjTimeFromPPQPos(take, origin.s)
+    src.t0 = proj_of(origin.s)
     src.pitches = between(p.set, math.min(origin.pitch, dest.pitch), math.max(origin.pitch, dest.pitch))
     if origin.pitch > dest.pitch then reverse(src.pitches) end
     src.label = "hueco entre origen y destino"
     return src
   end
 
-  local away = (p.single.direction == "down") and 1 or -1
-  src.pitches = walk(p.set, dest.pitch, away, p.single.count)
-  reverse(src.pitches)
+  local from = p.single.from_pitch
+  if from and from < dest.pitch then
+    src.pitches = between(p.set, from - 1, dest.pitch)
+  elseif from then
+    src.pitches = between(p.set, dest.pitch, from + 1)
+    reverse(src.pitches)
+  else
+    src.pitches = walk(p.set, dest.pitch, away, p.single.count)
+    reverse(src.pitches)
+  end
   local n = #src.pitches
   local ms = (p.timing.mode == "per_note") and n * p.timing.note_ms or p.timing.total_ms
   src.t0 = src.t1 - ms / 1000
@@ -161,6 +194,15 @@ local function build(take, p, src)
   return events, src
 end
 
+-- Borra las notas no seleccionadas del canal que arrancan en [lo, hi).
+local function delete_notes(take, chan, lo, hi)
+  local _, count = reaper.MIDI_CountEvts(take)
+  for i = count - 1, 0, -1 do
+    local _, sel, _, s, _, ch = reaper.MIDI_GetNote(take, i)
+    if not sel and ch == chan and s >= lo and s < hi then reaper.MIDI_DeleteNote(take, i) end
+  end
+end
+
 -- Escribe el glissando en el take del editor. Devuelve la cantidad de notas
 -- y los datos de lo escrito; sin glissando posible, nil y el motivo.
 function M.apply(editor, p)
@@ -169,17 +211,16 @@ function M.apply(editor, p)
     return nil, "El MIDI Editor no tiene un take valido."
   end
   local notes = selected_notes(take)
-  if #notes == 0 then
-    return nil, "Selecciona el destino (una nota) o origen y destino (dos o mas)."
-  end
-
-  local events, src = build(take, p, plan_source(take, p, notes))
-  if not events then return nil, src end
+  local src, serr = plan_source(take, p, notes)
+  if not src then return nil, serr end
+  local events, berr = build(take, p, src)
+  if not events then return nil, berr end
 
   local chan_raw = reaper.MIDIEditor_GetSetting_int(editor, "default_note_chan")
   local chan = (p.channel == "active") and chan_raw or (p.channel - 1)
 
   if p.undo then reaper.Undo_BeginBlock() end
+  if p.mode == "replace" then delete_notes(take, chan, events[1].s, src.ppq_end) end
   for _, ev in ipairs(events) do
     reaper.MIDI_InsertNote(take, false, false, ev.s, ev.e, chan, ev.pitch, ev.vel, true)
   end
@@ -204,7 +245,7 @@ function M.run(config)
     return
   end
   local n, info = M.apply(editor, p)
-  if not n then
+  if not n or type(info) ~= "table" then
     warn(tostring(info))
     return
   end

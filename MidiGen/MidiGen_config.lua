@@ -96,6 +96,11 @@ return {
         channel = "active",
         verbose = true,
 
+        -- mode: "merge" conserva las notas existentes; "replace" borra las
+        -- notas no seleccionadas del canal que arrancan entre la primera nota
+        -- generada y el final (el destino queda)
+        mode = "merge",
+
         -- pitch classes de cada conjunto (0 = Do)
         sets = {
             white = { 0, 2, 4, 5, 7, 9, 11 },
@@ -103,8 +108,13 @@ return {
         },
 
         -- una sola nota seleccionada: es el destino; el glissando llega a ella
-        -- desde count notas del conjunto, subiendo (up) o bajando (down)
+        -- desde count notas del conjunto, subiendo (up) o bajando (down). Con
+        -- from_pitch (opcional, pitch MIDI) el origen es ese pitch y count no se usa
         single = { count = 12, direction = "up" },
+
+        -- con time selection y sin notas seleccionadas: de from_pitch a to_pitch
+        -- (ambos incluidos si pertenecen al conjunto), con esa velocity
+        range = { from_pitch = 48, to_pitch = 84, velocity = 100 },
 
         -- contact: teclas apretadas a la vez (1 = cada nota dura hasta la
         -- siguiente; mas = solape de palma). timing.mode: "total" (total_ms) o
