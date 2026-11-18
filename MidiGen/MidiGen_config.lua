@@ -90,4 +90,42 @@ return {
             },
         },
     },
+
+    gliss = {
+        preset = "Pulgar",
+        channel = "active",
+        verbose = true,
+
+        -- pitch classes de cada conjunto (0 = Do)
+        sets = {
+            white = { 0, 2, 4, 5, 7, 9, 11 },
+            black = { 1, 3, 6, 8, 10 },
+        },
+
+        -- una sola nota seleccionada: es el destino; el glissando llega a ella
+        -- desde count notas del conjunto, subiendo (up) o bajando (down)
+        single = { count = 12, direction = "up" },
+
+        -- contact: teclas apretadas a la vez (1 = cada nota dura hasta la
+        -- siguiente; mas = solape de palma). timing.mode: "total" (total_ms) o
+        -- "per_note" (note_ms); curve < 1 acelera, > 1 frena. velocity: factor
+        -- sobre la velocity del destino, de la primera nota a la ultima.
+        presets = {
+            ["Pulgar"] = {
+                set = "white", contact = 1,
+                timing = { mode = "total", total_ms = 300, note_ms = 25, curve = 0.9, jitter_ms = 0 },
+                velocity = { from = 0.85, to = 1.0, curve = 1.0, jitter = 3 },
+            },
+            ["Palma"] = {
+                set = "white", contact = 3,
+                timing = { mode = "total", total_ms = 140, note_ms = 12, curve = 1.0, jitter_ms = 0 },
+                velocity = { from = 0.9, to = 1.0, curve = 1.0, jitter = 2 },
+            },
+            ["Negras"] = {
+                set = "black", contact = 1,
+                timing = { mode = "total", total_ms = 350, note_ms = 40, curve = 0.9, jitter_ms = 0 },
+                velocity = { from = 0.85, to = 1.0, curve = 1.0, jitter = 3 },
+            },
+        },
+    },
 }
