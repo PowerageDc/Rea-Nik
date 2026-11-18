@@ -71,11 +71,11 @@ function M.resolve(config, preset_name)
   local cfg = config.gliss
   local preset = cfg.presets[preset_name]
   if not preset then return nil, "preset inexistente: " .. tostring(preset_name) end
-  local pcs = cfg.sets[preset.set]
-  if not pcs then return nil, "conjunto inexistente: " .. tostring(preset.set) end
+  if not cfg.sets[preset.set] then return nil, "conjunto inexistente: " .. tostring(preset.set) end
   return {
     name = preset_name,
-    set = pitch_set(pcs),
+    set_name = preset.set,
+    sets = cfg.sets,
     contact = math.max(1, math.floor(preset.contact or 1)),
     timing = copy(preset.timing),
     velocity = copy(preset.velocity),
@@ -95,13 +95,12 @@ end
 -- destino y el glissando llega a ella (desde single.from_pitch, o desde
 -- single.count notas del conjunto). gap indica que las generadas quedan
 -- entre dos notas existentes.
-local function plan_source(take, p, notes)
+local function plan_source(take, p, notes, ts, te)
   local function ppq_of(t) return floor_ppq(reaper.MIDI_GetPPQPosFromProjTime(take, t)) end
   local function proj_of(ppq) return reaper.MIDI_GetProjTimeFromPPQPos(take, ppq) end
 
   local dest = notes[#notes]
   local away = (p.single.direction == "down") and 1 or -1
-  local ts, te = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
 
   if te > ts then
     local src = { t0 = ts, t1 = te, ppq_end = ppq_of(te), label = "time selection" }
@@ -194,14 +193,77 @@ local function build(take, p, src)
   return events, src
 end
 
--- Borra las notas no seleccionadas del canal que arrancan en [lo, hi).
-local function delete_notes(take, chan, lo, hi)
+-- Borra las notas no seleccionadas del canal que arrancan en [lo, hi), salvo
+-- las de keep (origen y destino del glissando). Devuelve las borradas.
+local function delete_notes(take, chan, lo, hi, keep)
+  local protected = {}
+  for _, n in ipairs(keep) do
+    protected[string.format("%d:%d:%d", n.pitch, n.chan, floor_ppq(n.s))] = true
+  end
+  local removed = {}
   local _, count = reaper.MIDI_CountEvts(take)
   for i = count - 1, 0, -1 do
-    local _, sel, _, s, _, ch = reaper.MIDI_GetNote(take, i)
-    if not sel and ch == chan and s >= lo and s < hi then reaper.MIDI_DeleteNote(take, i) end
+    local _, sel, muted, s, e, ch, pitch, vel = reaper.MIDI_GetNote(take, i)
+    local key = string.format("%d:%d:%d", pitch, ch, floor_ppq(s))
+    if not sel and not protected[key] and ch == chan and s >= lo and s < hi then
+      removed[#removed + 1] = { muted = muted, s = s, e = e, chan = ch, pitch = pitch, vel = vel }
+      reaper.MIDI_DeleteNote(take, i)
+    end
+  end
+  return removed
+end
+
+-- Escribe las notas del glissando (con replace, borra antes las del rango).
+-- Devuelve las notas borradas.
+local function write(take, p, events, src, chan, input)
+  local removed = {}
+  if p.mode == "replace" then
+    removed = delete_notes(take, chan, events[1].s, src.ppq_end, input.notes)
+  end
+  for _, ev in ipairs(events) do
+    reaper.MIDI_InsertNote(take, false, false, ev.s, ev.e, chan, ev.pitch, ev.vel, true)
+  end
+  reaper.MIDI_Sort(take)
+  return removed
+end
+
+local function restore_notes(take, notes)
+  for _, n in ipairs(notes) do
+    reaper.MIDI_InsertNote(take, false, n.muted, n.s, n.e, n.chan, n.pitch, n.vel, true)
   end
 end
+
+local function note_key(pitch, chan, s, e, vel)
+  return string.format("%d:%d:%d:%d:%d", pitch, chan, floor_ppq(s), floor_ppq(e), vel)
+end
+
+-- Borra del take las notas que escribio la ultima aplicacion.
+local function remove_written(take, s)
+  local wanted = {}
+  for _, w in ipairs(s.written) do
+    local key = note_key(w.pitch, s.chan, w.s, w.e, w.vel)
+    wanted[key] = (wanted[key] or 0) + 1
+  end
+  local _, count = reaper.MIDI_CountEvts(take)
+  for i = count - 1, 0, -1 do
+    local _, _, _, st, en, ch, pitch, vel = reaper.MIDI_GetNote(take, i)
+    local key = note_key(pitch, ch, st, en, vel)
+    if (wanted[key] or 0) > 0 then
+      wanted[key] = wanted[key] - 1
+      reaper.MIDI_DeleteNote(take, i)
+    end
+  end
+end
+
+local function take_hash(take)
+  local _, h = reaper.MIDI_GetHash(take, false, "")
+  return h
+end
+
+-- Ultimo glissando aplicado: take, hash del take completo, entrada (notas de
+-- origen y destino, time selection), canal, notas escritas y notas borradas.
+-- Permite rehacerlo desde el original.
+local session
 
 -- Escribe el glissando en el take del editor. Devuelve la cantidad de notas
 -- y los datos de lo escrito; sin glissando posible, nil y el motivo.
@@ -210,36 +272,166 @@ function M.apply(editor, p)
   if not take or not reaper.ValidatePtr(take, "MediaItem_Take*") then
     return nil, "El MIDI Editor no tiene un take valido."
   end
-  local notes = selected_notes(take)
-  local src, serr = plan_source(take, p, notes)
-  if not src then return nil, serr end
-  local events, berr = build(take, p, src)
-  if not events then return nil, berr end
+  local input = M.read_input(take)
+  local events, src = M.plan(take, p, input)
+  if not events or type(src) ~= "table" then return nil, tostring(src) end
 
   local chan_raw = reaper.MIDIEditor_GetSetting_int(editor, "default_note_chan")
   local chan = (p.channel == "active") and chan_raw or (p.channel - 1)
 
   if p.undo then reaper.Undo_BeginBlock() end
-  if p.mode == "replace" then delete_notes(take, chan, events[1].s, src.ppq_end) end
-  for _, ev in ipairs(events) do
-    reaper.MIDI_InsertNote(take, false, false, ev.s, ev.e, chan, ev.pitch, ev.vel, true)
-  end
-  reaper.MIDI_Sort(take)
+  local removed = write(take, p, events, src, chan, input)
   if p.undo then reaper.Undo_EndBlock("Generate glissando (" .. p.name .. ")", -1) end
 
+  session = {
+    take = take, hash = take_hash(take), input = input, chan = chan,
+    written = events, removed = removed,
+  }
   return #events, { label = src.label, chan = chan, chan_raw = chan_raw }
+end
+
+-- Notas seleccionadas y time selection vigentes: lo que define el glissando.
+function M.read_input(take)
+  local ts, te = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
+  return { notes = selected_notes(take), ts = ts, te = te }
+end
+
+-- Notas que escribiria el glissando para esa entrada, sin tocar el take.
+-- Devuelve las notas y los datos del origen; sin glissando posible, nil y el
+-- motivo. El conjunto de teclas se deriva del nombre vigente.
+function M.plan(take, p, input)
+  local view = setmetatable({ set = pitch_set(p.sets[p.set_name]) }, { __index = p })
+  local src, err = plan_source(take, view, input.notes, input.ts, input.te)
+  if not src then return nil, err end
+  return build(take, view, src)
+end
+
+-- true si el take no cambio desde el ultimo glissando aplicado.
+function M.can_rerun(take)
+  return session ~= nil and session.take == take and take_hash(take) == session.hash
+end
+
+-- Rehace el ultimo glissando con otros params, sobre el mismo origen y canal,
+-- partiendo del take original (borra lo escrito y restaura lo borrado).
+-- Devuelve la cantidad de notas; nil y el motivo si no hay sesion valida.
+function M.rerun(take, p)
+  if not M.can_rerun(take) then return nil, "sin sesion" end
+  local s = session
+  local events, src = M.plan(take, p, s.input)
+  if not events then return nil, src end
+
+  if p.undo then reaper.Undo_BeginBlock() end
+  remove_written(take, s)
+  restore_notes(take, s.removed)
+  reaper.MIDI_Sort(take)
+  local removed = write(take, p, events, src, s.chan, s.input)
+  if p.undo then reaper.Undo_EndBlock("Generate glissando (" .. p.name .. ")", -1) end
+
+  s.written, s.removed, s.hash = events, removed, take_hash(take)
+  return #events
+end
+
+local function num(v) return string.format("%.4g", v) end
+
+local function fields(t, keys)
+  local out = {}
+  for _, k in ipairs(keys) do
+    if t[k] ~= nil then out[#out + 1] = k .. " = " .. num(t[k]) end
+  end
+  return table.concat(out, ", ")
+end
+
+-- Texto Lua del preset vigente, para pegar en MidiGen_config.lua.
+function M.preset_text(p)
+  return table.concat({
+    "-- en gliss.presets:",
+    '["Custom"] = {',
+    string.format('    set = "%s", contact = %d,', p.set_name, p.contact),
+    string.format('    timing = { mode = "%s", %s },', p.timing.mode,
+      fields(p.timing, { "total_ms", "note_ms", "curve", "jitter_ms" })),
+    "    velocity = { " .. fields(p.velocity, { "from", "to", "curve", "jitter" }) .. " },",
+    "},",
+  }, "\n")
+end
+
+local STATE_SEC, STATE_KEY = "Nik_MidiGen_Gliss", "state"
+local NUMERIC = {
+  ["t.total_ms"] = { "timing", "total_ms" },
+  ["t.note_ms"] = { "timing", "note_ms" },
+  ["t.curve"] = { "timing", "curve" },
+  ["t.jitter_ms"] = { "timing", "jitter_ms" },
+  ["v.from"] = { "velocity", "from" },
+  ["v.to"] = { "velocity", "to" },
+  ["v.curve"] = { "velocity", "curve" },
+  ["v.jitter"] = { "velocity", "jitter" },
+  ["s.count"] = { "single", "count" },
+  ["r.from_pitch"] = { "range", "from_pitch" },
+  ["r.to_pitch"] = { "range", "to_pitch" },
+  ["r.velocity"] = { "range", "velocity" },
+}
+
+-- Guarda los params vigentes (persistente entre sesiones).
+function M.save(p)
+  local parts = {
+    "name=" .. p.name,
+    "set=" .. p.set_name,
+    "contact=" .. p.contact,
+    "tmode=" .. p.timing.mode,
+    "sdir=" .. p.single.direction,
+    "mode=" .. p.mode,
+    "channel=" .. tostring(p.channel),
+    "s.from_pitch=" .. (p.single.from_pitch and tostring(p.single.from_pitch) or ""),
+  }
+  for key, ref in pairs(NUMERIC) do
+    local v = p[ref[1]][ref[2]]
+    if v ~= nil then parts[#parts + 1] = key .. "=" .. tostring(v) end
+  end
+  reaper.SetExtState(STATE_SEC, STATE_KEY, table.concat(parts, "|"), true)
+end
+
+-- Params guardados sobre la base del preset guardado; sin estado valido, el
+-- preset por defecto del config.
+function M.load(config)
+  local cfg = config.gliss
+  local saved = {}
+  for k, v in reaper.GetExtState(STATE_SEC, STATE_KEY):gmatch("([%w_%.]+)=([^|]*)") do
+    saved[k] = v
+  end
+  local p, err = M.resolve(config, saved.name)
+  if not p then p, err = M.resolve(config, cfg.preset) end
+  if not p then return nil, err end
+
+  if cfg.sets[saved.set] then p.set_name = saved.set end
+  local contact = tonumber(saved.contact)
+  if contact and contact >= 1 then p.contact = math.floor(contact) end
+  if saved.tmode == "total" or saved.tmode == "per_note" then p.timing.mode = saved.tmode end
+  if saved.sdir == "up" or saved.sdir == "down" then p.single.direction = saved.sdir end
+  if saved.mode == "merge" or saved.mode == "replace" then p.mode = saved.mode end
+  local ch = tonumber(saved.channel)
+  if saved.channel == "active" then
+    p.channel = "active"
+  elseif ch and ch >= 1 and ch <= 16 then
+    p.channel = math.floor(ch)
+  end
+  if saved["s.from_pitch"] ~= nil then p.single.from_pitch = tonumber(saved["s.from_pitch"]) end
+  for key, ref in pairs(NUMERIC) do
+    local v = tonumber(saved[key])
+    if v then p[ref[1]][ref[2]] = v end
+  end
+  return p
 end
 
 local function warn(msg)
   reaper.ShowMessageBox(msg, "Glissando", 0)
 end
 
--- Aplica el preset por defecto del config al editor activo.
+-- Aplica el ultimo estado guardado (o el preset por defecto del config) al
+-- editor activo.
 function M.run(config)
   local editor = reaper.MIDIEditor_GetActive()
   if not editor then return end
 
-  local p, err = M.resolve(config, config.gliss.preset)
+  local p, err = M.load(config)
   if not p then
     warn(err)
     return
