@@ -50,4 +50,22 @@ function M.clear_taps()
   return #ids
 end
 
+-- Desplaza todos los taps por delta segundos. Devuelve cuántos movió.
+function M.shift_taps(delta)
+  local found = {}
+  local i = 0
+  while true do
+    local ret, is_region, pos, _, name, idx, color = reaper.EnumProjectMarkers3(0, i)
+    if ret == 0 then break end
+    if not is_region and M.is_tap_name(name) then
+      found[#found + 1] = { idx = idx, pos = pos, name = name, color = color }
+    end
+    i = i + 1
+  end
+  for _, t in ipairs(found) do
+    reaper.SetProjectMarker3(0, t.idx, false, t.pos + delta, 0, t.name, t.color)
+  end
+  return #found
+end
+
 return M

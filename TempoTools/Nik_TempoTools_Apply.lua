@@ -1,0 +1,92 @@
+local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
+local cfg = dofile(script_dir .. "TempoTools_config.lua")
+local Base = dofile(script_dir .. "TempoTools_common_logic.lua")
+local Read = dofile(script_dir .. "TempoTapRead_common_logic.lua")
+local Plan = dofile(script_dir .. "TempoTapPlan_common_logic.lua")
+local Items = dofile(script_dir .. "TempoTapItems_common_logic.lua")
+
+local TITLE = "Tempo taps"
+
+local function show(text, kind)
+  return reaper.ShowMessageBox(text, TITLE, kind or 0)
+end
+
+local function warnings_text(list)
+  local lines = {}
+  for _, w in ipairs(list) do
+    lines[#lines + 1] = "- " .. (type(w) == "table" and w.text or w)
+  end
+  return table.concat(lines, "\n")
+end
+
+local coll = Items.collect(cfg)
+local measures = Read.group(Read.read_taps())
+local proj_num, proj_den, proj_bpm = reaper.TimeMap_GetTimeSigAtTime(0, 0)
+
+local function build(preroll_bars)
+  return Plan.build(measures, {
+    proj_num = proj_num,
+    proj_den = proj_den,
+    proj_bpm = proj_bpm,
+    preroll_bars = preroll_bars,
+  })
+end
+
+local suggested = cfg.preroll_bars_default
+if not coll.fresh then
+  local detected = build(nil)
+  if detected then suggested = detected.preroll_bars end
+end
+
+local ok, input = reaper.GetUserInputs(TITLE, 1, "Compases de pre-roll:", tostring(suggested))
+if not ok then return end
+local n_bars = math.floor(tonumber(input) or 0)
+if n_bars < 1 or n_bars > 8 then
+  show("Cantidad de compases no válida: " .. input)
+  return
+end
+
+local plan, plan_warnings = build(n_bars)
+if not plan then
+  show("No se pudo calcular el plan:\n" .. warnings_text(plan_warnings))
+  return
+end
+
+local ev = Items.evaluate(coll, plan)
+if ev.blocking then
+  show("No se aplica nada:\n" .. warnings_text(ev.warnings))
+  return
+end
+
+local lines = {
+  string.format("Pre-roll: %d compases de %d/%d a %.2f bpm",
+    plan.preroll_bars, plan.init.num, plan.init.den, plan.init.bpm),
+  string.format("Desplazamiento: %+.3f s", plan.delta),
+  string.format("Items de stems a mover: %d", #ev.stems),
+  string.format("Items del count-in a pasar a beats: %d", ev.to_convert or 0),
+}
+if ev.click then
+  lines[#lines + 1] = string.format("Click: largo %.3f -> %.3f s", ev.click.len, ev.click.new_len)
+end
+
+local all = {}
+for _, w in ipairs(plan_warnings) do all[#all + 1] = w end
+for _, w in ipairs(ev.warnings) do all[#all + 1] = w end
+local text = table.concat(lines, "\n")
+if #all > 0 then
+  text = text .. "\n\nAvisos:\n" .. warnings_text(all)
+end
+
+if show(text .. "\n\n¿Aplicar?", 1) ~= 1 then return end
+
+reaper.Undo_BeginBlock2(0)
+reaper.PreventUIRefresh(1)
+local converted = Items.apply(coll, plan)
+local moved_taps = Base.shift_taps(plan.delta)
+reaper.PreventUIRefresh(-1)
+reaper.UpdateArrange()
+reaper.Undo_EndBlock2(0, "Tempo taps: alinear contenido", -1)
+
+reaper.ShowConsoleMsg(string.format(
+  "stems movidos: %d | taps movidos: %d | count-in convertidos: %d | delta %+.3f s\n",
+  #ev.stems, moved_taps, converted, plan.delta))

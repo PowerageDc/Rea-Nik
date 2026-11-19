@@ -102,12 +102,14 @@ function M.evaluate(coll, plan)
   end
 
   if #coll.stems == 0 then
+    ev.blocking = true
     warn("no se encontraron items de stems bajo el folder del Stem Bus")
   end
   for _, s in ipairs(coll.stems) do
     local new_pos = s.pos + plan.delta
     ev.stems[#ev.stems + 1] = { track = s.track, take = s.take, pos = s.pos, new_pos = new_pos }
     if new_pos < 0 then
+      ev.blocking = true
       warn(string.format("stem %s quedaría en %.3f s, antes de 0", s.track, new_pos))
     end
   end
@@ -124,6 +126,7 @@ function M.evaluate(coll, plan)
       warn("el item de la pista de click no es un click source (tipo '" .. c.source .. "')")
     end
     if ev.click.new_len <= 0 then
+      ev.blocking = true
       warn("el item de click quedaría con largo cero o negativo")
     end
   end
@@ -137,7 +140,7 @@ function M.evaluate(coll, plan)
       first_qn = (not first_qn or ci.start_qn < first_qn) and ci.start_qn or first_qn
       last_qn = (not last_qn or ci.end_qn > last_qn) and ci.end_qn or last_qn
       if ci.mode ~= 1 then
-        warn("el item del count-in '" .. ci.take .. "' no está en timebase beats")
+        ev.to_convert = (ev.to_convert or 0) + 1
       end
       if ci.pos > 0.001 then
         warn("el item del count-in '" .. ci.take .. "' no empieza en 0")
@@ -154,6 +157,26 @@ function M.evaluate(coll, plan)
   end
 
   return ev
+end
+
+-- Pasa el count-in a timebase beats, mueve los stems y alarga o acorta el click.
+-- Devuelve la cantidad de items del count-in convertidos.
+function M.apply(coll, plan)
+  local converted = 0
+  for _, ci in ipairs(coll.count_in) do
+    if ci.mode ~= 1 then
+      reaper.SetMediaItemInfo_Value(ci.item, "C_BEATATTACHMODE", 1)
+      converted = converted + 1
+    end
+  end
+  for _, s in ipairs(coll.stems) do
+    reaper.SetMediaItemInfo_Value(s.item, "D_POSITION", s.pos + plan.delta)
+  end
+  local c = coll.click_items[1]
+  if c then
+    reaper.SetMediaItemInfo_Value(c.item, "D_LENGTH", c.len + plan.delta)
+  end
+  return converted
 end
 
 return M
