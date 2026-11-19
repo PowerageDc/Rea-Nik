@@ -119,10 +119,12 @@ render, pero conviven en el mismo proyecto/entorno):
   tiempo y dinámica). Se combinan con las de selección de MidiNav. Config
   en código. Ver `features/midi_edit.md`.
 - **MidiGen (generación de eventos MIDI)**: scripts que crean eventos nuevos
-  en el MIDI Editor. Hoy, un panel para dibujar curvas de CC y pitch bend
+  en el MIDI Editor. Un panel para dibujar curvas de CC y pitch bend
   (campana, rampas, osciladores y bends en tres etapas) sobre una time
-  selection o las notas seleccionadas, con su one-shot. Config en código.
-  Ver `features/midi_gen.md`.
+  selection o las notas seleccionadas, y un panel de glissando de teclado
+  (teclas blancas o negras, gesto de pulgar o de palma) entre dos notas, hacia
+  una nota o sobre una time selection, cada uno con su one-shot. Config en
+  código. Ver `features/midi_gen.md`.
 - **FxWindow (ventana flotante de VSTi para grabar en OBS)**: acomoda la
   ventana flotante de un VSTi según un config por nombre de FX, para que el
   recorte de la captura de OBS caiga siempre igual en cualquier proyecto.
@@ -168,7 +170,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | A/B de tracks (ABPair)    | Funcional, uso local (contrato en el encabezado de los scripts) |
 | MidiNav                   | Doce acciones funcionando y validadas (cursor, selección de notas y de CC, y el toggle de foco). Pendientes en `features/midi_nav.md` |
 | MidiEdit                  | Alinear acordes, mover CC al cursor y rasguido de acordes con panel. Pendientes en `features/midi_edit.md` |
-| MidiGen                   | Curvas de CC y pitch bend con panel (cuatro motores, bend en tres etapas, punto en el cursor, En vivo). Pendientes en `features/midi_gen.md` |
+| MidiGen                   | Curvas de CC y pitch bend con panel (cuatro motores, bend en tres etapas, punto en el cursor, En vivo) y glissando de teclado con panel (vista previa de piano roll, En vivo). Pedal de sustain y otros pendientes en `features/midi_gen.md` |
 | Control remoto web        | Funcional. Pendientes por capa en `features/remote_control.md` §5 |
 | MusicState / Prompter     | Helper (cues con posición y duración libres, roles desde un catálogo), prompter de instrumentista (vertical y landscape), sincronización y UI de cantante (letra). Pendientes en `features/musicstate_helper.md` §8, `features/musicstate_instrumentista.md` §5 y `features/musicstate_cantante.md` §6 |
 | Deploy vía ReaPack        | Publicado: AutoColor, RemoteControl, MusicState (con lyrics y UI de cantante), MonitorMix y ProjectFolder, vía metapaquetes + .www. Pendientes en `05_REAPACK_DEPLOY.md` |
@@ -240,6 +242,7 @@ Docs en `_docs/features/`; código en `MidiGen/` y `_Shared/`.
 | Tarea | Docs | Código |
 |---|---|---|
 | Curvas de CC y pitch bend (módulo y panel) | `midi_gen.md`, `08_REAIMGUI_PATTERNS.md` | `MidiGen/MidiGenCcCurve_common_logic.lua`, `MidiGen/Nik_MidiGen_CcCurve.lua`, `MidiGen/Nik_MidiGen_CcCurvePanel.lua`, `MidiGen_config.lua`, `_Shared/ImGuiEditorFocus_common_logic.lua`, `_Shared/ImGuiButtonStyle_common_logic.lua` |
+| Glissando de teclado (módulo y panel) | `midi_gen.md`, `08_REAIMGUI_PATTERNS.md` | `MidiGen/MidiGenGliss_common_logic.lua`, `MidiGen/Nik_MidiGen_Gliss.lua`, `MidiGen/Nik_MidiGen_GlissPanel.lua`, `MidiGen_config.lua`, `Tests-Debug/Nik_MidiGen_ProbeGlissRerun.lua`, `_Shared/ImGuiEditorFocus_common_logic.lua`, `_Shared/ImGuiButtonStyle_common_logic.lua` |
 
 ## Qué adjuntar según la tarea (SubtitleExport)
 

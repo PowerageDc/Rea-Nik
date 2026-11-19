@@ -411,8 +411,9 @@ ButtonStyle.pop(ctx)
 
 ## 9. Paneles con vista previa: pestañas, sliders y estado derivado
 
-Primer caso: `MidiGen/Nik_MidiGen_CcCurvePanel.lua` (ver
-`features/midi_gen.md`).
+Primer caso: `MidiGen/Nik_MidiGen_CcCurvePanel.lua` (ver 
+`features/midi_gen.md`); el panel de glissando
+(`MidiGen/Nik_MidiGen_GlissPanel.lua`) suma los tres últimos puntos.
 
 - **Estado derivado: calcularlo después del widget que lo cambia.** Un valor
   derivado de otro (`chan_fixed = type(P.channel) == 'number'`) que se calcula
@@ -448,3 +449,21 @@ Primer caso: `MidiGen/Nik_MidiGen_CcCurvePanel.lua` (ver
   temporal y el valor real se vuelca solo si el modo está activo. Con el modo
   apagado, el slider va dentro de `BeginDisabled` y `EndDisabled`, siempre
   balanceados.
+- **Slider que muestra un texto propio.** El `format` de `SliderInt` puede ser
+  un texto sin `%d`: el slider dibuja ese texto en vez del valor (el panel de
+  glissando muestra la nota, `C4`, para un pitch MIDI). Se arma con el valor que
+  ya tiene el slider, así que durante el arrastre el texto va un cuadro
+  atrasado. Ctrl+clic sigue escribiendo el número, y el texto no puede
+  contener `%`.
+- **Dos sliders con orden obligado.** Para mantener `desde <= hasta` (o al
+  revés) se corrige después de dibujar los dos: si se violó el orden, el que se
+  movió arrastra al otro. Cuál se movió sale de comparar con el valor del cuadro
+  anterior, guardado en una tabla del panel. Guardar y re-aplicar quedan en el
+  `IsItemDeactivatedAfterEdit` del slider (§4): como se persiste el estado
+  completo, también guarda el valor corregido del otro, sin re-aplicar en cada
+  cuadro del arrastre.
+- **Piano roll en la vista previa.** Cada nota es un `AddRectFilled`: el eje
+  vertical reparte el alto entre los pitches del rango (más una fila de margen
+  arriba y abajo) y el horizontal, el tiempo en ticks. La velocity va en el
+  alfa del color (`0xRRGGBB00 | alfa`) y un ancho mínimo de pocos píxeles evita
+  que una nota corta desaparezca.

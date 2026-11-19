@@ -1,11 +1,11 @@
 # MidiGen — generación de eventos MIDI
 
-Scripts del MIDI Editor que crean datos MIDI nuevos (hoy, eventos CC y pitch
-bend) sobre una selección. Pensados para asignar a atajos de teclado, con un
-panel ReaImGui para elegir y ajustar los parámetros. Config en código en
-`MidiGen_config.lua` (ver `01_CONVENCIONES.md`). Lo que modifica notas o
-eventos que ya existen vive en `MidiEdit/` (ver `features/midi_edit.md`) y
-la navegación y selección en `MidiNav/` (ver `features/midi_nav.md`).
+Scripts del MIDI Editor que crean datos MIDI nuevos (curvas de CC y pitch bend,
+glissando de teclado) sobre una selección. Pensados para asignar a atajos de
+teclado, con un panel ReaImGui para elegir y ajustar los parámetros. Config en
+código en `MidiGen_config.lua` (ver `01_CONVENCIONES.md`). Lo que modifica notas
+o eventos que ya existen vive en `MidiEdit/` (ver `features/midi_edit.md`) y la
+navegación y selección en `MidiNav/` (ver `features/midi_nav.md`).
 
 ## 1. Scripts
 
@@ -15,18 +15,27 @@ Carpeta `C:\dev\Rea-Nik\MidiGen\`.
 |---|---|
 | `Nik_MidiGen_CcCurve.lua` | Dibuja una curva de CC o pitch bend con el último estado del panel |
 | `Nik_MidiGen_CcCurvePanel.lua` | Panel ReaImGui para elegir y ajustar la curva, con aplicar, punto en el cursor y re-aplicar en vivo |
+| `Nik_MidiGen_Gliss.lua` | Genera un glissando de teclado con el último estado del panel |
+| `Nik_MidiGen_GlissPanel.lua` | Panel ReaImGui para elegir y ajustar el glissando, con vista previa, aplicar y re-aplicar en vivo |
 
-Módulo de soporte (solo `dofile`, no se registra):
+Módulos de soporte (solo `dofile`, no se registran):
 - `MidiGenCcCurve_common_logic.lua`: `resolve`, `load`, `save`, `preset_text`,
   `target`, `resolve_range`, `build_points`, `sample`, `apply`, `rerun`,
   `can_rerun`, `insert_point` y `run`. El panel usa además
   `_Shared/ImGuiButtonStyle_common_logic.lua` y
   `_Shared/ImGuiEditorFocus_common_logic.lua`.
+- `MidiGenGliss_common_logic.lua`: `resolve`, `load`, `save`, `preset_text`,
+  `read_input`, `plan`, `apply`, `rerun`, `can_rerun` y `run`. El panel usa los
+  mismos dos módulos de `_Shared/` que el de curvas.
 
-Registro: `Nik_MidiGen_CcCurve.lua` en la sección **MIDI Editor** del Action
-List y `Nik_MidiGen_CcCurvePanel.lua` en **Main** (es una ventana flotante).
-El one-shot necesita un editor activo y sale sin hacer nada si no lo hay; el
-panel apunta al último editor visto.
+Sonda de la sesión de rehacer: `Tests-Debug/Nik_MidiGen_ProbeGlissRerun.lua`
+(aplica un glissando y lo rehace con otros presets sobre la misma sesión).
+
+Registro: los one-shot (`Nik_MidiGen_CcCurve.lua` y `Nik_MidiGen_Gliss.lua`) en
+la sección **MIDI Editor** del Action List y los paneles
+(`Nik_MidiGen_CcCurvePanel.lua` y `Nik_MidiGen_GlissPanel.lua`) en **Main**
+(son ventanas flotantes). Los one-shot necesitan un editor activo y salen sin
+hacer nada si no lo hay; los paneles apuntan al último editor visto.
 
 ## 2. Comportamiento
 
@@ -104,14 +113,93 @@ panel apunta al último editor visto.
   deja en el portapapeles el texto Lua con nombre `Custom` para pegar en
   `cc_curve.presets` de `MidiGen_config.lua`.
 
+### Glissando de teclado
+- Genera notas de un conjunto de teclas (blancas o negras) entre un origen y
+  un destino, en el canal elegido. Las notas generadas no quedan seleccionadas.
+- Origen, por orden de prioridad:
+  - Con time selection: ella fija el tiempo (de su inicio a su final) y las
+    notas seleccionadas los pitches. Con dos o más, los de la primera y la
+    última por inicio; con una, es el destino y el glissando llega a su pitch
+    con las `single.count` notas del conjunto que lo preceden; sin notas, el
+    `range` del config (`from_pitch` a `to_pitch`, con `direction`). Los dos
+    extremos entran si pertenecen al conjunto. La última nota se recorta al
+    final de la selección.
+  - Sin time selection y con dos o más notas seleccionadas: rellena el hueco.
+    La primera (por inicio) es el origen y la última el destino; ambas se
+    conservan y se generan solo las notas del conjunto estrictamente entre
+    ellas, de grave a agudo o al revés según sus pitches, repartidas entre el
+    inicio del origen y el del destino.
+  - Sin time selection y con una sola nota seleccionada: es el destino y el
+    glissando llega a ella. El origen es `single.from_pitch` (pitch absoluto,
+    incluido) o, si no está, `single.count` notas del conjunto en
+    `single.direction` (`"up"` viene desde abajo, `"down"` desde arriba). Las
+    notas terminan en el inicio del destino.
+  - Sin nada de lo anterior no escribe y avisa. Con el origen o el destino
+    fuera del conjunto (por ejemplo, un destino en tecla negra con teclas
+    blancas) se generan solo las del conjunto y el destino queda tal cual.
+- Conjuntos: `sets` guarda los pitch classes de cada uno (`white`, `black`).
+  Son fijos: no siguen la tonalidad.
+- Tiempo: con una sola nota seleccionada, `timing.mode` es `"total"`
+  (`total_ms`) o `"per_note"` (`note_ms` por intervalo); en los otros casos el
+  origen fija el tiempo y esos valores no se usan. La duración se mide de la
+  primera nota generada al inicio del destino, que hace de nota siguiente.
+  `curve` reparte con `f ^ curve` (menor a 1 acelera, mayor a 1 frena) y
+  `jitter_ms` suma un desvío determinista desde la segunda nota. Se calcula en
+  tiempo de proyecto, así que respeta los cambios de tempo.
+- Largo: `contact` es la cantidad de teclas apretadas a la vez. Cada nota dura
+  hasta el inicio de la que está `contact` posiciones adelante: 1 es el gesto de
+  pulgar (sin solapes ni huecos) y de 2 a 4 el de palma (solape). Las últimas
+  se recortan al inicio del destino (o al final de la time selection).
+- Velocity: factor de `from` a `to` sobre la velocity del destino, interpolado
+  por orden de la nota con `curve` y con `jitter`, entre 1 y 127. Con time
+  selection y sin notas, la base es `range.velocity`.
+- Canal: `channel` es `"active"` (`default_note_chan`) o un número de 1 a 16.
+- Modo: `"merge"` conserva las notas existentes; `"replace"` borra antes las
+  notas no seleccionadas del canal que arrancan entre la primera nota generada
+  y el final (el destino queda), sin tocar origen ni destino aunque se hayan
+  deseleccionado.
+- Escritura: inserta todas las notas con `noSort`, ordena una vez y abre un
+  solo bloque de undo.
+- Presets: juegos de `set`, `contact`, `timing` y `velocity` (Pulgar, Palma y
+  Negras).
+- One-shot: aplica el último estado guardado por el panel; sin estado, el
+  preset de `gliss.preset`.
+- Panel: arriba, preset (con `*` si se modificó, y Restaurar) y una vista previa
+  de piano roll que usa la misma función que escribe (`plan`): barras con el ancho
+  real de cada nota (se ve el solape) y opacidad según la velocity, y en azul las
+  notas existentes que rodean al glissando; debajo, un resumen (cantidad de
+  notas, rango, duración y origen) o el motivo si no hay glissando posible. En
+  el medio, cuatro pestañas: Tiempo, Teclas (conjunto, contacto y velocity),
+  Origen (una nota, por cantidad con dirección o por pitch; rango con dirección,
+  desde, hasta y velocity) y Salida (canal y modo). Abajo, Aplicar, Copiar
+  preset, En vivo y el estado. Los pitches se muestran como nota en cifrado y
+  octava (C4 es 60; `OCTAVE_OFFSET` en el panel cambia la convención), y
+  Ctrl+clic escribe el número MIDI. En el rango, Desde y Hasta se acomodan según
+  la dirección: el que se mueve arrastra al otro cuando lo pasa, y cambiar la
+  dirección los intercambia. El `*` compara conjunto, contacto, timing y
+  velocity contra el preset; canal, modo, origen y rango no cuentan.
+- En vivo: re-aplica al soltar un slider, partiendo del take original: borra lo
+  escrito, restaura las notas que borró `replace` y escribe de nuevo sobre el
+  origen (notas y time selection) y el canal de la última aplicación; cambiar
+  el canal solo guarda. La sesión se descarta si cambia el hash del take
+  completo. Cada re-aplicación es un punto de undo propio. La vista previa
+  sigue la selección actual; En vivo, la de la última aplicación.
+- Estado: ExtState `Nik_MidiGen_Gliss`, clave `state` (persistente), compartido
+  por el panel y el one-shot. Pisa los valores del preset en el config hasta
+  apretar Restaurar o elegir otro preset; canal, modo, origen y rango se
+  conservan al cambiar de preset. **Copiar preset** deja en el portapapeles el
+  texto Lua con nombre `Custom` para pegar en `gliss.presets`.
+
 ## 3. Config (`MidiGen_config.lua`)
 
 | Sección | Valores |
 |---|---|
 | `undo` | `enabled` |
 | `cc_curve` | `preset`, `lane`, `channel`, `mode`, `resolution`, `dense_step_ms`, `bend_range_st`, `verbose`, `presets` |
+| `gliss` | `preset`, `channel`, `mode`, `verbose`, `sets`, `single` (`count`, `direction`, `from_pitch` opcional), `range` (`direction`, `from_pitch`, `to_pitch`, `velocity`), `presets` (`set`, `contact`, `timing`, `velocity`) |
 
-`verbose` imprime en la consola lo que escribió el one-shot.
+En `cc_curve` y en `gliss`, `verbose` imprime en la consola lo que escribió el
+one-shot.
 
 ## 4. Decisiones
 
@@ -143,20 +231,49 @@ panel apunta al último editor visto.
 - **Sliders en vez de drags en el panel de curvas:** el recorrido completo del
   rango cabe en el ancho del control. Las pestañas dejan siempre visibles la
   vista previa y los botones.
+- **Glissando solo con conjuntos ejecutables:** blancas (el gesto de pulgar) y
+  negras (una pentatónica, con el dorso del dedo). El cromático no es un gesto de
+  un solo dedo (en piano se aproxima con la palma o con dos manos) y la escala no
+  tiene sentido en un teclado real (sí en arpa o en cuerdas). Como el conjunto es
+  una lista de pitch classes, sumar otro es agregar una entrada a `sets`.
+- **Largo por contacto en vez de largo fijo:** el pulgar apoya una tecla a la vez;
+  la palma, de dos a cuatro, y en un Hammond, sin sustain, suelta enseguida. Un
+  solo parámetro cubre ambos gestos y fija el solape.
+- **Duración medida hasta el inicio del destino:** el destino hace de nota
+  siguiente de la secuencia y el ritmo no tiene un salto al final.
+- **Cálculo en tiempo de proyecto:** los ms de los gestos no dependen del tempo
+  y no hizo falta el `ms_to_ticks` de Strum.
+- **La time selection manda en el tiempo y las notas en los pitches:** como en
+  las curvas, una time selection olvidada tiene prioridad sobre la selección de
+  notas.
+- **Velocity relativa al destino:** las notas generadas no tienen velocity
+  propia; escalar la del destino conserva la dinámica de la frase.
+- **`merge` por defecto y origen y destino protegidos en `replace`:** borrar
+  notas es más riesgoso que reemplazar CC.
+- **`plan` puro compartido:** la vista previa, Aplicar y En vivo usan el mismo
+  cálculo, que no toca el take.
+- **Vista previa de piano roll:** lo que distingue a un glissando de otro es el
+  solape, la aceleración y la llegada al destino; un resumen en texto no lo
+  muestra.
+- **Pitches en cifrado y dirección del rango:** el cifrado es la forma de leer
+  del panel y la dirección evita que Desde y Hasta se crucen sin querer.
+- **Módulo propio dentro de `MidiGen/`:** lo común con Strum (pseudoaleatorio
+  determinista) se extrae a `_Shared/` cuando lo use otro dominio.
 
 ## 5. Pendientes
 
-- Glissando para teclados: panel y one-shot, con tiempo en milisegundos. Sin
-  código todavía; falta definir origen y destino, conjunto de notas (cromático,
-  teclas blancas o negras, escala), reparto de tiempo y de velocity, largo de
-  cada nota y qué hacer con las notas existentes del rango.
+- Glissando: con una sola nota seleccionada y sin time selection siempre llega a
+  ella (ancla de llegada); falta un ancla de salida para el glissando que parte
+  de una nota.
 - Pedal de sustain (CC64) para teclados: panel y one-shot. Sin código todavía;
   falta definir los puntos de cambio (compás, acorde, armonía o marcadores de
   MusicState), el estilo (legato, sostenido o medio pedal) y qué hacer con los
   CC64 existentes.
-- Módulo común de glissando y pedal: dentro de `MidiGen/` hasta que otro
-  dominio lo necesite; extraer a `_Shared/MidiTake_common_logic.lua` solo
-  cuando haya un segundo consumidor (hoy Strum duplica `ms_to_ticks`).
+- Módulo común del glissando y el pedal: hoy el glissando es autosuficiente
+  (`MidiGenGliss_common_logic.lua`, con su propio pseudoaleatorio determinista,
+  lectura de notas y escritura); con el pedal, extraer lo común dentro de
+  `MidiGen/`, y a `_Shared/MidiTake_common_logic.lua` solo cuando lo use otro
+  dominio (hoy Strum duplica `ms_to_ticks` y el pseudoaleatorio).
 - Curvas CC: una curva por nota con varias seleccionadas (hoy una sola sobre
   todo el rango). Es el caso natural de los bends consecutivos y pide varios
   rangos en la sesión de En vivo.
