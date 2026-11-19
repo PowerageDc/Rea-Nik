@@ -33,12 +33,15 @@ local KIND_OPTS = { { "count", "Por cantidad" }, { "pitch", "Por pitch" } }
 local DIR_OPTS = { { "up", "Subiendo" }, { "down", "Bajando" } }
 local MODE_OPTS = { { "merge", "Mezclar" }, { "replace", "Reemplazar" } }
 local CHAN_OPTS = { { "active", "Activo" }, { "fixed", "Fijo" } }
-local NOTE_NAMES = { "Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si" }
+local NOTE_NAMES = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
 local TIMING_KEYS = { "total_ms", "note_ms", "curve", "jitter_ms" }
 local VEL_KEYS = { "from", "to", "curve", "jitter" }
 
+-- offset de octava: con -1, el pitch 60 es C4
+local OCTAVE_OFFSET = -1
+
 local function pitch_name(p)
-  return string.format("%s%d", NOTE_NAMES[p % 12 + 1], p // 12 - 1)
+  return string.format("%s%d", NOTE_NAMES[p % 12 + 1], p // 12 + OCTAVE_OFFSET)
 end
 
 local function differs(cur, base, keys)
@@ -133,6 +136,35 @@ local function slider_dbl(label, tbl, key, min, max, fmt, quiet)
   edited(quiet)
 end
 
+-- Slider de pitch MIDI que muestra la nota (C4, F#3). Ctrl+clic escribe el
+-- numero MIDI. Mientras se arrastra, el texto usa el valor del cuadro anterior.
+local function slider_pitch(label, tbl, key, min, max, quiet)
+  local cur = math.max(min, math.min(max, tbl[key] or min))
+  reaper.ImGui_SetNextItemWidth(ctx, -LABEL_W)
+  local changed, v = reaper.ImGui_SliderInt(ctx, label, cur, min, max, pitch_name(cur),
+    reaper.ImGui_SliderFlags_AlwaysClamp())
+  if changed then tbl[key] = v end
+  edited(quiet)
+end
+
+-- Mantiene el orden de Desde y Hasta segun la direccion del rango: el slider
+-- que se movio arrastra al otro cuando lo pasa. Guardar y re-aplicar lo hace
+-- el slider al soltarse.
+local range_prev = {}
+
+local function keep_range_order()
+  local r = P.range
+  local up = r.direction ~= "down"
+  if (up and r.from_pitch > r.to_pitch) or (not up and r.from_pitch < r.to_pitch) then
+    if r.from_pitch ~= range_prev.from then
+      r.to_pitch = r.from_pitch
+    else
+      r.from_pitch = r.to_pitch
+    end
+  end
+  range_prev.from = r.from_pitch
+end
+
 -- Piano roll de lo que escribiria el glissando (barras claras, con opacidad
 -- segun la velocity) y de las notas existentes que lo rodean (azul). Devuelve
 -- el texto de resumen.
@@ -215,15 +247,22 @@ local function draw_origin()
   end)
   -- se evalua despues del choice_row: un clic cambia from_pitch ahi
   if P.single.from_pitch ~= nil then
-    slider_int("Pitch de origen###o_from", P.single, "from_pitch", 0, 127, "%d")
+    slider_pitch("Pitch de origen###o_from", P.single, "from_pitch", 0, 127)
   else
     slider_int("Cantidad###o_count", P.single, "count", 1, 48, "%d notas")
     choice_row("o_dir", DIR_OPTS, P.single.direction, function(v) P.single.direction = v end)
   end
   reaper.ImGui_Separator(ctx)
   reaper.ImGui_Text(ctx, "Time selection sin notas seleccionadas")
-  slider_int("Desde pitch###r_from", P.range, "from_pitch", 0, 127, "%d")
-  slider_int("Hasta pitch###r_to", P.range, "to_pitch", 0, 127, "%d")
+  choice_row("r_dir", DIR_OPTS, P.range.direction, function(v)
+    if v ~= P.range.direction then
+      P.range.from_pitch, P.range.to_pitch = P.range.to_pitch, P.range.from_pitch
+    end
+    P.range.direction = v
+  end)
+  slider_pitch("Desde###r_from", P.range, "from_pitch", 0, 127)
+  slider_pitch("Hasta###r_to", P.range, "to_pitch", 0, 127)
+  keep_range_order()
   slider_int("Velocity###r_vel", P.range, "velocity", 1, 127, "%d")
 end
 

@@ -113,8 +113,10 @@ return {
         single = { count = 12, direction = "up" },
 
         -- con time selection y sin notas seleccionadas: de from_pitch a to_pitch
-        -- (ambos incluidos si pertenecen al conjunto), con esa velocity
-        range = { from_pitch = 48, to_pitch = 84, velocity = 100 },
+        -- (ambos incluidos si pertenecen al conjunto), con esa velocity.
+        -- direction: "up" (from_pitch <= to_pitch) o "down" (from_pitch >= to_pitch);
+        -- el panel mantiene ese orden
+        range = { direction = "up", from_pitch = 48, to_pitch = 84, velocity = 100 },
 
         -- contact: teclas apretadas a la vez (1 = cada nota dura hasta la
         -- siguiente; mas = solape de palma). timing.mode: "total" (total_ms) o

@@ -381,6 +381,7 @@ function M.save(p)
     "mode=" .. p.mode,
     "channel=" .. tostring(p.channel),
     "s.from_pitch=" .. (p.single.from_pitch and tostring(p.single.from_pitch) or ""),
+    "rdir=" .. (p.range.direction or "up"),
   }
   for key, ref in pairs(NUMERIC) do
     local v = p[ref[1]][ref[2]]
@@ -417,6 +418,11 @@ function M.load(config)
   for key, ref in pairs(NUMERIC) do
     local v = tonumber(saved[key])
     if v then p[ref[1]][ref[2]] = v end
+  end
+  if saved.rdir == "up" or saved.rdir == "down" then
+    p.range.direction = saved.rdir
+  elseif not p.range.direction then
+    p.range.direction = (p.range.from_pitch > p.range.to_pitch) and "down" or "up"
   end
   return p
 end
