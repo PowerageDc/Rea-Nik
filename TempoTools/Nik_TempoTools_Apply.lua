@@ -4,6 +4,7 @@ local Base = dofile(script_dir .. "TempoTools_common_logic.lua")
 local Read = dofile(script_dir .. "TempoTapRead_common_logic.lua")
 local Plan = dofile(script_dir .. "TempoTapPlan_common_logic.lua")
 local Items = dofile(script_dir .. "TempoTapItems_common_logic.lua")
+local Map = dofile(script_dir .. "TempoTapMap_common_logic.lua")
 
 local TITLE = "Tempo taps"
 
@@ -64,6 +65,7 @@ local lines = {
   string.format("Desplazamiento: %+.3f s", plan.delta),
   string.format("Items de stems a mover: %d", #ev.stems),
   string.format("Items del count-in a pasar a beats: %d", ev.to_convert or 0),
+  string.format("Tempo markers a insertar: %d (se reemplazan los existentes hasta el último downbeat)", #plan.markers),
 }
 if ev.click then
   lines[#lines + 1] = string.format("Click: largo %.3f -> %.3f s", ev.click.len, ev.click.new_len)
@@ -83,10 +85,19 @@ reaper.Undo_BeginBlock2(0)
 reaper.PreventUIRefresh(1)
 local converted = Items.apply(coll, plan)
 local moved_taps = Base.shift_taps(plan.delta)
+local tail = Map.apply(plan)
 reaper.PreventUIRefresh(-1)
+reaper.UpdateTimeline()
 reaper.UpdateArrange()
-reaper.Undo_EndBlock2(0, "Tempo taps: alinear contenido", -1)
+reaper.Undo_EndBlock2(0, "Tempo taps: alinear contenido y mapear tempo", -1)
 
+local v = Map.verify(plan, tail)
 reaper.ShowConsoleMsg(string.format(
   "stems movidos: %d | taps movidos: %d | count-in convertidos: %d | delta %+.3f s\n",
   #ev.stems, moved_taps, converted, plan.delta))
+reaper.ShowConsoleMsg(string.format(
+  "tempo markers: %d insertados (esperados %d) | desvío máximo de posición: %.4f s\n",
+  v.inserted, v.expected, v.max_dev))
+reaper.ShowConsoleMsg(string.format(
+  "downbeats fuera de inicio de compás: %d | saltos de compás irregulares: %d | desvío de markers posteriores: %.4f s\n",
+  v.off_grid, v.bad_seq, v.tail_dev))

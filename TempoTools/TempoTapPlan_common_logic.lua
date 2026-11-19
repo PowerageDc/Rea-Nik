@@ -90,6 +90,7 @@ function M.build(measures, opts)
   end
 
   local delta = n_bars * bar - first.start
+  if math.abs(delta) < 1e-9 then delta = 0 end
   local init = {
     num = first.num,
     den = first.den,
@@ -97,9 +98,11 @@ function M.build(measures, opts)
   }
 
   local markers = {}
+  local downbeats = {}
   local prev_num, prev_den = init.num, init.den
   local last_bpm
   for _, m in ipairs(usable) do
+    downbeats[#downbeats + 1] = m.start + delta
     local factor = bpm_factor(m.num, m.den)
     local sig_changed = m.num ~= prev_num or m.den ~= prev_den
     if m.mode == "bar" then
@@ -130,6 +133,7 @@ function M.build(measures, opts)
 
   local last = usable[#usable]
   markers[#markers + 1] = { pos = last.finish + delta, bpm = last_bpm, closing = true }
+  downbeats[#downbeats + 1] = last.finish + delta
 
   return {
     delta = delta,
@@ -137,6 +141,7 @@ function M.build(measures, opts)
     bar = bar,
     init = init,
     markers = markers,
+    downbeats = downbeats,
     first_pos = first.start + delta,
     last_pos = last.finish + delta,
   }, warnings
