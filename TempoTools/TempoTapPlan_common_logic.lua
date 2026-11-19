@@ -3,7 +3,7 @@ local Read = dofile(script_dir .. "TempoTapRead_common_logic.lua")
 
 local M = {}
 
-local COMPOUND_FACTOR = 0.75
+local COMPOUND_FACTOR = 1.5
 local PREROLL_TOLERANCE = 0.15
 local INIT_MEASURES = 4
 
