@@ -140,4 +140,52 @@ return {
             },
         },
     },
+
+    pedal = {
+        preset = "Legato",
+        -- canal de salida del CC64: "active" o 1 a 16
+        channel = "active",
+        -- canal de las notas que cuentan como ataques: "all", "active" o 1 a 16
+        source_channel = "all",
+        -- replace borra los CC64 del canal de salida dentro del rango; merge los conserva
+        mode = "replace",
+        verbose = true,
+
+        -- style: "legato" (levanta y vuelve a bajar en cada punto de cambio) o
+        -- "sustained" (baja al inicio del rango y sube al final; ignora change).
+        -- change: "chord" (inicios agrupados por chord_window_ms; dos puntos a menos
+        -- de min_gap_ms se funden en el primero) o "bar" (inicio de cada compas).
+        -- offset_ms: desplazamiento del levantado respecto del punto (negativo:
+        -- antes). dip_ms: tiempo entre el inicio del levantado y el del re-presionado.
+        -- shape: 0 cuadrada; 1 a 5 gradual con la forma de REAPER, en transition_ms.
+        -- start: "range" (presionado desde el inicio) o "first_attack".
+        -- close: escribe 0 (pedal suelto) al final del rango.
+        presets = {
+            ["Legato"] = {
+                style = "legato", change = "chord", chord_window_ms = 40, min_gap_ms = 150,
+                offset_ms = 30, dip_ms = 120, down_value = 127, up_value = 0,
+                shape = 0, transition_ms = 40, start = "range", close = true,
+            },
+            ["Legato limpio"] = {
+                style = "legato", change = "chord", chord_window_ms = 40, min_gap_ms = 150,
+                offset_ms = -20, dip_ms = 100, down_value = 127, up_value = 0,
+                shape = 0, transition_ms = 40, start = "range", close = true,
+            },
+            ["Medio pedal"] = {
+                style = "legato", change = "chord", chord_window_ms = 40, min_gap_ms = 150,
+                offset_ms = 30, dip_ms = 140, down_value = 127, up_value = 40,
+                shape = 2, transition_ms = 40, start = "range", close = true,
+            },
+            ["Por compas"] = {
+                style = "legato", change = "bar", chord_window_ms = 40, min_gap_ms = 150,
+                offset_ms = -20, dip_ms = 120, down_value = 127, up_value = 0,
+                shape = 0, transition_ms = 40, start = "range", close = true,
+            },
+            ["Sostenido"] = {
+                style = "sustained", change = "chord", chord_window_ms = 40, min_gap_ms = 150,
+                offset_ms = 0, dip_ms = 0, down_value = 127, up_value = 0,
+                shape = 0, transition_ms = 40, start = "range", close = true,
+            },
+        },
+    },
 }
