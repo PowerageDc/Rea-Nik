@@ -55,7 +55,7 @@ local function flatten(ms, closing)
   local pts = {}
   for i, m in ipairs(ms) do
     for j, b in ipairs(m.beats) do
-      pts[#pts + 1] = { b = b, kind = j == 1 and "down" or "beat" }
+      pts[#pts + 1] = { b = b, kind = j == 1 and "down" or "beat", inner = m.mode == "bar" and j > 1 }
     end
   end
   pts[#pts + 1] = { b = closing, kind = "down" }
@@ -98,7 +98,8 @@ local function snap_points(pts, kind, ctx)
       if ctx.locked[k] then pt.b.locked = true end
       if ctx.skip[k] then pt.b.skipped = true end
     end
-    if pt.kind == kind and not pt.b.locked and not pt.b.skipped then
+    local inert = pt.inner and not cfg.snap_inner_beats
+    if pt.kind == kind and not pt.b.locked and not pt.b.skipped and not inert then
       local pos = pt.b.pos
       local prev = pts[k - 1] and pts[k - 1].b.pos
       local nxt = pts[k + 1] and pts[k + 1].b.pos
@@ -128,6 +129,16 @@ local function anchored(b)
   return b.status == "snapped" or b.locked
 end
 
+-- Con un tempo por compas, los beats interiores de esos compases quedan fuera.
+local function active_points(pts, cfg)
+  if cfg.snap_inner_beats then return pts end
+  local out = {}
+  for _, pt in ipairs(pts) do
+    if not pt.inner then out[#out + 1] = pt end
+  end
+  return out
+end
+
 local function interpolate_unanchored(pts, max_run)
   local k = 1
   while k <= #pts do
@@ -152,6 +163,9 @@ end
 
 local function run_once(measures, coll, cfg, extra)
   local ms = copy_measures(measures)
+  if not cfg.snap_inner_beats then
+    for _, m in ipairs(ms) do m.mode = "bar" end
+  end
   local last = ms[#ms]
   local closing = { pos = last.finish, raw = last.finish, origin = "tapped", status = "kept" }
 
@@ -175,11 +189,12 @@ local function run_once(measures, coll, cfg, extra)
   local pts = flatten(ms, closing)
   snap_points(pts, "beat", ctx)
   if cfg.snap_unanchored == "interpolate" then
-    interpolate_unanchored(pts, cfg.snap_interp_max)
+    interpolate_unanchored(active_points(pts, cfg), cfg.snap_interp_max)
   end
   sync(ms, closing)
+  if not cfg.snap_inner_beats then respread_bar_beats(ms) end
 
-  if cfg.snap_bar_to_beat then
+  if cfg.snap_inner_beats then
     for _, m in ipairs(ms) do
       if m.mode == "bar" then
         for j = 2, #m.beats do
@@ -200,6 +215,7 @@ local function run_once(measures, coll, cfg, extra)
       kind = pt.kind, raw = b.raw, pos = b.pos, shift = shift,
       status = b.status, ref = b.ref, ratio = b.ratio,
       locked = b.locked, rejected = b.skipped,
+      inert = pt.inner and not cfg.snap_inner_beats or nil,
     }
     raws[k], news[k] = b.raw, b.pos
     if b.status == "snapped" then shifts[#shifts + 1] = shift end
@@ -232,7 +248,9 @@ end
 -- tratándolo como un punto sin ataque.
 -- Devuelve { measures, points, median_shift, irregularity_raw, irregularity_new }.
 -- Cada punto: { kind, raw, pos, shift, status, ref, ratio, outlier, locked, rejected,
--- rejected_pos, rejected_ratio } con status "snapped", "interpolated" o "kept".
+-- rejected_pos, rejected_ratio, inert } con status "snapped", "interpolated" o "kept".
+-- inert: beat interior que no se usa porque snap_inner_beats esta apagado: no se
+-- ajusta y cada compas queda con un solo marker, aunque sus beats se hayan tocado.
 -- Los rechazados conservan la posición y el ratio del ataque que se descartó.
 -- El índice del punto en `points` es estable mientras `measures` no cambie.
 function M.run(measures, coll, cfg, opts)

@@ -12,7 +12,8 @@ return {
   snap_high_ratio = 4.0,
   snap_unanchored = "interpolate",
   snap_interp_max = 3,
-  snap_bar_to_beat = true,
+  snap_inner_beats = true,
   snap_outlier_k = 3,
   snap_min_gap = 0.03,
+  clear_taps_after = false,
 }

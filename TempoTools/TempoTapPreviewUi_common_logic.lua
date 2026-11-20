@@ -29,8 +29,8 @@ local function draw_summary(ctx, S)
   local s = S.summary
   local function sum(k) return s.down[k] + s.beat[k] end
   reaper.ImGui_Text(ctx, string.format(
-    "Ajustados %d | interpolados %d | sin cambio %d | total %d",
-    sum("snapped"), sum("interpolated"), sum("kept"), s.total))
+    "Ajustados %d | interpolados %d | sin cambio %d | sin marker %d | total %d",
+    sum("snapped"), sum("interpolated"), sum("kept"), s.inert, s.total))
 
   local marks = {
     { "baja confianza", s.low, COLORS.low },
@@ -68,6 +68,12 @@ local function draw_controls(ctx, S)
     S.interp_max, 1, Preview.INTERP_MAX_LIMIT, "%d", reaper.ImGui_SliderFlags_AlwaysClamp())
   if changed then Preview.set_interp_max(S, v) end
   if off then reaper.ImGui_EndDisabled(ctx) end
+
+  local on, toggled = S.inner_beats, nil
+  toggled, on = reaper.ImGui_Checkbox(ctx,
+    "Usar los beats internos, tocados o segun los ataques (apagado: un tempo por compas en toda la cancion)###inner_beats",
+    on)
+  if toggled then Preview.set_inner_beats(S, on) end
 end
 
 local COLUMNS = {
@@ -85,6 +91,7 @@ end
 
 -- Marca de lectura de un punto: texto y color. Una sola por punto.
 local function mark_of(p)
+  if p.inert then return "sin marker", COLORS.dim end
   if p.locked then return "bloqueado", COLORS.locked end
   if p.rejected then
     return string.format("rechazado x%.1f %+.1f ms",
@@ -101,11 +108,12 @@ local function draw_row(ctx, S, st, k, p)
   reaper.ImGui_PushID(ctx, k)
   reaper.ImGui_TableNextRow(ctx)
   local mark, mark_col = mark_of(p)
-  if mark then
+  if mark and not p.inert then
     reaper.ImGui_TableSetBgColor(ctx, reaper.ImGui_TableBgTarget_RowBg0(),
       (mark_col & 0xFFFFFF00) | 0x30)
   end
-  if p.locked then
+  local dimmed = p.locked or p.inert
+  if dimmed then
     reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), COLORS.dim)
   end
 
@@ -134,9 +142,11 @@ local function draw_row(ctx, S, st, k, p)
   if mark then reaper.ImGui_TextColored(ctx, mark_col, mark) end
 
   reaper.ImGui_TableSetColumnIndex(ctx, 10)
+  if p.inert then reaper.ImGui_BeginDisabled(ctx) end
   local changed = reaper.ImGui_Checkbox(ctx, "##lock", p.locked == true)
+  if p.inert then reaper.ImGui_EndDisabled(ctx) end
 
-  if p.locked then reaper.ImGui_PopStyleColor(ctx) end
+  if dimmed then reaper.ImGui_PopStyleColor(ctx) end
   reaper.ImGui_PopID(ctx)
   return changed
 end
@@ -169,10 +179,14 @@ local function draw_table(ctx, S, st)
 end
 
 -- Devuelve "apply", "cancel" o nil.
-local function draw_buttons(ctx)
+local function draw_buttons(ctx, S)
   local avail_w = reaper.ImGui_GetContentRegionAvail(ctx)
   reaper.ImGui_Separator(ctx)
-  reaper.ImGui_SetCursorPosX(ctx, reaper.ImGui_GetCursorPosX(ctx) + avail_w - 2 * BUTTON_W - 8)
+  local x0 = reaper.ImGui_GetCursorPosX(ctx)
+  local changed, v = reaper.ImGui_Checkbox(ctx, "Borrar los taps al aplicar", S.clear_taps)
+  if changed then S.clear_taps = v end
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_SetCursorPosX(ctx, x0 + avail_w - 2 * BUTTON_W - 8)
   local action
   if ButtonStyle.button(ctx, "Cancelar", "neutral", BUTTON_W) then action = "cancel" end
   reaper.ImGui_SameLine(ctx)
@@ -192,7 +206,7 @@ local function frame(ctx, S, st)
     draw_controls(ctx, S)
     reaper.ImGui_Separator(ctx)
     draw_table(ctx, S, st)
-    action = draw_buttons(ctx)
+    action = draw_buttons(ctx, S)
     st.focus_tick()
     reaper.ImGui_End(ctx)
   end

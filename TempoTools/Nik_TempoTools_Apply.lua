@@ -40,7 +40,8 @@ local function build(measures, preroll_bars)
 end
 
 -- measures: compases ya ajustados por el snap. snap: resumen de la vista previa.
-local function finish(measures, snap)
+-- clear_taps: borrar los markers TAP y TAP1 dentro del mismo bloque de deshacer.
+local function finish(measures, snap, clear_taps)
   local suggested = cfg.preroll_bars_default
   if not coll.fresh then
     local detected = build(measures, nil)
@@ -81,6 +82,9 @@ local function finish(measures, snap)
   if ev.click then
     lines[#lines + 1] = string.format("Click: largo %.3f -> %.3f s", ev.click.len, ev.click.new_len)
   end
+  if clear_taps then
+    lines[#lines + 1] = "Se borran los markers TAP y TAP1 al terminar"
+  end
 
   local all = {}
   for _, w in ipairs(plan_warnings) do all[#all + 1] = w end
@@ -98,6 +102,7 @@ local function finish(measures, snap)
   local moved_taps = Base.shift_taps(plan.delta)
   local tail = Map.apply(plan)
   Items.fit_click(coll, plan)
+  local cleared = clear_taps and Base.delete_taps() or 0
   reaper.PreventUIRefresh(-1)
   reaper.UpdateTimeline()
   reaper.UpdateArrange()
@@ -105,8 +110,8 @@ local function finish(measures, snap)
 
   local v = Map.verify(plan, tail)
   reaper.ShowConsoleMsg(string.format(
-    "stems movidos: %d | taps movidos: %d | count-in convertidos: %d | delta %+.3f s\n",
-    #ev.stems, moved_taps, converted, plan.delta))
+    "stems movidos: %d | taps movidos: %d | taps borrados: %d | count-in convertidos: %d | delta %+.3f s\n",
+    #ev.stems, moved_taps, cleared, converted, plan.delta))
   reaper.ShowConsoleMsg(string.format(
     "tempo markers: %d insertados (esperados %d) | desvío máximo de posición: %.4f s\n",
     v.inserted, v.expected, v.max_dev))
@@ -117,6 +122,6 @@ end
 
 local S = Preview.new(tapped, coll, cfg)
 PreviewUi.run(S, {
-  on_apply = function(measures) finish(measures, S.summary) end,
+  on_apply = function(measures) finish(measures, S.summary, S.clear_taps) end,
   on_cancel = function() end,
 })

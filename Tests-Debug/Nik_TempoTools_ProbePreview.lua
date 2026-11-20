@@ -20,8 +20,8 @@ local function show(S)
     return s.down[k] + s.beat[k]
   end
   log(string.format(
-    "  ajustados %d | interpolados %d | sin cambio %d | baja conf. %d | dudosos %d | rechazados %d | bloqueados %d | a beat %d | mediana %+.1f ms",
-    sum("snapped"), sum("interpolated"), sum("kept"), s.low, s.outlier,
+    "  ajustados %d | interpolados %d | sin cambio %d | sin marker %d | baja conf. %d | dudosos %d | rechazados %d | bloqueados %d | a beat %d | mediana %+.1f ms",
+    sum("snapped"), sum("interpolated"), sum("kept"), s.inert, s.low, s.outlier,
     s.rejected, s.locked, s.to_beat, s.median_shift * 1000))
 end
 
@@ -57,4 +57,10 @@ timed("interpolate, largo max 5", function()
   Preview.set_policy(S, "interpolate")
   Preview.set_interp_max(S, 5)
 end)
+show(S)
+
+timed("un tempo por compas", function() Preview.set_inner_beats(S, false) end)
+show(S)
+
+timed("seguir los ataques", function() Preview.set_inner_beats(S, true) end)
 show(S)

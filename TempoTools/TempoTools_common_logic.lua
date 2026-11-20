@@ -30,7 +30,7 @@ function M.add_tap(is_downbeat)
   reaper.Undo_EndBlock2(0, "Tempo tap: " .. name, -1)
 end
 
-function M.clear_taps()
+local function tap_ids()
   local ids = {}
   local i = 0
   while true do
@@ -41,13 +41,24 @@ function M.clear_taps()
     end
     i = i + 1
   end
-  if #ids == 0 then return 0 end
-  reaper.Undo_BeginBlock2(0)
+  return ids
+end
+
+-- Borra los taps sin abrir un bloque de deshacer: para llamarla dentro de uno propio.
+function M.delete_taps()
+  local ids = tap_ids()
   for _, idx in ipairs(ids) do
     reaper.DeleteProjectMarker(0, idx, false)
   end
-  reaper.Undo_EndBlock2(0, "Tempo tap: borrar taps", -1)
   return #ids
+end
+
+function M.clear_taps()
+  if #tap_ids() == 0 then return 0 end
+  reaper.Undo_BeginBlock2(0)
+  local n = M.delete_taps()
+  reaper.Undo_EndBlock2(0, "Tempo tap: borrar taps", -1)
+  return n
 end
 
 -- Desplaza todos los taps por delta segundos. Devuelve cuántos movió.

@@ -16,6 +16,7 @@ local function view_cfg(S)
   return setmetatable({
     snap_unanchored = S.policy,
     snap_interp_max = S.interp_max,
+    snap_inner_beats = S.inner_beats,
   }, { __index = S.cfg })
 end
 
@@ -41,17 +42,21 @@ local function summarize(S, res)
     total = #res.points,
     down = { snapped = 0, interpolated = 0, kept = 0 },
     beat = { snapped = 0, interpolated = 0, kept = 0 },
-    low = 0, outlier = 0, rejected = 0, locked = 0, to_beat = 0,
+    low = 0, outlier = 0, rejected = 0, locked = 0, to_beat = 0, inert = 0,
     median_shift = res.median_shift,
     irregularity_raw = res.irregularity_raw,
     irregularity_new = res.irregularity_new,
   }
   for _, p in ipairs(res.points) do
-    s[p.kind][p.status] = s[p.kind][p.status] + 1
+    if p.inert then
+      s.inert = s.inert + 1
+    else
+      s[p.kind][p.status] = s[p.kind][p.status] + 1
+    end
     if p.low then s.low = s.low + 1 end
     if p.outlier then s.outlier = s.outlier + 1 end
     if p.rejected then s.rejected = s.rejected + 1 end
-    if p.locked then s.locked = s.locked + 1 end
+    if p.locked and not p.inert then s.locked = s.locked + 1 end
   end
   for i, m in ipairs(res.measures) do
     if m.mode == "beat" and S.measures[i].mode == "bar" then
@@ -69,7 +74,7 @@ function M.recompute(S)
 end
 
 -- measures: salida de Read.group. coll: salida de Items.collect.
--- Estado: { res, summary, policy, interp_max, locked, ... }
+-- Estado: { res, summary, policy, interp_max, inner_beats, clear_taps, locked, ... }
 --   S.res      resultado de Snap.run con puntos anotados (bar, beat, origin, low)
 --   S.summary  conteos por tipo y estado, marcas, desplazamiento y irregularidad
 function M.new(measures, coll, cfg)
@@ -81,6 +86,8 @@ function M.new(measures, coll, cfg)
     cache = {},
     policy = cfg.snap_unanchored,
     interp_max = cfg.snap_interp_max,
+    inner_beats = cfg.snap_inner_beats and true or false,
+    clear_taps = cfg.clear_taps_after and true or false,
   }
   M.recompute(S)
   return S
@@ -88,7 +95,8 @@ end
 
 -- Deja el punto k como se toco (o lo vuelve a anclar).
 function M.toggle_lock(S, k)
-  if not S.res.points[k] then return end
+  local p = S.res.points[k]
+  if not p or p.inert then return end
   S.locked[k] = (not S.locked[k]) or nil
   M.recompute(S)
 end
@@ -98,6 +106,15 @@ function M.set_policy(S, policy)
   if policy ~= "interpolate" and policy ~= "keep" then return end
   if S.policy == policy then return end
   S.policy = policy
+  M.recompute(S)
+end
+
+-- on = true: los beats interiores, tocados o segun los ataques, dan un marker por
+-- beat. false: se ignoran y cada compas queda con un tempo.
+function M.set_inner_beats(S, on)
+  on = on and true or false
+  if S.inner_beats == on then return end
+  S.inner_beats = on
   M.recompute(S)
 end
 
