@@ -60,6 +60,7 @@ function M.resolve(config, preset_name)
   p.source_channel = cfg.source_channel
   p.mode = cfg.mode
   p.close = preset.close == true
+  p.lift_first = preset.lift_first == true
   p.undo = config.undo.enabled
   return p
 end
@@ -95,6 +96,8 @@ local function from_source(p, input, chan)
   if sc == "active" then return chan == input.active_chan end
   return chan == sc - 1
 end
+
+M.from_source = from_source
 
 -- Un punto por acorde (inicio del primero; los siguientes a menos de
 -- window_ms se suman a el). Dos puntos a menos de gap_ms: queda el primero.
@@ -155,7 +158,12 @@ function M.plan(take, p, input)
     else
       pts = chord_points(take, attacks, p.chord_window_ms, p.min_gap_ms)
     end
-    if #pts == 0 then return nil, "Sin puntos de cambio en el rango." end
+    if #pts == 0 then
+      if p.change == "chord" and #attacks == 0 and p.source_channel ~= "all" then
+        return nil, "Ninguna nota del rango es del canal de origen elegido."
+      end
+      return nil, "Sin puntos de cambio en el rango."
+    end
   end
 
   local first = attacks[1]
@@ -175,13 +183,17 @@ function M.plan(take, p, input)
   local last, dips = start_ppq, 0
 
   if p.style == "legato" then
-    -- en acordes, el primer punto no levanta (no hay acorde anterior en el
-    -- rango); en compases, levanta todo punto posterior al inicio
+    -- en acordes, el primer punto levanta solo con lift_first (sin ella se
+    -- asume que no hay acorde anterior que cortar); en compases, levanta todo
+    -- punto posterior al inicio. Con lift_first, un levantado anterior al
+    -- inicio se recorta al inicio.
     local lifts = {}
-    for i = (p.change == "bar") and 1 or 2, #pts do
-      if pts[i] > start_ppq then
+    for i = (p.change == "bar" or p.lift_first) and 1 or 2, #pts do
+      if pts[i] > start_ppq or (p.lift_first and pts[i] == start_ppq) then
         local lift = floor_ppq(pts[i] + ms_to_ticks(take, pts[i], p.offset_ms))
-        if lift > math.max(start_ppq, lifts[#lifts] or 0) and lift < ppq1 then
+        if p.lift_first and lift < start_ppq then lift = start_ppq end
+        local prev = lifts[#lifts] or (p.lift_first and start_ppq - 1 or start_ppq)
+        if lift > prev and lift < ppq1 then
           lifts[#lifts + 1] = lift
         end
       end
@@ -207,6 +219,8 @@ function M.plan(take, p, input)
         dips = dips + 1
       end
     end
+    -- un levantado en el inicio reemplaza al presionado inicial
+    if events[2] and events[2].ppq == events[1].ppq then table.remove(events, 1) end
   end
 
   if p.close and ppq1 > last then add(ppq1, 0) end
@@ -297,8 +311,8 @@ function M.preset_text(p)
       p.style, p.change, num(p.chord_window_ms), num(p.min_gap_ms)),
     string.format("    offset_ms = %s, dip_ms = %s, down_value = %s, up_value = %s,",
       num(p.offset_ms), num(p.dip_ms), num(p.down_value), num(p.up_value)),
-    string.format('    shape = %s, transition_ms = %s, start = "%s", close = %s,',
-      num(p.shape), num(p.transition_ms), p.start, tostring(p.close)),
+    string.format('    shape = %s, transition_ms = %s, start = "%s", close = %s, lift_first = %s,',
+      num(p.shape), num(p.transition_ms), p.start, tostring(p.close), tostring(p.lift_first)),
     "},",
   }, "\n")
 end
@@ -313,6 +327,7 @@ function M.save(p)
     "change=" .. p.change,
     "start=" .. p.start,
     "close=" .. (p.close and "1" or "0"),
+    "lift_first=" .. (p.lift_first and "1" or "0"),
     "mode=" .. p.mode,
     "channel=" .. tostring(p.channel),
     "source_channel=" .. tostring(p.source_channel),
@@ -340,6 +355,7 @@ function M.load(config)
   if CHANGES[saved.change] then p.change = saved.change end
   if STARTS[saved.start] then p.start = saved.start end
   if saved.close == "1" or saved.close == "0" then p.close = (saved.close == "1") end
+  if saved.lift_first == "1" or saved.lift_first == "0" then p.lift_first = (saved.lift_first == "1") end
   if MODES[saved.mode] then p.mode = saved.mode end
   local ch, sch = tonumber(saved.channel), tonumber(saved.source_channel)
   if saved.channel == "active" then

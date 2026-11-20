@@ -160,6 +160,9 @@ return {
         -- shape: 0 cuadrada; 1 a 5 gradual con la forma de REAPER, en transition_ms.
         -- start: "range" (presionado desde el inicio) o "first_attack".
         -- close: escribe 0 (pedal suelto) al final del rango.
+        -- lift_first (opcional, false si falta): el primer punto de cambio tambien
+        -- levanta, para cortar un pedal que venia presionado de antes; si el
+        -- levantado cae antes del inicio del rango, se recorta al inicio.
         presets = {
             ["Legato"] = {
                 style = "legato", change = "chord", chord_window_ms = 40, min_gap_ms = 150,
@@ -180,6 +183,11 @@ return {
                 style = "legato", change = "bar", chord_window_ms = 40, min_gap_ms = 150,
                 offset_ms = -20, dip_ms = 120, down_value = 127, up_value = 0,
                 shape = 0, transition_ms = 40, start = "range", close = true,
+            },
+            ["Medio pedal por compas"] = {
+                style = "legato", change = "bar", chord_window_ms = 40, min_gap_ms = 150,
+                offset_ms = -20, dip_ms = 140, down_value = 127, up_value = 40,
+                shape = 2, transition_ms = 40, start = "range", close = true,
             },
             ["Sostenido"] = {
                 style = "sustained", change = "chord", chord_window_ms = 40, min_gap_ms = 150,

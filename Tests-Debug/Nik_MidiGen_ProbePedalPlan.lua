@@ -2,12 +2,14 @@ local script_dir = debug.getinfo(1, "S").source:match("@(.*[/\\])")
 local Config = dofile(script_dir .. "../MidiGen/MidiGen_config.lua")
 local Pedal = dofile(script_dir .. "../MidiGen/MidiGenPedal_common_logic.lua")
 
-local PRESET = "Por compas"
+local PRESET = "Legato"
+local LIFT_FIRST = true
 
 local function say(s) reaper.ShowConsoleMsg(s .. "\n") end
 
 local p, err = Pedal.resolve(Config, PRESET)
 if not p then say("resolve: " .. tostring(err)) return end
+p.lift_first = LIFT_FIRST
 
 local editor = reaper.MIDIEditor_GetActive()
 if not editor then say("Sin MIDI Editor abierto") return end
