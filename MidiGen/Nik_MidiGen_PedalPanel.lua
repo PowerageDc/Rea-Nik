@@ -31,6 +31,13 @@ local START_OPTS = { { "range", "Inicio del rango" }, { "first_attack", "Primer 
 local MODE_OPTS = { { "merge", "Mezclar" }, { "replace", "Reemplazar" } }
 local CHAN_OPTS = { { "active", "Activo" }, { "fixed", "Fijo" } }
 local SRC_OPTS = { { "all", "Todos" }, { "active", "Activo" }, { "fixed", "Fijo" } }
+local CURSOR_OPTS = { { "inherit", "Heredar forma" }, { "square", "Cuadrada" } }
+
+local function cursor_status(v, info)
+  if not v or type(info) ~= "table" then return tostring(info) end
+  return string.format("Pedal en %.3f s: %d (forma %d%s)", info.time, v, info.shape,
+    info.reshaped and ", anterior cuadrado" or "")
+end
 local SHAPE_NAMES = { [0] = "Cuadrada", "Lineal", "Suave", "Inicio rapido", "Final rapido", "Bezier" }
 local LABEL_W = 130
 
@@ -72,6 +79,7 @@ local function select_preset(name)
   local np = Pedal.resolve(Config, name)
   if not np then return end
   np.channel, np.source_channel, np.mode = P.channel, P.source_channel, P.mode
+  np.cursor_shape = P.cursor_shape
   P = np
   need_save = true
   need_live = true
@@ -212,6 +220,10 @@ local function draw_output()
   reaper.ImGui_Text(ctx, "Arranque")
   choice_row("start", START_OPTS, P.start, function(v) P.start = v end)
   check("Soltar el pedal al final del rango###close", "close")
+
+  reaper.ImGui_Separator(ctx)
+  reaper.ImGui_Text(ctx, "Forma al presionar o soltar en el cursor")
+  choice_row("cursor_shape", CURSOR_OPTS, P.cursor_shape, function(v) P.cursor_shape = v end, true)
 end
 
 -- Piano roll de las notas del rango (arriba) y linea del pedal con relleno
@@ -351,6 +363,15 @@ local function draw()
   reaper.ImGui_SameLine(ctx)
   local lv_changed, lv = reaper.ImGui_Checkbox(ctx, "En vivo###live", live)
   if lv_changed then live = lv end
+  if not take then reaper.ImGui_BeginDisabled(ctx) end
+  if ButtonStyle.button(ctx, "Presionar en el cursor###press", "neutral", { pad = 8, h = 28 }) and last_editor then
+    status = cursor_status(Pedal.cursor_point(last_editor, P, true))
+  end
+  reaper.ImGui_SameLine(ctx)
+  if ButtonStyle.button(ctx, "Soltar en el cursor###release", "neutral", { pad = 8, h = 28 }) and last_editor then
+    status = cursor_status(Pedal.cursor_point(last_editor, P, false))
+  end
+  if not take then reaper.ImGui_EndDisabled(ctx) end
   reaper.ImGui_Text(ctx, status ~= "" and status or " ")
 
   if need_save then Pedal.save(P) end

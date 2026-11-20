@@ -53,6 +53,10 @@ function M.resolve(config, preset_name)
     return nil, "source_channel invalido: " .. tostring(cfg.source_channel)
   end
   if not MODES[cfg.mode] then return nil, "mode invalido: " .. tostring(cfg.mode) end
+  local cursor_shape = cfg.cursor_shape or "inherit"
+  if cursor_shape ~= "inherit" and cursor_shape ~= "square" then
+    return nil, "cursor_shape invalido: " .. tostring(cursor_shape)
+  end
 
   local p = copy(preset)
   p.name = preset_name
@@ -61,6 +65,7 @@ function M.resolve(config, preset_name)
   p.mode = cfg.mode
   p.close = preset.close == true
   p.lift_first = preset.lift_first == true
+  p.cursor_shape = cursor_shape
   p.undo = config.undo.enabled
   return p
 end
@@ -328,6 +333,7 @@ function M.save(p)
     "start=" .. p.start,
     "close=" .. (p.close and "1" or "0"),
     "lift_first=" .. (p.lift_first and "1" or "0"),
+    "cursor_shape=" .. p.cursor_shape,
     "mode=" .. p.mode,
     "channel=" .. tostring(p.channel),
     "source_channel=" .. tostring(p.source_channel),
@@ -356,6 +362,9 @@ function M.load(config)
   if STARTS[saved.start] then p.start = saved.start end
   if saved.close == "1" or saved.close == "0" then p.close = (saved.close == "1") end
   if saved.lift_first == "1" or saved.lift_first == "0" then p.lift_first = (saved.lift_first == "1") end
+  if saved.cursor_shape == "inherit" or saved.cursor_shape == "square" then
+    p.cursor_shape = saved.cursor_shape
+  end
   if MODES[saved.mode] then p.mode = saved.mode end
   local ch, sch = tonumber(saved.channel), tonumber(saved.source_channel)
   if saved.channel == "active" then
@@ -402,6 +411,93 @@ function M.run(config)
     reaper.ShowConsoleMsg(string.format(
       "Pedal: preset=%s canal=%d origen=%s cambios=%d eventos=%d rango=%.3f-%.3f s\n",
       p.name, info.chan + 1, info.source, info.changes, n, info.t0, info.t1))
+  end
+end
+
+-- Escribe un CC64 en el cursor: down_value si down, 0 si no. Reemplaza el CC64
+-- del mismo tick (el nuevo hereda su forma). Devuelve el valor y los datos del
+-- punto; nil y el motivo si no se pudo.
+function M.cursor_point(editor, p, down)
+  local take = reaper.MIDIEditor_GetTake(editor)
+  if not take or not reaper.ValidatePtr(take, "MediaItem_Take*") then
+    return nil, "El MIDI Editor no tiene un take valido."
+  end
+  local item = reaper.GetMediaItemTake_Item(take)
+  local pos = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+  local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+  local ppq = floor_ppq(reaper.MIDI_GetPPQPosFromProjTime(take, reaper.GetCursorPosition()))
+  local ppq_start = floor_ppq(reaper.MIDI_GetPPQPosFromProjTime(take, pos))
+  local ppq_end = floor_ppq(reaper.MIDI_GetPPQPosFromProjTime(take, pos + len))
+  if ppq < math.max(0, ppq_start) or ppq > ppq_end then
+    return nil, "El cursor esta fuera del item."
+  end
+
+  local info = Cc.lane_info(PEDAL_CC)
+  local chan
+  if p.channel == "active" then
+    chan = reaper.MIDIEditor_GetSetting_int(editor, "default_note_chan")
+  else
+    chan = p.channel - 1
+  end
+  local value = down and p.down_value or 0
+
+  local prev
+  for _, ev in ipairs(Cc.read_range(take, info, chan, 0, ppq)) do
+    if not prev or ev.ppq >= prev.ppq then prev = ev end
+  end
+  local has_next = #Cc.read_range(take, info, chan, ppq + 1, 2 ^ 53) > 0
+
+  local shape, tension = 0, 0
+  if p.cursor_shape == "inherit" and prev and has_next then
+    shape, tension = prev.shape, prev.tension
+  end
+
+  local list, first = {}, ppq
+  if p.cursor_shape == "square" and prev and prev.ppq < ppq and prev.shape ~= 0 then
+    prev.shape, prev.tension = 0, 0
+    list[#list + 1] = prev
+    first = prev.ppq
+  end
+  local m2, m3 = Cc.encode(info, value)
+  list[#list + 1] = {
+    ppq = ppq, chanmsg = info.chanmsg, chan = chan, msg2 = m2, msg3 = m3,
+    shape = shape, tension = tension,
+  }
+
+  if p.undo then reaper.Undo_BeginBlock() end
+  Cc.delete_range(take, info, chan, first, ppq)
+  Cc.insert_events(take, list)
+  if p.undo then
+    reaper.Undo_EndBlock(down and "Sustain pedal down at cursor" or "Sustain pedal up at cursor", -1)
+  end
+
+  return value, {
+    ppq = ppq, time = reaper.GetCursorPosition(), chan = chan,
+    shape = shape, inherited = shape ~= 0, reshaped = first < ppq,
+  }
+end
+
+-- Presionar o soltar el pedal en el cursor del editor activo, con el ultimo
+-- estado guardado (o el preset por defecto del config).
+function M.run_cursor(config, down)
+  local editor = reaper.MIDIEditor_GetActive()
+  if not editor then return end
+
+  local p, err = M.load(config)
+  if not p then
+    warn(err)
+    return
+  end
+  local v, info = M.cursor_point(editor, p, down)
+  if not v or type(info) ~= "table" then
+    warn(tostring(info))
+    return
+  end
+
+  if config.pedal.verbose then
+    reaper.ShowConsoleMsg(string.format("Pedal: %s en %.3f s canal=%d valor=%d forma=%d%s\n",
+      down and "presionado" or "soltado", info.time, info.chan + 1, v, info.shape,
+      info.reshaped and " (evento anterior pasado a cuadrado)" or ""))
   end
 end
 

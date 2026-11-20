@@ -149,6 +149,10 @@ return {
         source_channel = "all",
         -- replace borra los CC64 del canal de salida dentro del rango; merge los conserva
         mode = "replace",
+        -- forma del punto que escriben Presionar y Soltar en el cursor: "inherit"
+        -- toma la forma y la tension del evento anterior (si hay uno posterior);
+        -- "square" lo escribe cuadrado y deja cuadrado tambien el evento anterior
+        cursor_shape = "inherit",
         verbose = true,
 
         -- style: "legato" (levanta y vuelve a bajar en cada punto de cambio) o
