@@ -231,9 +231,10 @@ end
 -- Un punto de baja confianza y dudoso a la vez no se ancla: se corre de nuevo
 -- tratándolo como un punto sin ataque.
 -- Devuelve { measures, points, median_shift, irregularity_raw, irregularity_new }.
--- Cada punto: { kind, raw, pos, shift, status, ref, ratio, outlier, locked, rejected }
--- con status "snapped", "interpolated" o "kept". El índice del punto en `points`
--- es estable mientras `measures` no cambie.
+-- Cada punto: { kind, raw, pos, shift, status, ref, ratio, outlier, locked, rejected,
+-- rejected_pos, rejected_ratio } con status "snapped", "interpolated" o "kept".
+-- Los rechazados conservan la posición y el ratio del ataque que se descartó.
+-- El índice del punto en `points` es estable mientras `measures` no cambie.
 function M.run(measures, coll, cfg, opts)
   opts = opts or {}
   local extra = {
@@ -251,8 +252,13 @@ function M.run(measures, coll, cfg, opts)
     end
   end
   if any then
+    local first = res
     extra.skip = rejected
     res = run_once(measures, coll, cfg, extra)
+    for k in pairs(rejected) do
+      res.points[k].rejected_pos = first.points[k].pos
+      res.points[k].rejected_ratio = first.points[k].ratio
+    end
   end
   return res
 end

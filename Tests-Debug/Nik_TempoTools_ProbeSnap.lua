@@ -34,7 +34,10 @@ for i, p in ipairs(res.points) do
   local flags = ""
   if p.status == "snapped" and p.ratio < cfg.snap_high_ratio then flags = flags .. " [baja confianza]" end
   if p.outlier then flags = flags .. " [dudoso]" end
-  if p.rejected then flags = flags .. " [rechazado]" end
+  if p.rejected then
+    flags = flags .. string.format(" [rechazado x%.1f %+.1f ms]",
+      p.rejected_ratio, (p.rejected_pos - p.raw) * 1000)
+  end
   log(string.format("%3d  %-5s %9.3f -> %9.3f  %+7.1f ms  %-12s %-14s %s%s",
     i, p.kind, p.raw, p.pos, p.shift * 1000, p.status, p.ref or "-",
     p.ratio and string.format("x%.1f", p.ratio) or "", flags))
