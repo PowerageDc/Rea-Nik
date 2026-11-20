@@ -9,4 +9,10 @@ return {
   snap_window_ratio = 0.15,
   snap_window_min = 0.04,
   snap_window_max = 0.12,
+  snap_high_ratio = 4.0,
+  snap_unanchored = "interpolate",
+  snap_interp_max = 3,
+  snap_bar_to_beat = true,
+  snap_outlier_k = 3,
+  snap_min_gap = 0.03,
 }
