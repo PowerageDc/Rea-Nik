@@ -196,11 +196,19 @@ end
 
 -- Devuelve "apply", "cancel" o nil mientras la ventana sigue abierta.
 local function frame(ctx, S, st)
-  reaper.ImGui_SetNextWindowSize(ctx, 1000, 560, reaper.ImGui_Cond_FirstUseEver())
+  local w = S.window
+  if w then
+    reaper.ImGui_SetNextWindowPos(ctx, w.x, w.y, reaper.ImGui_Cond_FirstUseEver())
+  end
+  reaper.ImGui_SetNextWindowSize(ctx, w and w.w or 1000, w and w.h or 560,
+    reaper.ImGui_Cond_FirstUseEver())
   local flags = reaper.ImGui_WindowFlags_NoNav() | reaper.ImGui_WindowFlags_NoCollapse()
   local visible, open = reaper.ImGui_Begin(ctx, TITLE, true, flags)
   local action
   if visible then
+    local x, y = reaper.ImGui_GetWindowPos(ctx)
+    local ww, hh = reaper.ImGui_GetWindowSize(ctx)
+    S.window = { x = x, y = y, w = ww, h = hh }
     draw_summary(ctx, S)
     reaper.ImGui_Separator(ctx)
     draw_controls(ctx, S)

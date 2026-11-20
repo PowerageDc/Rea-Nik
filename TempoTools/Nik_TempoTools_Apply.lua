@@ -41,6 +41,7 @@ end
 
 -- measures: compases ya ajustados por el snap. snap: resumen de la vista previa.
 -- clear_taps: borrar los markers TAP y TAP1 dentro del mismo bloque de deshacer.
+-- Devuelve true si se aplicó; false si se canceló o no se pudo, para volver a la vista previa.
 local function finish(measures, snap, clear_taps)
   local suggested = cfg.preroll_bars_default
   if not coll.fresh then
@@ -49,23 +50,23 @@ local function finish(measures, snap, clear_taps)
   end
 
   local ok, input = reaper.GetUserInputs(TITLE, 1, "Compases de pre-roll:", tostring(suggested))
-  if not ok then return end
+  if not ok then return false end
   local n_bars = math.floor(tonumber(input) or 0)
   if n_bars < 1 or n_bars > 8 then
     show("Cantidad de compases no válida: " .. input)
-    return
+    return false
   end
 
   local plan, plan_warnings = build(measures, n_bars)
   if not plan then
     show("No se pudo calcular el plan:\n" .. warnings_text(plan_warnings))
-    return
+    return false
   end
 
   local ev = Items.evaluate(coll, plan)
   if ev.blocking then
     show("No se aplica nada:\n" .. warnings_text(ev.warnings))
-    return
+    return false
   end
 
   local function count(k) return snap.down[k] + snap.beat[k] end
@@ -94,7 +95,7 @@ local function finish(measures, snap, clear_taps)
     text = text .. "\n\nAvisos:\n" .. warnings_text(all)
   end
 
-  if show(text .. "\n\n¿Aplicar?", 1) ~= 1 then return end
+  if show(text .. "\n\n¿Aplicar?", 1) ~= 1 then return false end
 
   reaper.Undo_BeginBlock2(0)
   reaper.PreventUIRefresh(1)
@@ -118,10 +119,18 @@ local function finish(measures, snap, clear_taps)
   reaper.ShowConsoleMsg(string.format(
     "downbeats fuera de inicio de compás: %d | saltos de compás irregulares: %d | desvío de markers posteriores: %.4f s\n",
     v.off_grid, v.bad_seq, v.tail_dev))
+  return true
 end
 
 local S = Preview.new(tapped, coll, cfg)
-PreviewUi.run(S, {
-  on_apply = function(measures) finish(measures, S.summary, S.clear_taps) end,
-  on_cancel = function() end,
-})
+
+local function open_preview()
+  PreviewUi.run(S, {
+    on_apply = function(measures)
+      if not finish(measures, S.summary, S.clear_taps) then open_preview() end
+    end,
+    on_cancel = function() end,
+  })
+end
+
+open_preview()
