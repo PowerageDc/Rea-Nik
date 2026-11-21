@@ -94,18 +94,65 @@ local function split_by_level(s, run, p)
     return merged
 end
 
+local function classify(row, p)
+    if row.hf >= p.sib_hf_min and row.zc_hz >= p.sib_hz_min then return "sib" end
+    return "voz"
+end
+
+-- Separa una corrida por clase (sibilante o voz) según los rasgos de cada
+-- ventana. Las ráfagas más cortas que class_rows se absorben en la vecina para
+-- que una sola ventana ruidosa no parta la pieza.
+local function split_by_class(rows, run, p)
+    if not p.classify then
+        return { { i0 = run.i0, i1 = run.i1, class = "voz" } }
+    end
+
+    local raw = {}
+    for i = run.i0, run.i1 do
+        local c = classify(rows[i], p)
+        local last = raw[#raw]
+        if last and last.class == c then
+            last.i1 = i
+        else
+            raw[#raw + 1] = { i0 = i, i1 = i, class = c }
+        end
+    end
+
+    local merged = {}
+    for _, pc in ipairs(raw) do
+        local prev = merged[#merged]
+        if prev and (prev.class == pc.class or (pc.i1 - pc.i0 + 1) < p.class_rows) then
+            prev.i1 = pc.i1
+        else
+            merged[#merged + 1] = pc
+        end
+    end
+    if #merged > 1 and (merged[1].i1 - merged[1].i0 + 1) < p.class_rows then
+        merged[2].i0 = merged[1].i0
+        table.remove(merged, 1)
+    end
+    return merged
+end
+
 local function describe(rows, pc, win)
-    local vals, peak = {}, -math.huge
+    local vals, peak, hf, zc = {}, -math.huge, 0, 0
     for i = pc.i0, pc.i1 do
-        vals[#vals + 1] = rows[i].rms_db
-        if rows[i].peak_db > peak then peak = rows[i].peak_db end
+        local r = rows[i]
+        vals[#vals + 1] = r.rms_db
+        if r.peak_db > peak then peak = r.peak_db end
+        hf = hf + r.hf
+        zc = zc + r.zc_hz
     end
     table.sort(vals)
+    local n = pc.i1 - pc.i0 + 1
     return {
         t0 = rows[pc.i0].t,
         t1 = rows[pc.i1].t + win,
         level_db = vals[math.ceil(#vals / 2)],
         peak_db = peak,
+        class = pc.class,
+        hf = hf / n,
+        zc_hz = zc / n,
     }
 end
 
@@ -121,14 +168,21 @@ function M.split(rows, seg_cfg, window_ms)
         min_rows = rows_for(seg_cfg.min_len_ms, window_ms),
         step_db = seg_cfg.level_split and seg_cfg.level_step_db or nil,
         hold_rows = rows_for(seg_cfg.level_hold_ms, window_ms),
+        classify = seg_cfg.classify,
+        sib_hf_min = seg_cfg.sib_hf_min,
+        sib_hz_min = seg_cfg.sib_hz_min,
+        class_rows = rows_for(seg_cfg.class_min_ms, window_ms),
     }
 
     local s = smooth(rows, smooth_rows)
     local out = {}
     for _, run in ipairs(voiced_runs(rows, p)) do
-        local pieces = p.step_db and split_by_level(s, run, p) or { run }
-        for _, pc in ipairs(pieces) do
-            out[#out + 1] = describe(rows, pc, window_ms / 1000)
+        for _, cp in ipairs(split_by_class(rows, run, p)) do
+            local pieces = p.step_db and split_by_level(s, cp, p) or { cp }
+            for _, pc in ipairs(pieces) do
+                pc.class = cp.class
+                out[#out + 1] = describe(rows, pc, window_ms / 1000)
+            end
         end
     end
     return out
@@ -145,10 +199,17 @@ function M.clear_regions(prefix)
     end
 end
 
+local CLASS_COLORS = {
+    sib = { 255, 140, 0 },
+    voz = { 70, 130, 220 },
+}
+
 function M.add_regions(prefix, pieces, first_index)
     for i, pc in ipairs(pieces) do
-        local name = string.format("%s%03d %.1f", prefix, first_index + i, pc.level_db)
-        reaper.AddProjectMarker2(0, true, pc.t0, pc.t1, name, -1, 0)
+        local name = string.format("%s%03d %s %.1f", prefix, first_index + i, pc.class, pc.level_db)
+        local c = CLASS_COLORS[pc.class] or CLASS_COLORS.voz
+        reaper.AddProjectMarker2(0, true, pc.t0, pc.t1, name, -1,
+            reaper.ColorToNative(c[1], c[2], c[3]) | 0x1000000)
     end
 end
 

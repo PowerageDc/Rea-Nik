@@ -34,6 +34,7 @@ function M.part_levels(part, opts)
         buf.clear()
         local got = reaper.GetAudioAccessorSamples(acc, sr, nch, t - part.pos, n, buf)
         local sum, peak, count = 0, 0, 0
+        local msum, dsum, zc = 0, 0, 0
         if got == 1 then
             local s = buf.table()
             count = #s
@@ -43,12 +44,29 @@ function M.part_levels(part, opts)
                 if v < 0 then v = -v end
                 if v > peak then peak = v end
             end
+            local prev = 0
+            for f = 0, n - 1 do
+                local m = s[f * nch + 1]
+                if nch == 2 then m = (m + s[f * nch + 2]) * 0.5 end
+                msum = msum + m * m
+                if f > 0 then
+                    local d = m - prev
+                    dsum = dsum + d * d
+                    if (m >= 0) ~= (prev >= 0) then zc = zc + 1 end
+                end
+                prev = m
+            end
         end
         local rms = count > 0 and math.sqrt(sum / count) or 0
+        -- hf: energía de la señal diferenciada sobre la energía de la señal
+        -- (mono); crece con el contenido agudo. zc_hz: cruces por cero por
+        -- segundo dividido 2, estimación de la frecuencia dominante.
         rows[#rows + 1] = {
             t = t,
             rms_db = to_db(rms, opts.floor_db, info.gain_db),
             peak_db = to_db(peak, opts.floor_db, info.gain_db),
+            hf = msum > 0 and dsum / msum or 0,
+            zc_hz = zc / (2 * opts.window_s),
             got = got,
         }
         t = t + opts.window_s

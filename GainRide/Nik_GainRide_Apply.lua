@@ -22,7 +22,11 @@ local opts = {
     sample_rate = cfg.sample_rate,
     floor_db = cfg.floor_db,
 }
-local margin = math.max(ap.ramp_down_ms, ap.ramp_up_ms) / 1000
+local margin = math.max(ap.ramp_down_ms, ap.ramp_up_ms)
+for _, cc in pairs(ap.classes) do
+    margin = math.max(margin, cc.ramp_down_ms or 0, cc.ramp_up_ms or 0)
+end
+margin = margin / 1000
 
 -- Las piezas de todos los tramos de un mismo track forman una sola secuencia,
 -- para que las rampas entre tramos vecinos no se pisen.
@@ -55,8 +59,8 @@ for _, tr in ipairs(order) do
         if env then
             local pts, info = Apply.plan(entry.pieces, ap)
             Apply.write(env, pts, entry.ranges, ap)
-            log("GainRide | track '%s' | piezas=%d | puntos=%d | objetivo %.1f dB | ganancia [%.1f, %+.1f] dB | topes: bajar %d, subir %d",
-                name, #entry.pieces, #pts, info.target, info.g_min, info.g_max,
+            log("GainRide | track '%s' | piezas=%d | puntos=%d | objetivo %s dB | ganancia [%.1f, %+.1f] dB | topes: bajar %d, subir %d",
+                name, #entry.pieces, #pts, info.target_text, info.g_min, info.g_max,
                 info.capped_down, info.capped_up)
         else
             missing[#missing + 1] = name

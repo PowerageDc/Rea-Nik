@@ -45,9 +45,9 @@ for si, seg in ipairs(segments) do
 
     for i, pc in ipairs(pieces) do
         if i <= MAX_LINES then
-            log("   %03d  %s -> %s  %5.0f ms  nivel %6.1f dB  pk %6.1f",
+            log("   %03d  %s -> %s  %5.0f ms  %s  nivel %6.1f dB  pk %6.1f  hf %.2f  zc %5.0f Hz",
                 total + i, fmt_t(pc.t0), fmt_t(pc.t1), (pc.t1 - pc.t0) * 1000,
-                pc.level_db, pc.peak_db)
+                pc.class, pc.level_db, pc.peak_db, pc.hf, pc.zc_hz)
         end
     end
     if #pieces > MAX_LINES then

@@ -9,7 +9,10 @@ return {
     apply = {
         mode = "selected",
         envelope = "Volume (Pre-FX)",
-        target_db = "median",
+        classes = {
+            voz = { target_db = "median", offset_db = 0 },
+            sib = { target_db = "median", offset_db = -2, ramp_down_ms = 10, ramp_up_ms = 40 },
+        },
         strength = 0.4,
         max_down_db = 9,
         max_up_db = 3,
@@ -28,5 +31,9 @@ return {
         level_split = true,
         level_step_db = 4,
         level_hold_ms = 60,
+        classify = true,
+        sib_hf_min = 0.3,
+        sib_hz_min = 3000,
+        class_min_ms = 60,
     },
 }
