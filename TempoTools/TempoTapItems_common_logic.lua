@@ -159,7 +159,7 @@ function M.evaluate(coll, plan)
   return ev
 end
 
--- Pasa el count-in a timebase beats, mueve los stems y alarga o acorta el click.
+-- Pasa el count-in a timebase beats y mueve los stems.
 -- Devuelve la cantidad de items del count-in convertidos.
 function M.apply(coll, plan)
   local converted = 0
@@ -172,11 +172,18 @@ function M.apply(coll, plan)
   for _, s in ipairs(coll.stems) do
     reaper.SetMediaItemInfo_Value(s.item, "D_POSITION", s.pos + plan.delta)
   end
-  local c = coll.click_items[1]
-  if c then
-    reaper.SetMediaItemInfo_Value(c.item, "D_LENGTH", c.len + plan.delta)
-  end
   return converted
+end
+
+-- Lleva el final del click a su final anterior mas el desplazamiento. Se llama
+-- con el mapa de tempo ya aplicado: un item en timebase beats guarda su largo
+-- en beats y lo recalcula con cada cambio del mapa, asi que fijarlo antes lo
+-- deformaria.
+function M.fit_click(coll, plan)
+  local c = coll.click_items[1]
+  if not c then return end
+  local pos = reaper.GetMediaItemInfo_Value(c.item, "D_POSITION")
+  reaper.SetMediaItemInfo_Value(c.item, "D_LENGTH", c.pos + c.len + plan.delta - pos)
 end
 
 return M
