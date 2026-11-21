@@ -10,10 +10,12 @@ local EditorFocus = dofile(script_dir .. "../_Shared/ImGuiEditorFocus_common_log
 local TITLE = "GainRide"
 
 local MODES = {
-    { id = "selected", label = "Items seleccionados" },
-    { id = "all", label = "Tracks seleccionados" },
+    { id = "selected", label = "Items sel." },
+    { id = "all", label = "Tracks sel." },
     { id = "timesel", label = "Time selection" },
 }
+
+local SHAPE_NAMES = { "Lineal", "Cuadrada", "Inicio y fin lentos", "Inicio rápido", "Final rápido", "Bézier" }
 
 local function deep_copy(v)
     if type(v) ~= "table" then return v end
@@ -55,7 +57,9 @@ local S = {
     dirty = false,
     last_refresh = 0,
     preview = false,
-    summary = {},
+    lanes = {},
+    sel = 1,
+    follow = false,
 }
 
 local ctx = reaper.ImGui_CreateContext(TITLE)
@@ -75,7 +79,7 @@ end
 local function analyze()
     local segments, err = Source.resolve(P.mode, cfg.merge_tolerance_ms / 1000)
     if not segments then
-        S.reads, S.msg, S.summary = nil, err, {}
+        S.reads, S.msg, S.lanes = nil, err, {}
         return
     end
     local t0 = reaper.time_precise()
@@ -138,7 +142,7 @@ end
 -- activa, rehace también las regiones.
 local function refresh()
     S.dirty = false
-    S.summary = {}
+    S.lanes = {}
     if not S.reads then return end
     if not reads_valid(S.reads) then
         S.reads, S.msg = nil, "Los items cambiaron: analizá de nuevo."
@@ -156,19 +160,28 @@ local function refresh()
         for _, pc in ipairs(pieces) do
             n[pc.class] = (n[pc.class] or 0) + 1
         end
-        local line = string.format("%s | piezas %d (voz %d, sib %d, plo %d)",
-            Source.track_name(tr), #pieces, n.voz, n.sib, n.plo)
+        local lane = {
+            tr = tr,
+            name = Source.track_name(tr),
+            pieces = pieces,
+            line1 = string.format("piezas %d (voz %d, sib %d, plo %d)", #pieces, n.voz, n.sib, n.plo),
+            line2 = "sin piezas en este track",
+        }
         if #pieces > 0 then
-            local _, info = Apply.plan(pieces, P.apply)
-            line = line .. string.format(" | objetivo %s dB | ganancia [%.1f, %+.1f] | topes %d/%d",
-                info.target_text, info.g_min, info.g_max, info.capped_down, info.capped_up)
+            local pts, info = Apply.plan(pieces, P.apply)
+            lane.pts = pts
+            lane.line1 = lane.line1 .. string.format(" | topes bajar %d, subir %d",
+                info.capped_down, info.capped_up)
+            lane.line2 = string.format("objetivo %s dB | ganancia [%.1f, %+.1f] dB",
+                info.target_text, info.g_min, info.g_max)
             if S.preview then
                 Segment.add_regions(cfg.preview_prefix, pieces, first)
                 first = first + #pieces
             end
         end
-        S.summary[#S.summary + 1] = line
+        S.lanes[#S.lanes + 1] = lane
     end
+    if S.sel > #S.lanes then S.sel = math.max(1, #S.lanes) end
     reaper.PreventUIRefresh(-1)
     if S.preview then reaper.UpdateArrange() end
 end
@@ -248,11 +261,24 @@ local function tab_gain()
     sl_dbl("up", "Tope al subir", ap, "max_up_db", 0, 12, "%.1f dB")
     sl_int("rdown", "Rampa al bajar", ap, "ramp_down_ms", 0, 500, "%d ms")
     sl_int("rup", "Rampa al subir", ap, "ramp_up_ms", 0, 1000, "%d ms")
-    sl_int("shape", "Forma de rampa", ap, "shape", 0, 5)
-    sl_dbl("tension", "Tensión", ap, "tension", -1, 1, "%.2f")
+    reaper.ImGui_SetNextItemWidth(ctx, -LABEL_W)
+    if reaper.ImGui_BeginCombo(ctx, "Forma de rampa##shape", SHAPE_NAMES[ap.shape + 1]) then
+        for i, name in ipairs(SHAPE_NAMES) do
+            if reaper.ImGui_Selectable(ctx, name .. "###shape" .. i, ap.shape == i - 1) then
+                ap.shape = i - 1
+                S.dirty = true
+            end
+        end
+        reaper.ImGui_EndCombo(ctx)
+    end
+    reaper.ImGui_BeginDisabled(ctx, ap.shape ~= 5)
+    sl_dbl("tension", "Tensión (Bézier)", ap, "tension", -1, 1, "%.2f")
+    reaper.ImGui_EndDisabled(ctx)
     check("keep", "Conservar puntos existentes", ap, "keep_existing")
-    reaper.ImGui_Separator(ctx)
+end
 
+local function tab_by_class()
+    local ap = P.apply
     reaper.ImGui_Text(ctx, "Voz")
     sl_dbl("voz_off", "Offset", ap.classes.voz, "offset_db", -12, 6, "%.1f dB")
     reaper.ImGui_Text(ctx, "Sibilante")
@@ -271,16 +297,230 @@ local function tab_read()
     sl_int("lf", "Corte de graves (lf)", P.read, "lf_hz", 50, 500, "%d Hz")
 end
 
-local function draw()
-    reaper.ImGui_Text(ctx, "Fuente")
-    for _, m in ipairs(MODES) do
-        if reaper.ImGui_RadioButton(ctx, m.label, P.mode == m.id) and P.mode ~= m.id then
-            P.mode = m.id
-            S.reads, S.msg, S.summary = nil, "Sin analizar.", {}
+local LEVEL_H, GAIN_H, GAP = 76, 46, 4
+local LV_LO, LV_HI = -80, 0
+local VIEW_PAD_S = 0.5
+
+-- Fracción del cambio de una rampa en 11 puntos equiespaciados (0 a 1), medida
+-- en un envelope real con 12 dB de recorrido. La forma 0 es lineal y la 1 no
+-- tiene tabla: se dibuja aparte.
+local SHAPE_TABLES = {
+    [2] = { 0, .03, .09, .20, .33, .47, .62, .76, .88, .97, 1 },
+    [3] = { 0, .25, .46, .63, .76, .86, .93, .97, .99, 1, 1 },
+    [4] = { 0, 0, .01, .02, .06, .11, .20, .32, .48, .70, 1 },
+}
+local BEZIER_TABLES = {
+    neg = { 0, .83, .92, .96, .98, .99, 1, 1, 1, 1, 1 },
+    zero = { 0, .06, .15, .25, .36, .47, .59, .70, .82, .92, 1 },
+    pos = { 0, 0, 0, 0, 0, .01, .02, .03, .06, .14, 1 },
+}
+
+-- Tabla de una forma con su tensión; nil si la forma es lineal. En Bézier se
+-- mezcla entre las tablas de tensión -1, 0 y +1.
+local function shape_table(shape, tension)
+    if shape == 5 then
+        local a, b, f
+        if tension < 0 then
+            a, b, f = BEZIER_TABLES.neg, BEZIER_TABLES.zero, tension + 1
+        else
+            a, b, f = BEZIER_TABLES.zero, BEZIER_TABLES.pos, tension
+        end
+        local out = {}
+        for i = 1, #a do out[i] = a[i] + (b[i] - a[i]) * f end
+        return out
+    end
+    return SHAPE_TABLES[shape]
+end
+local CLASS_COL = { voz = 0x4682DC00, sib = 0xFF8C0000, plo = 0xC83CC800 }
+
+-- Rango de tiempo de la curva: lo visible en el arrange, o el de los tramos
+-- del track con el margen de las rampas.
+local function view_span(lane)
+    if S.follow then
+        local ok, a, b = pcall(reaper.GetSet_ArrangeView2, 0, false, 0, 0, 0, 0)
+        if ok and a and b and b > a then return a, b end
+    end
+    local lo, hi = math.huge, -math.huge
+    for _, rd in ipairs(S.reads) do
+        if rd.seg.track == lane.tr then
+            lo = math.min(lo, rd.seg.t0)
+            hi = math.max(hi, rd.seg.t1)
+        end
+    end
+    if hi <= lo then return 0, 1 end
+    return lo - VIEW_PAD_S, hi + VIEW_PAD_S
+end
+
+-- Rango del carril de ganancia según fuerza, topes y offsets: no depende de
+-- los datos, así que no se mueve mientras se ajusta otro parámetro.
+local function gain_bounds()
+    local ap = P.apply
+    local lo, hi = 0, 0
+    for _, cc in pairs(ap.classes) do
+        local off = cc.offset_db or 0
+        lo = math.min(lo, -ap.max_down_db * ap.strength + off)
+        hi = math.max(hi, ap.max_up_db * ap.strength + off)
+    end
+    lo, hi = lo - 1, hi + 1
+    if hi - lo < 6 then
+        local mid = (hi + lo) / 2
+        lo, hi = mid - 3, mid + 3
+    end
+    return lo, hi
+end
+
+local function draw_curve_controls()
+    reaper.ImGui_BeginDisabled(ctx, #S.lanes < 2)
+    reaper.ImGui_SetNextItemWidth(ctx, 200)
+    local cur = S.lanes[S.sel]
+    if reaper.ImGui_BeginCombo(ctx, "##lane", cur and cur.name or "Sin track") then
+        for i, ln in ipairs(S.lanes) do
+            if reaper.ImGui_Selectable(ctx, ln.name .. "###lane" .. i, i == S.sel) then
+                S.sel = i
+            end
+        end
+        reaper.ImGui_EndCombo(ctx)
+    end
+    reaper.ImGui_EndDisabled(ctx)
+    reaper.ImGui_SameLine(ctx)
+    local ch, v = reaper.ImGui_Checkbox(ctx, "Seguir el arrange##follow", S.follow)
+    if ch then S.follow = v end
+end
+
+-- Carril de nivel (RMS, piezas y umbrales de la puerta) y carril de ganancia
+-- planificada, sobre el mismo eje de tiempo. Los puntos son los de Apply.plan,
+-- los mismos que escribe Aplicar.
+local function draw_curve()
+    local AddLine = reaper.ImGui_DrawList_AddLine
+    local AddRect = reaper.ImGui_DrawList_AddRectFilled
+
+    local w = reaper.ImGui_GetContentRegionAvail(ctx)
+    local x, y = reaper.ImGui_GetCursorScreenPos(ctx)
+    reaper.ImGui_Dummy(ctx, w, LEVEL_H + GAP + GAIN_H)
+    local dl = reaper.ImGui_GetWindowDrawList(ctx)
+    local gy0 = y + LEVEL_H + GAP
+    AddRect(dl, x, y, x + w, y + LEVEL_H, 0x00000066, 4)
+    AddRect(dl, x, gy0, x + w, gy0 + GAIN_H, 0x00000066, 4)
+
+    local lane = S.reads and S.lanes[S.sel]
+    if not lane then return end
+
+    local t0, t1 = view_span(lane)
+    local span = math.max(t1 - t0, 1e-6)
+    local g_lo, g_hi = gain_bounds()
+    local function tx(t)
+        local c = math.max(t0, math.min(t1, t))
+        return x + w * (c - t0) / span
+    end
+    local function ly(db)
+        local c = math.max(LV_LO, math.min(LV_HI, db))
+        return y + LEVEL_H - 1 - (LEVEL_H - 2) * (c - LV_LO) / (LV_HI - LV_LO)
+    end
+    local function gy(db)
+        local c = math.max(g_lo, math.min(g_hi, db))
+        return gy0 + GAIN_H - 1 - (GAIN_H - 2) * (c - g_lo) / (g_hi - g_lo)
+    end
+
+    for _, pc in ipairs(lane.pieces) do
+        if pc.t1 > t0 and pc.t0 < t1 then
+            local xa = tx(pc.t0)
+            local xb = math.max(tx(pc.t1), xa + 2)
+            local col = CLASS_COL[pc.class] or CLASS_COL.voz
+            local yl = ly(pc.level_db)
+            AddRect(dl, xa, yl, xb, y + LEVEL_H - 1, col | 0x40, 0)
+            AddLine(dl, xa, yl, xb, yl, col | 0xFF, 2)
         end
     end
 
-    reaper.ImGui_Separator(ctx)
+    AddLine(dl, x, ly(P.seg.open_db), x + w, ly(P.seg.open_db), 0xFFFFFF55, 1)
+    AddLine(dl, x, ly(P.seg.close_db), x + w, ly(P.seg.close_db), 0xFFFFFF26, 1)
+
+    local win = S.read_cfg.window_ms / 1000
+    local step = math.max(1, math.floor(span / win / w))
+    for _, rd in ipairs(S.reads) do
+        if rd.seg.track == lane.tr then
+            local rows, n = rd.rows, #rd.rows
+            local qx, qy
+            local i = 1
+            while i <= n do
+                local r = rows[i]
+                if r.t > t1 then break end
+                if r.t + win >= t0 then
+                    local m = r.rms_db
+                    for k = i + 1, math.min(i + step - 1, n) do
+                        if rows[k].rms_db > m then m = rows[k].rms_db end
+                    end
+                    local cx, cy = tx(r.t + win / 2), ly(m)
+                    if qx then AddLine(dl, qx, qy, cx, cy, 0xE0E0E0FF, 1) end
+                    qx, qy = cx, cy
+                end
+                i = i + step
+            end
+        end
+    end
+
+    AddLine(dl, x, gy(0), x + w, gy(0), 0xFFFFFF40, 1)
+    local gcol = 0xB8FF6DFF
+
+    -- Recorta el tramo al rango visible interpolando en el tiempo, para que
+    -- una rampa que sale del encuadre no se deforme contra el borde.
+    local function seg_line(ta, ya, tb, yb)
+        if tb < t0 or ta > t1 then return end
+        if tb > ta then
+            if ta < t0 then
+                ya = ya + (yb - ya) * (t0 - ta) / (tb - ta)
+                ta = t0
+            end
+            if tb > t1 then
+                yb = ya + (yb - ya) * (t1 - ta) / (tb - ta)
+                tb = t1
+            end
+        end
+        AddLine(dl, tx(ta), gy(ya), tx(tb), gy(yb), gcol, 1.5)
+    end
+
+    local pts = lane.pts
+    if pts then
+        for i = 1, #pts - 1 do
+            local a, b = pts[i], pts[i + 1]
+            if a.shape == 1 then
+                seg_line(a.t, a.db, b.t, a.db)
+                seg_line(b.t, a.db, b.t, b.db)
+            else
+                local tab = a.db ~= b.db and shape_table(a.shape, a.tension) or nil
+                local steps = tab and #tab - 1 or 1
+                local qt, qy = a.t, a.db
+                for k = 1, steps do
+                    local u = k / steps
+                    local nt = a.t + (b.t - a.t) * u
+                    local ny = a.db + (b.db - a.db) * (tab and tab[k + 1] or u)
+                    seg_line(qt, qy, nt, ny)
+                    qt, qy = nt, ny
+                end
+            end
+        end
+    end
+
+    local cpos = reaper.GetCursorPosition()
+    if cpos >= t0 and cpos <= t1 then
+        local cx = tx(cpos)
+        AddLine(dl, cx, y, cx, gy0 + GAIN_H, 0xFFFFFF80, 1)
+    end
+
+    reaper.ImGui_DrawList_AddText(dl, x + 4, y + 2, 0xFFFFFFA0, "nivel (dB)")
+    reaper.ImGui_DrawList_AddText(dl, x + 4, gy0 + 2, 0xFFFFFFA0,
+        string.format("ganancia (%+.0f a %+.0f dB)", g_hi, g_lo))
+end
+
+local function draw()
+    reaper.ImGui_Text(ctx, "Fuente")
+    for _, m in ipairs(MODES) do
+        reaper.ImGui_SameLine(ctx)
+        if reaper.ImGui_RadioButton(ctx, m.label, P.mode == m.id) and P.mode ~= m.id then
+            P.mode = m.id
+            S.reads, S.msg, S.lanes = nil, "Sin analizar.", {}
+        end
+    end
 
     if ButtonStyle.button(ctx, "Analizar##analyze", "neutral", { pad = 14 }) then
         S.analyze = 2
@@ -314,17 +554,38 @@ local function draw()
         S.dirty = true
     end
 
+    draw_curve_controls()
+    draw_curve()
+    local lane = S.reads and S.lanes[S.sel]
+    reaper.ImGui_Text(ctx, lane and lane.line1 or " ")
+    reaper.ImGui_Text(ctx, lane and lane.line2 or " ")
+
+    reaper.ImGui_Separator(ctx)
+    reaper.ImGui_TextWrapped(ctx, S.msg)
+    if read_stale() then
+        reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0xFFB347FF)
+        reaper.ImGui_Text(ctx, "Cambió la lectura: analizá de nuevo para aplicar.")
+        reaper.ImGui_PopStyleColor(ctx, 1)
+    else
+        reaper.ImGui_Text(ctx, " ")
+    end
+
+    reaper.ImGui_Separator(ctx)
     if reaper.ImGui_BeginTabBar(ctx, "gr_tabs") then
         if reaper.ImGui_BeginTabItem(ctx, "Piezas###t_pieces") then
             tab_pieces()
             reaper.ImGui_EndTabItem(ctx)
         end
-        if reaper.ImGui_BeginTabItem(ctx, "Clases###t_classes") then
+        if reaper.ImGui_BeginTabItem(ctx, "Detección###t_classes") then
             tab_classes()
             reaper.ImGui_EndTabItem(ctx)
         end
         if reaper.ImGui_BeginTabItem(ctx, "Ganancia###t_gain") then
             tab_gain()
+            reaper.ImGui_EndTabItem(ctx)
+        end
+        if reaper.ImGui_BeginTabItem(ctx, "Por clase###t_byclass") then
+            tab_by_class()
             reaper.ImGui_EndTabItem(ctx)
         end
         if reaper.ImGui_BeginTabItem(ctx, "Lectura###t_read") then
@@ -333,21 +594,10 @@ local function draw()
         end
         reaper.ImGui_EndTabBar(ctx)
     end
-
-    reaper.ImGui_Separator(ctx)
-    reaper.ImGui_TextWrapped(ctx, S.msg)
-    if read_stale() then
-        reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0xFFB347FF)
-        reaper.ImGui_TextWrapped(ctx, "Cambió la lectura: analizá de nuevo para aplicar.")
-        reaper.ImGui_PopStyleColor(ctx, 1)
-    end
-    for _, line in ipairs(S.summary) do
-        reaper.ImGui_TextWrapped(ctx, line)
-    end
 end
 
 local function loop()
-    reaper.ImGui_SetNextWindowSize(ctx, 520, 600, reaper.ImGui_Cond_FirstUseEver())
+    reaper.ImGui_SetNextWindowSize(ctx, 520, 640, reaper.ImGui_Cond_FirstUseEver())
     local visible, open = reaper.ImGui_Begin(ctx, TITLE, true, WIN_FLAGS)
     if visible then
         draw()
