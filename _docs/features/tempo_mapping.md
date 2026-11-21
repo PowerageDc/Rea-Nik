@@ -45,6 +45,15 @@ Aplicar directo vía `SetTempoTimeSigMarker` con estos tres valores calculados a
 
 **Ruler — ver 6/8 con las 6 corcheas marcadas:** no es el BPM basis lo que controla esto, es un ajuste de grid separado ("Show grid line spacing" en las opciones de grid/ruler) — cambiar de 1/4 a 1/8 resuelve la numeración de la regla en el tramo compuesto.
 
+**En revisión — relación BPM/compás medida en REAPER:** una medición en un proyecto
+vacío (`Tests-Debug/Nik_TempoTools_ProbeSigBpm.lua`, ver `features/tempo_tap.md` §5)
+mostró que REAPER guarda el BPM en negras por minuto aunque el denominador sea 8: un
+6/8 a 120 bpm dura 1,5 s (3 negras). Con eso, un compás compuesto cuyos pulsos son
+negras con puntillo necesita BPM igual a 1,5 por los pulsos por minuto, y el factor
+0,75 dejaba el compás al doble de largo en el mapa generado por taps. La fórmula de
+arriba y `convert_simple_to_compound.lua` quedan sin verificar contra un caso real de
+ReaBeat con esta medición.
+
 ## Gotcha: `SetTempoTimeSigMarker` y drift en cascada vía API
 
 - La función es mutuamente excluyente: pasar `timepos` requiere `measurepos=-1, beatpos=-1` (o viceversa). Pasar ambos sets de parámetros a la vez causa que REAPER ignore `timepos` y recalcule posición desde compás/beat — replica el mismo bug que la edición manual.

@@ -3,10 +3,10 @@
 Catálogo técnico de "cómo hacer X sin el bug conocido Y" en ReaImGui.
 No es documentación de una feature: aplica a cualquier panel nativo del
 proyecto, presente o futuro (hoy: `Nik_MusicState_Helper.lua` y la UI de
-`VstiControl/` y los paneles de `MidiEdit/` y `MidiGen/`; también relevante
-para `ReaPitchBus/Nik_ReaPitchBus_Knob.lua` y cualquier panel nuevo).
-Primer caso donde se resolvió cada patrón: la tab Armonía del MusicState
-Helper (`features/musicstate_helper.md`).
+`VstiControl/`, los paneles de `MidiEdit/` y `MidiGen/` y la vista previa 
+del snap de `TempoTools/`; también relevante para `ReaPitchBus/Nik_ReaPitchBus_Knob.lua` 
+y cualquier panel nuevo). Primer caso donde se resolvió cada patrón: la 
+tab Armonía del MusicState Helper (`features/musicstate_helper.md`).
 
 ## 1. Sticky header sin romper Nav (tablas con scroll)
 
@@ -333,6 +333,12 @@ y `WindowFlags_NoNav` en la raíz.
   reabrirlo): `MIDIEditor_GetActive` sigue devolviendo el editor aunque el foco
   esté en la ventana de ImGui, y `toHwnd` de `_Shared/ImGuiHostFocus_common_logic.lua` 
   le da el foco.
+- **La regla vive en un módulo.** `_Shared/ImGuiEditorFocus_common_logic.lua`
+  (`new(ctx, getHwnd)` devuelve un `tick()` para llamar cada frame dentro de
+  `Begin` y `End`) implementa esa regla con la ventana destino como función,
+  así que sirve también con la ventana principal de REAPER (`reaper.GetMainHwnd`).
+  La vista previa del snap de `TempoTools/` la usa así, para seguir con los
+  atajos de transporte mientras revisa.
 - **Auto-repeat de la tecla que mueve el foco.** Si la tecla sigue apretada
   tras el cambio, Windows manda repeticiones a la ventana que recibe el foco y
   ImGui las lee como un press nuevo: la devuelve de inmediato. Una ventana de
@@ -467,3 +473,56 @@ Primer caso: `MidiGen/Nik_MidiGen_CcCurvePanel.lua` (ver
   arriba y abajo) y el horizontal, el tiempo en ticks. La velocity va en el
   alfa del color (`0xRRGGBB00 | alfa`) y un ancho mínimo de pocos píxeles evita
   que una nota corta desaparezca.
+
+## 10. Ventanas de revisión: tabla con acciones por fila y resultado por callback
+
+Primer caso: la vista previa del snap de `TempoTools/`
+(`TempoTapPreviewUi_common_logic.lua`; ver `features/tempo_tap.md`). Aplica a una
+ventana que muestra una lista calculada, deja corregirla y devuelve el resultado
+a quien la abrió.
+
+- **Estado y dibujo separados.** El cálculo vive en un módulo sin ImGui
+  (`TempoTapPreview_common_logic.lua`) y la ventana solo dibuja y despacha. El
+  modelo se prueba desde una sonda de consola, sin abrir la ventana.
+- **Fila seleccionable con un control encima.** Un `Selectable` con
+  `SelectableFlags_SpanAllColumns` en la primera columna da el clic de toda la
+  fila, pero cubre los widgets de las columnas siguientes. Para que un
+  `Checkbox` de otra columna reciba su clic hay que sumar el flag de
+  solapamiento, que cambió de nombre entre versiones:
+  `SelectableFlags_AllowOverlap` o `SelectableFlags_AllowItemOverlap`; se toma el
+  que exista. Con el flag, tildar la casilla no dispara el clic de la fila.
+- **ID de fila.** `PushID(ctx, k)` con el índice de la lista maestra, estable
+  mientras la lista de entrada no cambie (§2).
+- **Una acción que reemplaza la lista se aplica al terminar de dibujarla.** Si
+  un widget de una fila recalcula el modelo en medio del loop, las filas
+  siguientes se dibujan con datos de la lista vieja. Se anota qué se pidió y se
+  aplica después de `EndTable` y `EndChild`.
+- **Teñir y atenuar una fila.** `TableSetBgColor` con `TableBgTarget_RowBg0()`
+  y el color de la marca con alfa bajo (`(color & 0xFFFFFF00) | 0x30`) tiñe la
+  fila. `PushStyleColor` de `Col_Text` con un gris la atenúa, con un solo pop al
+  final de la fila. El `BeginDisabled` va solo alrededor del widget que no
+  corresponde.
+- **Pie de botones con altura reservada.** El body de la tabla (el child del §1)
+  toma el alto que devuelve `GetContentRegionAvail` menos una constante para el
+  pie (separador, casilla y botones). El pie se alinea a la derecha con
+  `SetCursorPosX` sobre el ancho disponible; `GetContentRegionAvail` devuelve
+  ancho y alto.
+- **Recalcular en vivo mientras se arrastra.** Si el efecto de un `SliderInt` es
+  un recálculo barato (los resultados salen de una caché), se actualiza el
+  modelo en cada `changed`. `IsItemDeactivatedAfterEdit` (§4) queda para
+  persistir o aplicar algo costoso.
+- **Resultado por callback desde el `defer`.** `run(S, handlers)` crea el
+  contexto y mantiene el loop con `defer`. Cuando el frame devuelve `"apply"` o
+  `"cancel"`, llama al callback y no vuelve a encolar el loop. No se llama a
+  `DestroyContext`: dejar de usar el contexto alcanzó en las pruebas.
+- **Cerrar con la X equivale a cancelar.** `Begin` devuelve `open = false` y se
+  lo traduce a la acción de cancelar. Con `WindowFlags_NoCollapse`, `visible` no
+  es falso por minimizar la ventana.
+- **Un diálogo nativo bloquea el script y, con él, la ventana.** `GetUserInputs`
+  y `ShowMessageBox` detienen el `defer` mientras están abiertos y la ventana
+  quedaría congelada sin repintar. Se cierra antes y, si el flujo se cancela, se
+  vuelve a abrir con el mismo estado del modelo y su caché, así que reaparece al
+  instante. La posición y el tamaño se leen cada frame (`GetWindowPos`,
+  `GetWindowSize`) y se restauran con `SetNextWindowPos` y `SetNextWindowSize` en
+  `Cond_FirstUseEver`, que en un contexto nuevo actúa como la primera vez. Se
+  pierden la fila seleccionada y el scroll de la tabla.

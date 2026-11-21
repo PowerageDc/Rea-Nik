@@ -133,6 +133,9 @@ del SRT de armonía; ver `features/subtitle_export.md`).
 Y `VstiControl_<Vsti>_config.lua`, uno por VSTi (`VstiControl_ModoBass_config.lua`, 
 `VstiControl_AmpleGuitar_config.lua`: controles, octavas y rangos propios de
 cada VSTi; ver `features/vsti_control.md`).
+Y `TempoTools_config.lua` (pre-roll por defecto, nombres de los tracks de click y
+count-in, parámetros del detector y del snap a transientes, y valores iniciales de
+la vista previa (beats internos y borrado de los taps); ver `features/tempo_tap.md`).
 
 ### Pendiente (no bloqueante)
 Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
@@ -193,7 +196,7 @@ C:\dev\Rea-Nik\
 ├── MidiEdit/ acciones de edición MIDI sobre la selección (alinear notas, mover CC al cursor, rasguido de acordes)
 ├── MidiGen/ generación de eventos MIDI nuevos: curvas de CC y pitch bend, glissando de teclado y pedal de sustain
 ├── RenderWorkflow/ generación de regiones + batch render
-├── TempoTools/ utilidades de tempo/compás
+├── TempoTools/ utilidades de tempo/compás y mapeo de tempo por taps (taps, plan de tempo, aplicación, snap a transientes y su vista previa ReaImGui; ver `features/tempo_tap.md`)
 ├── ProjectFolder/ abrir carpetas del proyecto (raíz, Media, Render) desde el Action List y juntar en Media\Samples los archivos que usan los FX
 ├── ProjectPack/ zip con clave de las carpetas de proyecto: acción de lote de REAPER (`Nik_ProjectPack_*.lua`) y menú contextual de Windows (`.bat`, `.vbs` y `.reg`, que no siguen `Nik_<Dominio>_<Acción>`)
 ├── FxWindow/ posición y tamaño de la ventana flotante de un VSTi según config, para la captura de OBS
@@ -222,12 +225,13 @@ uno solo (`ImGuiInputCommit_common_logic.lua`, patrones de input;
 REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un modal de 
 confirmación: patrones de ReaImGui, hoy solo en el Helper de `MusicState/`; 
 `ImGuiButtonStyle_common_logic.lua`, estilo semántico de botones por tipo, hoy en 
-las tabs del Helper y en los paneles de Strum (`MidiEdit/`) y de curvas y glissando (`MidiGen/`);
-`ImGuiEditorFocus_common_logic.lua`, devolución del foco a un MIDI Editor tras
-interactuar con un panel; `MusicTranspose_common_logic.lua`, port a Lua de 
-`nikTranspose`: transposición de acordes y tonalidad, hoy solo en `SubtitleExport/`; 
-`FolderView_common_logic.lua`, vista de Explorer de una carpeta y PowerShell sin 
-ventana, hoy en `ProjectFolder/` y `ProjectPack/`; `ProjectPaths_common_logic.lua`, 
+las tabs del Helper y en los paneles de Strum (`MidiEdit/`) y de curvas y glissando 
+(`MidiGen/`) y en la vista previa del snap (`TempoTools/`);
+`ImGuiEditorFocus_common_logic.lua`, devolución del foco a una ventana (un MIDI Editor
+o la principal de REAPER) tras interactuar con un panel; `MusicTranspose_common_logic.lua`, 
+port a Lua de `nikTranspose`: transposición de acordes y tonalidad, hoy solo 
+en `SubtitleExport/`; `FolderView_common_logic.lua`, vista de Explorer de una carpeta y 
+PowerShell sin ventana, hoy en `ProjectFolder/` y `ProjectPack/`; `ProjectPaths_common_logic.lua`, 
 rutas de un proyecto, y `ProjectSamples_common_logic.lua`, recolección de samples 
 de sus FX, también por ambos). Un módulo usado por un solo dominio se queda dentro 
 de la carpeta de ese dominio (ej. `ActiveProject_common_logic.lua`, 

@@ -87,6 +87,10 @@ render, pero conviven en el mismo proyecto/entorno):
 - **Auto-color system**: colorea tracks por familia de instrumento.
 - **Tempo mapping / ReaBeat**: detección de tempo y corrección de mapa de
   tempo para intros atípicas.
+- **TempoTap (mapeo de tempo por taps)**: se toca el pulso con dos teclas (beat y
+  downbeat) y un script convierte los markers en tempo markers, desplaza stems y
+  taps tras el count-in y ajusta el click. Un snap con vista previa ReaImGui 
+  alinea los taps a los ataques del audio. Ver `features/tempo_tap.md`.
 - **Panel ReaPitch (Stem Bus)**: control nativo de semitonos ReaPitch vía
   ReaImGui, ver `03_PANEL_REAPITCH_KNOB.md`.
 - **A/B de tracks (ABPair)**: alterna por solo entre dos tracks (ej. MIDI
@@ -168,6 +172,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Sistema de Snapshots      | Implementado (script custom, prefijo SN_)      |
 | Render Workflow           | Regiones, count-in y preset implementados; batch render pendiente |
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
+| TempoTap (taps de tempo)  | Taps, plan de tempo y aplicación validados; snap a transientes integrado, con vista previa ReaImGui (bloqueos, política de sin ataque, tempo por compás y borrado de taps opcionales). Pendientes en `features/tempo_tap.md` §8 |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | A/B de tracks (ABPair)    | Funcional, uso local (contrato en el encabezado de los scripts) |
 | MidiNav                   | Doce acciones funcionando y validadas (cursor, selección de notas y de CC, y el toggle de foco). Pendientes en `features/midi_nav.md` |
@@ -287,6 +292,18 @@ Docs en `_docs/features/`; código en `VstiControl/` y `_Shared/`.
 | Escala y posiciones | `vsti_control.md` | `VstiControl/VstiControlMap_common_logic.lua`, config del VSTi |
 | UI (controles, estado, foco) | `vsti_control.md`, `08_REAIMGUI_PATTERNS.md` | `VstiControl/VstiControlUi_common_logic.lua`, `_Shared/ImGuiButtonStyle_common_logic.lua`, `_Shared/ImGuiHostFocus_common_logic.lua` |
 | VSTi nuevo o ajuste de uno existente | `vsti_control.md` | `VstiControl/VstiControl_<Vsti>_config.lua`, `VstiControl/Nik_VstiControl_<Vsti>.lua` |
+
+## Qué adjuntar según la tarea (TempoTap)
+
+Docs en `_docs/features/`; código en `TempoTools/`, `_Shared/` y `Tests-Debug/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Taps, lectura y plan de tempo | `tempo_tap.md` | `TempoTools/TempoTools_common_logic.lua`, `TempoTools/TempoTapRead_common_logic.lua`, `TempoTools/TempoTapPlan_common_logic.lua`, `TempoTools_config.lua` |
+| Aplicación (items y mapa de tempo) | `tempo_tap.md` | `TempoTools/Nik_TempoTools_Apply.lua`, `TempoTools/TempoTapItems_common_logic.lua`, `TempoTools/TempoTapMap_common_logic.lua`, `TempoTools_config.lua`, `_Shared/StemBus_common_logic.lua` |
+| Detector y snap | `tempo_tap.md` | `TempoTools/TempoTapOnset_common_logic.lua`, `TempoTools/TempoTapSnap_common_logic.lua`, `TempoTools_config.lua`, `Tests-Debug/Nik_TempoTools_ProbeOnset.lua`, `Tests-Debug/Nik_TempoTools_ProbeSnap.lua` |
+| Vista previa ReaImGui del snap e integración | `tempo_tap.md`, `08_REAIMGUI_PATTERNS.md` | lo de las dos filas anteriores, `TempoTools/TempoTapRead_common_logic.lua` (contrato de los compases), `TempoTools/TempoTapPreview_common_logic.lua`, `TempoTools/TempoTapPreviewUi_common_logic.lua`, `_Shared/ImGuiButtonStyle_common_logic.lua`, `_Shared/ImGuiEditorFocus_common_logic.lua`, `Tests-Debug/Nik_TempoTools_ProbePreview.lua`, `Tests-Debug/Nik_TempoTools_ProbePreviewUi.lua` |
+| Compases compuestos y fórmula de ReaBeat | `tempo_tap.md`, `tempo_mapping.md` | `TempoTools/TempoTapPlan_common_logic.lua`, `convert_simple_to_compound.lua`, `Tests-Debug/Nik_TempoTools_ProbeSigBpm.lua` |
 
 ## Qué adjuntar según la tarea (Deploy ReaPack)
 

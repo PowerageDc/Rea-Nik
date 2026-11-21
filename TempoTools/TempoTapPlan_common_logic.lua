@@ -3,6 +3,7 @@ local Read = dofile(script_dir .. "TempoTapRead_common_logic.lua")
 
 local M = {}
 
+-- Un pulso compuesto ternario equivale a 1,5 negras y REAPER guarda el BPM en negras.
 local COMPOUND_FACTOR = 1.5
 local PREROLL_TOLERANCE = 0.15
 local INIT_MEASURES = 4
