@@ -29,6 +29,7 @@ local opts = {
     window_s = cfg.window_ms / 1000,
     sample_rate = cfg.sample_rate,
     floor_db = cfg.floor_db,
+    lf_hz = cfg.lf_hz,
 }
 local every = math.max(1, math.floor(cfg.print_every_ms / cfg.window_ms + 0.5))
 

@@ -26,6 +26,7 @@ local opts = {
     window_s = cfg.window_ms / 1000,
     sample_rate = cfg.sample_rate,
     floor_db = cfg.floor_db,
+    lf_hz = cfg.lf_hz,
 }
 
 reaper.Undo_BeginBlock()
@@ -45,13 +46,26 @@ for si, seg in ipairs(segments) do
 
     for i, pc in ipairs(pieces) do
         if i <= MAX_LINES then
-            log("   %03d  %s -> %s  %5.0f ms  %s  nivel %6.1f dB  pk %6.1f  hf %.2f  zc %5.0f Hz",
+            log("   %03d  %s -> %s  %5.0f ms  %s  nivel %6.1f dB  pk %6.1f  hf %.2f  zc %5.0f Hz  lf %.2f",
                 total + i, fmt_t(pc.t0), fmt_t(pc.t1), (pc.t1 - pc.t0) * 1000,
-                pc.class, pc.level_db, pc.peak_db, pc.hf, pc.zc_hz)
+                pc.class, pc.level_db, pc.peak_db, pc.hf, pc.zc_hz, pc.lf)
         end
     end
     if #pieces > MAX_LINES then
         log("   ... (+%d piezas más)", #pieces - MAX_LINES)
+    end
+
+    local shown = 0
+    for i = 2, #rows do
+        local r, prev = rows[i], rows[i - 1]
+        local rise = r.rms_db - prev.rms_db
+        if rise >= 6 and r.lf >= 0.3 and prev.rms_db <= cfg.seg.plo_pre_db + 10 and shown < MAX_LINES then
+            shown = shown + 1
+            local ok = r.lf >= cfg.seg.plo_lf_min and rise >= cfg.seg.plo_rise_db
+                and prev.rms_db <= cfg.seg.plo_pre_db
+            log("   cand %s  subida %+5.1f dB  antes %6.1f dB  lf %.2f  %s",
+                fmt_t(r.t), rise, prev.rms_db, r.lf, ok and "PLO" or "-")
+        end
     end
 
     Segment.add_regions(cfg.preview_prefix, pieces, total)

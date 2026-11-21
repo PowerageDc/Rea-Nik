@@ -21,6 +21,7 @@ local opts = {
     window_s = cfg.window_ms / 1000,
     sample_rate = cfg.sample_rate,
     floor_db = cfg.floor_db,
+    lf_hz = cfg.lf_hz,
 }
 local margin = math.max(ap.ramp_down_ms, ap.ramp_up_ms)
 for _, cc in pairs(ap.classes) do

@@ -93,7 +93,7 @@ function M.plan(pieces, ap)
     pts[#pts + 1] = { t = outs[n] + r_out, db = 0, shape = 0, tension = 0 }
 
     local parts = {}
-    for _, c in ipairs({ "voz", "sib" }) do
+    for _, c in ipairs({ "voz", "sib", "plo" }) do
         if tg[c] then parts[#parts + 1] = string.format("%s %.1f", c, tg[c]) end
     end
 

@@ -134,14 +134,52 @@ local function split_by_class(rows, run, p)
     return merged
 end
 
+-- Un plosivo empieza en una ventana con mucha energía grave, una subida brusca
+-- respecto de la anterior y una ventana previa de nivel bajo (la oclusión).
+local function is_onset(rows, i, p)
+    if i < 2 then return false end
+    local r, prev = rows[i], rows[i - 1]
+    return r.lf >= p.plo_lf_min
+        and r.rms_db - prev.rms_db >= p.plo_rise_db
+        and prev.rms_db <= p.plo_pre_db
+end
+
+-- Recorta de cada pieza las ventanas del plosivo (plo_rows desde el ataque).
+-- Si lo que sobra después es más corto que class_rows, se suma al plosivo.
+local function carve_plosives(rows, pieces, p)
+    if not p.plosive then return pieces end
+    local out = {}
+    for _, pc in ipairs(pieces) do
+        local cur, i = pc.i0, pc.i0
+        while i <= pc.i1 do
+            if is_onset(rows, i, p) then
+                if i > cur then
+                    out[#out + 1] = { i0 = cur, i1 = i - 1, class = pc.class }
+                end
+                local last = math.min(pc.i1, i + p.plo_rows - 1)
+                if pc.i1 - last < p.class_rows then last = pc.i1 end
+                out[#out + 1] = { i0 = i, i1 = last, class = "plo" }
+                cur, i = last + 1, last + 1
+            else
+                i = i + 1
+            end
+        end
+        if cur <= pc.i1 then
+            out[#out + 1] = { i0 = cur, i1 = pc.i1, class = pc.class }
+        end
+    end
+    return out
+end
+
 local function describe(rows, pc, win)
-    local vals, peak, hf, zc = {}, -math.huge, 0, 0
+    local vals, peak, hf, zc, lf = {}, -math.huge, 0, 0, 0
     for i = pc.i0, pc.i1 do
         local r = rows[i]
         vals[#vals + 1] = r.rms_db
         if r.peak_db > peak then peak = r.peak_db end
         hf = hf + r.hf
         zc = zc + r.zc_hz
+        lf = lf + r.lf
     end
     table.sort(vals)
     local n = pc.i1 - pc.i0 + 1
@@ -153,6 +191,7 @@ local function describe(rows, pc, win)
         class = pc.class,
         hf = hf / n,
         zc_hz = zc / n,
+        lf = lf / n,
     }
 end
 
@@ -172,12 +211,17 @@ function M.split(rows, seg_cfg, window_ms)
         sib_hf_min = seg_cfg.sib_hf_min,
         sib_hz_min = seg_cfg.sib_hz_min,
         class_rows = rows_for(seg_cfg.class_min_ms, window_ms),
+        plosive = seg_cfg.plosive,
+        plo_lf_min = seg_cfg.plo_lf_min,
+        plo_rise_db = seg_cfg.plo_rise_db,
+        plo_pre_db = seg_cfg.plo_pre_db,
+        plo_rows = rows_for(seg_cfg.plo_ms, window_ms),
     }
 
     local s = smooth(rows, smooth_rows)
     local out = {}
     for _, run in ipairs(voiced_runs(rows, p)) do
-        for _, cp in ipairs(split_by_class(rows, run, p)) do
+        for _, cp in ipairs(carve_plosives(rows, split_by_class(rows, run, p), p)) do
             local pieces = p.step_db and split_by_level(s, cp, p) or { cp }
             for _, pc in ipairs(pieces) do
                 pc.class = cp.class
@@ -202,6 +246,7 @@ end
 local CLASS_COLORS = {
     sib = { 255, 140, 0 },
     voz = { 70, 130, 220 },
+    plo = { 200, 60, 200 },
 }
 
 function M.add_regions(prefix, pieces, first_index)

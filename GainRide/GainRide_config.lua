@@ -5,6 +5,7 @@ return {
     print_every_ms = 1000,
     sample_rate = 44100,
     floor_db = -120,
+    lf_hz = 150,
     preview_prefix = "GR_",
     apply = {
         mode = "selected",
@@ -12,6 +13,7 @@ return {
         classes = {
             voz = { target_db = "median", offset_db = 0 },
             sib = { target_db = "median", offset_db = -2, ramp_down_ms = 10, ramp_up_ms = 40 },
+            plo = { target_db = "median", offset_db = -3, ramp_down_ms = 5, ramp_up_ms = 40 },
         },
         strength = 0.4,
         max_down_db = 9,
@@ -35,5 +37,10 @@ return {
         sib_hf_min = 0.3,
         sib_hz_min = 3000,
         class_min_ms = 60,
+        plosive = true,
+        plo_lf_min = 0.5,
+        plo_rise_db = 12,
+        plo_pre_db = -40,
+        plo_ms = 40,
     },
 }
