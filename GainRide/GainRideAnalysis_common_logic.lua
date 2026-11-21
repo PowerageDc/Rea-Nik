@@ -58,4 +58,22 @@ function M.part_levels(part, opts)
     return rows, info
 end
 
+-- Une las partes de un tramo en una sola curva en tiempo de proyecto. En un
+-- solape manda la parte que empieza después.
+function M.segment_levels(seg, opts)
+    local rows = {}
+    for _, part in ipairs(seg.parts) do
+        local part_rows = M.part_levels(part, opts)
+        if part_rows then
+            while #rows > 0 and rows[#rows].t >= part.t0 do
+                rows[#rows] = nil
+            end
+            for _, r in ipairs(part_rows) do
+                rows[#rows + 1] = r
+            end
+        end
+    end
+    return rows
+end
+
 return M
