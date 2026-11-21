@@ -39,7 +39,7 @@ reaper.Undo_EndBlock("GainRide: puntos de ganancia en el envelope", -1)
 
 if #missing > 0 then
     reaper.ShowMessageBox(
-        "No se encontró el envelope '" .. ap.envelope .. "' en: " .. table.concat(missing, ", ")
+        "No se encontró el envelope '" .. ap.envelope .. "' visible en: " .. table.concat(missing, ", ")
             .. ".\nMostralo en el track y volvé a correr el script.",
         "GainRide", 0)
 end

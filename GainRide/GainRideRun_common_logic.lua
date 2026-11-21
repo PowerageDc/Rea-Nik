@@ -73,7 +73,12 @@ function M.write(order, by_track, ap)
             results[#results + 1] = { name = name, empty = true }
         else
             local env = reaper.GetTrackEnvelopeByName(tr, ap.envelope)
+            local visible = false
             if env then
+                local _, chunk = reaper.GetEnvelopeStateChunk(env, "", false)
+                visible = chunk:match("\nVIS (%d+)") == "1"
+            end
+            if env and visible then
                 local pts, info = Apply.plan(entry.pieces, ap)
                 Apply.write(env, pts, entry.ranges, ap)
                 results[#results + 1] = {
