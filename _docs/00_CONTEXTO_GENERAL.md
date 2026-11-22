@@ -158,6 +158,12 @@ render, pero conviven en el mismo proyecto/entorno):
   (hoy MODO Bass 2 y Ample Guitar), según el cursor y la selección de tiempo o
   de notas. Los controles de cada VSTi salen de un config propio. Ver
   `features/vsti_control.md`.
+- **GainRide (riding de ganancia por nivel de audio)**: crea los puntos del
+  envelope Volume (Pre-FX) de un track a partir del nivel real de sus items (items
+  seleccionados, tracks seleccionados o time selection), con piezas por silencios,
+  cambios de nivel y clase (voz, sibilante, plosivo), rampas y offsets por clase. Un
+  panel ReaImGui ajusta los parámetros con vista previa (regiones y curva de nivel y
+  ganancia) y los guarda en el proyecto. Ver `features/gain_ride.md`.
 - **Deploy vía ReaPack**: empaquetado y distribución de un subconjunto de scripts 
   (hoy: Control remoto + Auto-color + MusicState + MonitorMix + ProjectFolder) a
   PCs de ensayo sin git ni editor de código, vía repo propio `Rea-Nik` en GitHub. 
@@ -188,6 +194,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | ProjectPack               | Zip con clave en lote desde REAPER y por menú contextual, clave fuera del repo. Pendientes en `features/project_pack.md` §6 |
 | MusicVideo                | Escena de OBS, audio por ReaRoute y máscara validados con MODO Bass; Pendientes en `features/music_video.md` §13 |
 | VstiControl               | MODO Bass 2 y Ample Guitar funcionando y validados (keyswitches en tres modos, curvas con escala, posiciones, variantes por velocity). Pendientes en `features/vsti_control.md` §7 |
+| GainRide                  | Fuente, análisis, segmentación por clase, escritura de puntos y panel ReaImGui (parámetros con tooltips, vista previa en regiones y curva, ajustes por proyecto, copiar a config) validados; calibración de sibilantes y plosivos con más material pendiente. Pendientes en `features/gain_ride.md` §9 |
 
 ## Pendientes generales (horizonte, no bloqueantes)
 - Count-in con offset negativo de render: **evaluado y descartado** como forma
@@ -304,6 +311,17 @@ Docs en `_docs/features/`; código en `TempoTools/`, `_Shared/` y `Tests-Debug/`
 | Detector y snap | `tempo_tap.md` | `TempoTools/TempoTapOnset_common_logic.lua`, `TempoTools/TempoTapSnap_common_logic.lua`, `TempoTools_config.lua`, `Tests-Debug/Nik_TempoTools_ProbeOnset.lua`, `Tests-Debug/Nik_TempoTools_ProbeSnap.lua` |
 | Vista previa ReaImGui del snap e integración | `tempo_tap.md`, `08_REAIMGUI_PATTERNS.md` | lo de las dos filas anteriores, `TempoTools/TempoTapRead_common_logic.lua` (contrato de los compases), `TempoTools/TempoTapPreview_common_logic.lua`, `TempoTools/TempoTapPreviewUi_common_logic.lua`, `_Shared/ImGuiButtonStyle_common_logic.lua`, `_Shared/ImGuiEditorFocus_common_logic.lua`, `Tests-Debug/Nik_TempoTools_ProbePreview.lua`, `Tests-Debug/Nik_TempoTools_ProbePreviewUi.lua` |
 | Compases compuestos y fórmula de ReaBeat | `tempo_tap.md`, `tempo_mapping.md` | `TempoTools/TempoTapPlan_common_logic.lua`, `convert_simple_to_compound.lua`, `Tests-Debug/Nik_TempoTools_ProbeSigBpm.lua` |
+
+## Qué adjuntar según la tarea (GainRide)
+
+Docs en `_docs/features/`; código en `GainRide/`, `_Shared/` y `Tests-Debug/`.
+
+| Tarea | Docs | Código |
+|---|---|---|
+| Fuente y lectura de nivel | `gain_ride.md` | `GainRide/GainRideSource_common_logic.lua`, `GainRide/GainRideAnalysis_common_logic.lua`, `GainRide/GainRide_config.lua`, `Tests-Debug/Nik_GainRide_ProbeLevels.lua` |
+| Segmentación y clases | `gain_ride.md` | `GainRide/GainRideSegment_common_logic.lua`, `GainRide/GainRideAnalysis_common_logic.lua`, `GainRide/GainRide_config.lua`, `Tests-Debug/Nik_GainRide_ProbeSegments.lua` |
+| Escritura de puntos (plan, rampas, offsets, formas) | `gain_ride.md` | `GainRide/GainRideApply_common_logic.lua`, `GainRide/GainRideRun_common_logic.lua`, `GainRide/Nik_GainRide_Apply.lua`, `GainRide/GainRide_config.lua`, `Tests-Debug/Nik_GainRide_ProbeShapes.lua` |
+| Panel (UI, vista previa, ajustes por proyecto, tooltips) | `gain_ride.md`, `08_REAIMGUI_PATTERNS.md` | todo `GainRide/`, `_Shared/ImGuiButtonStyle_common_logic.lua`, `_Shared/ImGuiEditorFocus_common_logic.lua`, `_Shared/ImGuiHostFocus_common_logic.lua` |
 
 ## Qué adjuntar según la tarea (Deploy ReaPack)
 

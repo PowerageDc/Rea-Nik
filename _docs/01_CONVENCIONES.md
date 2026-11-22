@@ -136,6 +136,10 @@ cada VSTi; ver `features/vsti_control.md`).
 Y `TempoTools_config.lua` (pre-roll por defecto, nombres de los tracks de click y
 count-in, parámetros del detector y del snap a transientes, y valores iniciales de
 la vista previa (beats internos y borrado de los taps); ver `features/tempo_tap.md`).
+Y `GainRide_config.lua` (ventana de análisis, umbrales de segmentación y de
+clasificación en sibilantes y plosivos, y parámetros del apply: topes de ganancia,
+rampas y offset por clase; vive dentro de `GainRide/`, el panel parte de estos
+valores y los ajustes los guarda por proyecto; ver `features/gain_ride.md`).
 
 ### Pendiente (no bloqueante)
 Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,
@@ -203,6 +207,7 @@ C:\dev\Rea-Nik\
 ├── SubtitleExport/ SRT con la armonía del proyecto, para quemar en los videos de piano de KeySight
 ├── MusicVideo/ pipeline de videos de instrumento y letra: escenas de OBS, máscaras, CSS de los Browser Source y fades con ffmpeg (`.bat`, `.ps1` y archivos de OBS, no scripts de REAPER: no siguen `Nik_<Dominio>_<Acción>`)
 ├── VstiControl/ UI ReaImGui que inserta keyswitches y curvas CC de un VSTi en el MIDI Editor activo, con un config por VSTi (wrappers `Nik_VstiControl_<Vsti>.lua`)
+├── GainRide/ riding de ganancia por nivel de audio: puntos del envelope Pre-FX según el audio de los items (fuente, análisis, segmentación en piezas con clase, escritura con rampas y panel ReaImGui)
 ├── ABPair/ alternar por solo entre dos tracks (par guardado en el proyecto)
 ├── AutoColor/ auto-color de tracks
 ├── StemFragment/ captura/UI de fragmentos de stem
@@ -226,7 +231,7 @@ REAPER; `ImGuiConfirmModal_common_logic.lua`, ciclo de vida de un modal de
 confirmación: patrones de ReaImGui, hoy solo en el Helper de `MusicState/`; 
 `ImGuiButtonStyle_common_logic.lua`, estilo semántico de botones por tipo, hoy en 
 las tabs del Helper y en los paneles de Strum (`MidiEdit/`) y de curvas y glissando 
-(`MidiGen/`) y en la vista previa del snap (`TempoTools/`);
+(`MidiGen/`), en la vista previa del snap (`TempoTools/`) y en el panel de GainRide (`GainRide/`);
 `ImGuiEditorFocus_common_logic.lua`, devolución del foco a una ventana (un MIDI Editor
 o la principal de REAPER) tras interactuar con un panel; `MusicTranspose_common_logic.lua`, 
 port a Lua de `nikTranspose`: transposición de acordes y tonalidad, hoy solo 
