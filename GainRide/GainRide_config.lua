@@ -3,7 +3,7 @@ return {
     merge_tolerance_ms = 1,
     window_ms = 20,
     print_every_ms = 1000,
-    sample_rate = 44100,
+    sample_rate = 48000,
     floor_db = -120,
     lf_hz = 150,
     preview_prefix = "GR_",
