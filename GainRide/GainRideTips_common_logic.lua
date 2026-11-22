@@ -7,7 +7,8 @@ return {
     apply = "Escribe en el envelope Volume (Pre-FX) los puntos que muestra la curva verde. Deja un solo paso de undo.",
     clear = "Borra las regiones GR_ de la vista previa.",
     preview = "Dibuja en el timeline una región por pieza, coloreada por clase (voz, sibilante, plosivo). Se actualiza al mover los parámetros.",
-    defaults = "Vuelve todos los parámetros a los valores de GainRide_config.lua.",
+    defaults = "Vuelve todos los parámetros a los valores de GainRide_config.lua. Se guarda en el proyecto como cualquier otro cambio.",
+    copycfg = "Copia al portapapeles el contenido completo de GainRide_config.lua con los valores actuales del panel, para pegarlo en el archivo. No toca la fuente ni lo que el panel no edita.",
     lane = "Track que muestran la curva y el resumen. Se habilita cuando hay más de un track.",
     follow = "La curva muestra solo lo visible en el arrange, en lugar del tramo completo del track.",
 

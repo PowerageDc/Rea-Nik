@@ -7,6 +7,7 @@ local cfg = dofile(script_dir .. "GainRide_config.lua")
 local ButtonStyle = dofile(script_dir .. "../_Shared/ImGuiButtonStyle_common_logic.lua")
 local EditorFocus = dofile(script_dir .. "../_Shared/ImGuiEditorFocus_common_logic.lua")
 local Tips = dofile(script_dir .. "GainRideTips_common_logic.lua")
+local Params = dofile(script_dir .. "GainRideParams_common_logic.lua")
 
 local TITLE = "GainRide"
 
@@ -46,7 +47,19 @@ local function load_defaults()
         cc.ramp_up_ms = cc.ramp_up_ms or P.apply.ramp_up_ms
     end
 end
-load_defaults()
+
+-- Parte de los valores de la config y superpone los guardados en el proyecto.
+local function load_params()
+    load_defaults()
+    P.mode = cfg.apply.mode
+    Params.load(P)
+    local ok = false
+    for _, m in ipairs(MODES) do
+        if m.id == P.mode then ok = true end
+    end
+    if not ok then P.mode = cfg.apply.mode end
+end
+load_params()
 
 -- reads: filas de nivel por tramo (resultado de la lectura de audio).
 -- analyze: 0 sin pedido, 2 pedido hecho, 1 se lee al final de este frame.
@@ -61,6 +74,8 @@ local S = {
     lanes = {},
     sel = 1,
     follow = false,
+    proj = reaper.EnumProjects(-1),
+    save_pending = false,
 }
 
 local ctx = reaper.ImGui_CreateContext(TITLE)
@@ -143,6 +158,7 @@ end
 -- activa, rehace también las regiones.
 local function refresh()
     S.dirty = false
+    S.save_pending = true
     S.lanes = {}
     if not S.reads then return end
     if not reads_valid(S.reads) then
@@ -562,6 +578,7 @@ local function draw()
         if clicked and P.mode ~= m.id then
             P.mode = m.id
             S.reads, S.msg, S.lanes = nil, "Sin analizar.", {}
+            S.save_pending = true
         end
     end
 
@@ -596,11 +613,17 @@ local function draw()
         end
     end
     reaper.ImGui_SameLine(ctx)
-    if ButtonStyle.button(ctx, "Restaurar valores de la config##defaults", "subtle", { pad = 14 }) then
+    if ButtonStyle.button(ctx, "Restaurar##defaults", "subtle", { pad = 14 }) then
         load_defaults()
         S.dirty = true
     end
     tip("defaults")
+    reaper.ImGui_SameLine(ctx)
+    if ButtonStyle.button(ctx, "Copiar a config##copycfg", "neutral", { pad = 14 }) then
+        reaper.ImGui_SetClipboardText(ctx, Params.config_text(cfg, P))
+        S.msg = "Config copiada: pegala en GainRide_config.lua."
+    end
+    tip("copycfg")
 
     draw_curve_controls()
     draw_curve()
@@ -662,9 +685,24 @@ local function loop()
         S.analyze = 1
     end
 
+    local proj = reaper.EnumProjects(-1)
+    if proj ~= S.proj then
+        S.proj = proj
+        S.save_pending = false
+        S.dirty = false
+        load_params()
+        S.reads, S.lanes = nil, {}
+        S.msg = "Cambió el proyecto: analizá de nuevo."
+    end
+
     if S.dirty and reaper.time_precise() - S.last_refresh >= 0.12 then
         S.last_refresh = reaper.time_precise()
         refresh()
+    end
+
+    if S.save_pending and not reaper.ImGui_IsMouseDown(ctx, 0) then
+        S.save_pending = false
+        Params.save(P)
     end
 
     if open then reaper.defer(loop) end
