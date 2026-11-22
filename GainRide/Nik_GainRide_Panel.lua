@@ -6,6 +6,7 @@ local Run = dofile(script_dir .. "GainRideRun_common_logic.lua")
 local cfg = dofile(script_dir .. "GainRide_config.lua")
 local ButtonStyle = dofile(script_dir .. "../_Shared/ImGuiButtonStyle_common_logic.lua")
 local EditorFocus = dofile(script_dir .. "../_Shared/ImGuiEditorFocus_common_logic.lua")
+local Tips = dofile(script_dir .. "GainRideTips_common_logic.lua")
 
 local TITLE = "GainRide"
 
@@ -186,6 +187,38 @@ local function refresh()
     if S.preview then reaper.UpdateArrange() end
 end
 
+local function hover_flag(name)
+    local f = reaper["ImGui_HoveredFlags_" .. name]
+    return f and f() or 0
+end
+local HOVER = hover_flag("AllowWhenDisabled") | hover_flag("DelayShort")
+local TIP_WIDTH = 60
+local tip_text = {}
+
+-- SetTooltip no corta líneas: se envuelve el texto a mano y se guarda.
+local function wrap(text)
+    local lines, line = {}, ""
+    for word in text:gmatch("%S+") do
+        if #line > 0 and #line + #word + 1 > TIP_WIDTH then
+            lines[#lines + 1] = line
+            line = word
+        else
+            line = #line > 0 and (line .. " " .. word) or word
+        end
+    end
+    lines[#lines + 1] = line
+    return table.concat(lines, "\n")
+end
+
+-- Tooltip del último item dibujado. No aparece mientras se arrastra.
+local function tip(id)
+    local text = Tips[id]
+    if not text then return end
+    if reaper.ImGui_IsItemActive(ctx) or not reaper.ImGui_IsItemHovered(ctx, HOVER) then return end
+    if not tip_text[id] then tip_text[id] = wrap(text) end
+    reaper.ImGui_SetTooltip(ctx, tip_text[id])
+end
+
 local CLAMP = reaper.ImGui_SliderFlags_AlwaysClamp()
 local LABEL_W = 190
 
@@ -193,6 +226,7 @@ local function sl_int(id, text, tbl, key, lo, hi, fmt)
     reaper.ImGui_SetNextItemWidth(ctx, -LABEL_W)
     local ch, v = reaper.ImGui_SliderInt(ctx, text .. "##" .. id,
         math.floor(tbl[key] + 0.5), lo, hi, fmt or "%d", CLAMP)
+    tip(id)
     if ch then
         tbl[key] = v
         S.dirty = true
@@ -203,6 +237,7 @@ end
 local function sl_dbl(id, text, tbl, key, lo, hi, fmt)
     reaper.ImGui_SetNextItemWidth(ctx, -LABEL_W)
     local ch, v = reaper.ImGui_SliderDouble(ctx, text .. "##" .. id, tbl[key], lo, hi, fmt or "%.2f", CLAMP)
+    tip(id)
     if ch then
         tbl[key] = v
         S.dirty = true
@@ -212,6 +247,7 @@ end
 
 local function check(id, text, tbl, key)
     local ch, v = reaper.ImGui_Checkbox(ctx, text .. "##" .. id, tbl[key])
+    tip(id)
     if ch then
         tbl[key] = v
         S.dirty = true
@@ -262,7 +298,9 @@ local function tab_gain()
     sl_int("rdown", "Rampa al bajar", ap, "ramp_down_ms", 0, 500, "%d ms")
     sl_int("rup", "Rampa al subir", ap, "ramp_up_ms", 0, 1000, "%d ms")
     reaper.ImGui_SetNextItemWidth(ctx, -LABEL_W)
-    if reaper.ImGui_BeginCombo(ctx, "Forma de rampa##shape", SHAPE_NAMES[ap.shape + 1]) then
+    local shape_open = reaper.ImGui_BeginCombo(ctx, "Forma de rampa##shape", SHAPE_NAMES[ap.shape + 1])
+    tip("shape")
+    if shape_open then
         for i, name in ipairs(SHAPE_NAMES) do
             if reaper.ImGui_Selectable(ctx, name .. "###shape" .. i, ap.shape == i - 1) then
                 ap.shape = i - 1
@@ -373,7 +411,9 @@ local function draw_curve_controls()
     reaper.ImGui_BeginDisabled(ctx, #S.lanes < 2)
     reaper.ImGui_SetNextItemWidth(ctx, 200)
     local cur = S.lanes[S.sel]
-    if reaper.ImGui_BeginCombo(ctx, "##lane", cur and cur.name or "Sin track") then
+    local lane_open = reaper.ImGui_BeginCombo(ctx, "##lane", cur and cur.name or "Sin track")
+    tip("lane")
+    if lane_open then
         for i, ln in ipairs(S.lanes) do
             if reaper.ImGui_Selectable(ctx, ln.name .. "###lane" .. i, i == S.sel) then
                 S.sel = i
@@ -384,6 +424,7 @@ local function draw_curve_controls()
     reaper.ImGui_EndDisabled(ctx)
     reaper.ImGui_SameLine(ctx)
     local ch, v = reaper.ImGui_Checkbox(ctx, "Seguir el arrange##follow", S.follow)
+    tip("follow")
     if ch then S.follow = v end
 end
 
@@ -516,7 +557,9 @@ local function draw()
     reaper.ImGui_Text(ctx, "Fuente")
     for _, m in ipairs(MODES) do
         reaper.ImGui_SameLine(ctx)
-        if reaper.ImGui_RadioButton(ctx, m.label, P.mode == m.id) and P.mode ~= m.id then
+        local clicked = reaper.ImGui_RadioButton(ctx, m.label, P.mode == m.id)
+        tip("mode_" .. m.id)
+        if clicked and P.mode ~= m.id then
             P.mode = m.id
             S.reads, S.msg, S.lanes = nil, "Sin analizar.", {}
         end
@@ -526,20 +569,24 @@ local function draw()
         S.analyze = 2
         S.msg = "Analizando..."
     end
+    tip("analyze")
     reaper.ImGui_SameLine(ctx)
     reaper.ImGui_BeginDisabled(ctx, S.reads == nil or S.analyze > 0 or read_stale())
     if ButtonStyle.button(ctx, "Aplicar##apply", "primary", { pad = 14 }) then
         apply()
     end
+    tip("apply")
     reaper.ImGui_EndDisabled(ctx)
     reaper.ImGui_SameLine(ctx)
     if ButtonStyle.button(ctx, "Borrar vista previa##clear", "neutral", { pad = 14 }) then
         clear_preview()
     end
+    tip("clear")
 
     reaper.ImGui_Separator(ctx)
 
     local ch, v = reaper.ImGui_Checkbox(ctx, "Vista previa (regiones)##preview", S.preview)
+    tip("preview")
     if ch then
         S.preview = v
         if v then
@@ -553,6 +600,7 @@ local function draw()
         load_defaults()
         S.dirty = true
     end
+    tip("defaults")
 
     draw_curve_controls()
     draw_curve()
