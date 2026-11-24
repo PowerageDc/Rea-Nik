@@ -135,11 +135,11 @@ Y `VstiControl_<Vsti>_config.lua`, uno por VSTi (`VstiControl_ModoBass_config.lu
 cada VSTi; ver `features/vsti_control.md`).
 Y `TempoTools_config.lua` (pre-roll por defecto, nombres de los tracks de click y
 count-in, parámetros del detector y del snap a transientes, y valores iniciales de
-la vista previa (beats internos y borrado de los taps); ver `features/tempo_tap.md`).
-Y `GainRide_config.lua` (ventana de análisis, umbrales de segmentación y de
-clasificación en sibilantes y plosivos, y parámetros del apply: topes de ganancia,
-rampas y offset por clase; vive dentro de `GainRide/`, el panel parte de estos
-valores y los ajustes los guarda por proyecto; ver `features/gain_ride.md`).
+la vista previa (beats internos, borrado de los taps y seguimiento de la reproducción); 
+ver `features/tempo_tap.md`). Y `GainRide_config.lua` (ventana de análisis, umbrales 
+de segmentación y de clasificación en sibilantes y plosivos, y parámetros del 
+apply: topes de ganancia, rampas y offset por clase; vive dentro de `GainRide/`, el 
+panel parte de estos valores y los ajustes los guarda por proyecto; ver `features/gain_ride.md`).
 
 ### Pendiente (no bloqueante)
 Los scripts existentes de la familia `NikRemote_*` (`NikRemote_ReaPitch_*`,

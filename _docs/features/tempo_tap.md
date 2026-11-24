@@ -63,7 +63,7 @@ markers de sección):
 | `TempoTools/TempoTapMap_common_logic.lua` | `apply` y `verify` del mapa de tempo |
 | `TempoTools/TempoTapOnset_common_logic.lua` | detector de ataques: `candidates`, `resolve` |
 | `TempoTools/TempoTapSnap_common_logic.lua` | `run`: snap en memoria, con regla de rechazo, puntos bloqueados y caché de detección |
-| `TempoTools/TempoTapPreview_common_logic.lua` | modelo de la vista previa, sin ImGui: `new`, `recompute`, `toggle_lock`, `set_policy`, `set_interp_max`, `set_inner_beats`, `go_to`, `measures` |
+| `TempoTools/TempoTapPreview_common_logic.lua` | modelo de la vista previa, sin ImGui: `new`, `recompute`, `toggle_lock`, `set_policy`, `set_interp_max`, `set_inner_beats`, `go_to`, `index_at`, `measures` |
 | `TempoTools/TempoTapPreviewUi_common_logic.lua` | ventana ReaImGui de la vista previa: `run` |
 | `TempoTools/Nik_TempoTools_Apply.lua` | acción principal: snap, vista previa, plan y aplicación |
 | `TempoTools/TempoTools_config.lua` | config en código |
@@ -210,6 +210,30 @@ desplazamiento cero.
 - **Foco:** al soltar un control y al sacar el mouse de la ventana, el foco vuelve a
   la ventana principal (`ImGuiEditorFocus_common_logic.lua`), para usar los atajos de
   REAPER mientras se revisa; no mientras hay un control activo o un popup abierto.
+- **Seguimiento de la reproducción:** la fila actual es la del último punto con
+  posición resultante (`pos`) menor o igual a la de referencia (`Preview.index_at`,
+  tolerancia de 1 ms). Antes del primer punto no hay fila actual y pasado el último
+  queda el último. La referencia es `GetPlayPosition` reproduciendo o en pausa y el
+  cursor de edición detenido. Se compara contra `pos` y no contra la posición
+  tocada: el audio sigue en su lugar hasta aplicar, y la fila se enciende cuando
+  suena el ataque que eligió el snap.
+  - *Marca:* franja de 4 px y marco verdes sobre el rect de la fila (draw list), sin
+    tocar el fondo ni el color del texto, así que no se mezcla con el tinte de las
+    marcas, el texto atenuado ni la selección. En pausa va a media opacidad y
+    detenido es solo un marco gris. La primera columna es un gutter vacío (con el
+    `Selectable` de la fila) para que la franja no tape el número.
+  - *Autoscroll:* solo cuando cambia la fila actual y esta sale de la parte superior
+    del body (`1 - follow_band`); la deja a `follow_band` del borde superior.
+    La casilla "Seguir la reproduccion" (`follow_default`) lo activa; el botón
+    "Ir a la reproduccion" desplaza una vez y se habilita si la fila actual no se ve.
+  - *Scroll manual:* cualquier cambio de `ScrollY` que no hizo el propio seguimiento
+    (rueda, barra, carril) lo suspende `follow_suspend` segundos, con un texto gris
+    en los controles. Solo reproduciendo o en pausa: detenido, un cambio del cursor
+    lleva la tabla a su fila de inmediato, y al pasar de stop a play se descarta la
+    suspensión y se desplaza en el primer frame. La rueda llega a la tabla con el
+    foco devuelto a la ventana principal.
+  - Un clic en una fila detenido mueve el cursor sin desplazar la tabla; durante el
+    play, sin buscar la reproducción.
 - **Aplicar y cancelar:** Aplicar entrega `Preview.measures` a `Plan.build`;
   cancelar o cerrar con la X termina el script. La ventana recuerda posición y
   tamaño para reabrirse donde estaba (ver §1).
@@ -217,11 +241,6 @@ desplazamiento cero.
 
 ## 8. Pendientes
 
-- Seguir la reproducción en la vista previa: la fila del punto que corresponde a la
-  posición de reproducción se resalta y la tabla se desplaza para mantenerla a la
-  vista. Falta decidir contra qué posición se compara (la nueva o la tocada), si el
-  desplazamiento se pausa cuando se usa el scroll de la tabla, y que funcione con el
-  foco devuelto a la ventana principal.
 - Mostrar en la vista previa los avisos de lectura de `Read.group` (compás inferido
   por conteo, taps ignorados antes del primer y después del último downbeat, dobles
   pulsaciones, nombres de compás inválidos), que `Apply` hoy descarta.

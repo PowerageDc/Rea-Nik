@@ -178,7 +178,7 @@ render, pero conviven en el mismo proyecto/entorno):
 | Sistema de Snapshots      | Implementado (script custom, prefijo SN_)      |
 | Render Workflow           | Regiones, count-in y preset implementados; batch render pendiente |
 | Tempo mapping / ReaBeat   | Diagnóstico en curso                           |
-| TempoTap (taps de tempo)  | Taps, plan de tempo y aplicación validados; snap a transientes integrado, con vista previa ReaImGui (bloqueos, política de sin ataque, tempo por compás y borrado de taps opcionales). Pendientes en `features/tempo_tap.md` §8 |
+| TempoTap (taps de tempo)  | Taps, plan de tempo y aplicación validados; snap a transientes integrado, con vista previa ReaImGui (bloqueos, política de sin ataque, tempo por compás, borrado de taps opcionales y seguimiento de la reproducción). Pendientes en `features/tempo_tap.md` §8 |
 | Panel ReaPitch (Stem Bus) | Funcional, pulido visual pendiente             |
 | A/B de tracks (ABPair)    | Funcional, uso local (contrato en el encabezado de los scripts) |
 | MidiNav                   | Doce acciones funcionando y validadas (cursor, selección de notas y de CC, y el toggle de foco). Pendientes en `features/midi_nav.md` |

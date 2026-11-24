@@ -518,6 +518,25 @@ a quien la abrió.
 - **Cerrar con la X equivale a cancelar.** `Begin` devuelve `open = false` y se
   lo traduce a la acción de cancelar. Con `WindowFlags_NoCollapse`, `visible` no
   es falso por minimizar la ventana.
+- **Marca de fila sin tocar fondo ni texto.** Para marcar una fila (la que suena)
+  sin mezclarse con el tinte de otras marcas, el texto atenuado ni el relleno de la
+  selección, se dibuja geometría con `GetWindowDrawList` sobre el rect del
+  `Selectable` (`GetItemRectMin` y `GetItemRectMax`) justo después de él: una franja
+  con `AddRectFilled` y un marco con `AddRect`. Una columna inicial vacía (gutter) del
+  ancho de la franja, con el `Selectable` de la fila, evita que tape el primer
+  texto; el header lleva la misma columna para quedar alineado.
+- **Autoscroll que no pelea con el scroll manual.** Se desplaza solo cuando cambia
+  el índice de la fila objetivo, no en cada frame, con `SetScrollY` calculado a
+  mano (`GetScrollY` más la distancia de la fila al borde del child) en vez de
+  `SetScrollHereY`. Para saber si el usuario scrolleó (rueda, barra y carril, sin
+  depender de dónde cae el mouse) se compara `GetScrollY` con el del frame
+  anterior y se descarta el frame en que desplazó el propio código. La rueda
+  con el mouse sobre el child cubre el caso de girar con la tabla ya en un tope,
+  donde `ScrollY` no cambia.
+- **Transiciones del transporte.** Una espera ligada a un modo (la suspensión del
+  seguimiento en play y pausa) se descarta al cambiar de modo (stop a play); sin
+  eso, un scroll hecho detenido retrasa el primer desplazamiento al dar play. Hay que
+  olvidar también la última fila vista, o el seguimiento espera al próximo cambio.
 - **Un diálogo nativo bloquea el script y, con él, la ventana.** `GetUserInputs`
   y `ShowMessageBox` detienen el `defer` mientras están abiertos y la ventana
   quedaría congelada sin repintar. Se cierra antes y, si el flujo se cancela, se
