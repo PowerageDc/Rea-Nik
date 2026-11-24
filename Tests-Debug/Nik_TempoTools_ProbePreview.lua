@@ -64,3 +64,35 @@ show(S)
 
 timed("seguir los ataques", function() Preview.set_inner_beats(S, true) end)
 show(S)
+
+local pts = S.res.points
+local n = #pts
+
+local monotonic = true
+for k = 2, n do
+  if pts[k].pos < pts[k - 1].pos then monotonic = false end
+end
+log("  posiciones no decrecientes: " .. tostring(monotonic))
+
+local function check(label, t, expected)
+  local got = Preview.index_at(S, t)
+  log(string.format("  %-26s t=%.4f -> %s (esperado %s) %s",
+    label, t, tostring(got), tostring(expected), got == expected and "ok" or "FALLA"))
+end
+
+local mid = math.max(1, n // 2)
+check("antes del primero", pts[1].pos - 1, nil)
+check("en el primero", pts[1].pos, 1)
+check("dentro del epsilon", pts[1].pos - 0.0005, 1)
+check("en un punto intermedio", pts[mid].pos, mid)
+if mid < n then
+  check("justo antes del siguiente", pts[mid + 1].pos - 0.01, mid)
+end
+check("en el ultimo", pts[n].pos, n)
+check("despues del ultimo", pts[n].pos + 10, n)
+
+local mismatches = 0
+for k, p in ipairs(pts) do
+  if Preview.index_at(S, p.pos) ~= k then mismatches = mismatches + 1 end
+end
+log(string.format("  puntos cuyo index_at(pos) no es su indice: %d de %d", mismatches, n))

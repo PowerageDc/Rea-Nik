@@ -12,6 +12,8 @@ local M = {}
 local INTERP_MAX_LIMIT = 16
 M.INTERP_MAX_LIMIT = INTERP_MAX_LIMIT
 
+local INDEX_EPS = 0.001
+
 local function view_cfg(S)
   return setmetatable({
     snap_unanchored = S.policy,
@@ -129,6 +131,24 @@ end
 function M.go_to(S, k)
   local p = S.res.points[k]
   if p then reaper.SetEditCurPos(p.pos, true, false) end
+end
+
+-- Indice del ultimo punto cuya posicion resultante es <= t, con INDEX_EPS de
+-- tolerancia. nil si t esta antes del primero; pasado el ultimo, el ultimo.
+-- Supone posiciones no decrecientes.
+function M.index_at(S, t)
+  local pts = S.res.points
+  local lo, hi, found = 1, #pts, nil
+  while lo <= hi do
+    local mid = (lo + hi) // 2
+    if pts[mid].pos <= t + INDEX_EPS then
+      found = mid
+      lo = mid + 1
+    else
+      hi = mid - 1
+    end
+  end
+  return found
 end
 
 -- Compases resultantes, para Plan.build.
