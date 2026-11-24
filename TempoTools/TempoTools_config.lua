@@ -16,4 +16,7 @@ return {
   snap_outlier_k = 3,
   snap_min_gap = 0.03,
   clear_taps_after = false,
+  follow_default = true,
+  follow_band = 0.25,
+  follow_suspend = 3,
 }

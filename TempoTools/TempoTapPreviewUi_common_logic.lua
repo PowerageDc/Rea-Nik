@@ -20,7 +20,12 @@ local COLORS = {
   rejected = 0xFF40FFFF,
   locked = 0x40E0FFFF,
   dim = 0x888888FF,
+  play = 0x30D060FF,
+  cursor = 0xA0A0A0FF,
 }
+
+local STRIPE_W = 4
+local GUTTER_W = STRIPE_W + 6
 
 local overlap = reaper.ImGui_SelectableFlags_AllowOverlap or reaper.ImGui_SelectableFlags_AllowItemOverlap
 local SELECT_FLAGS = reaper.ImGui_SelectableFlags_SpanAllColumns() | (overlap and overlap() or 0)
@@ -49,7 +54,13 @@ local function draw_summary(ctx, S)
     s.median_shift * 1000, s.irregularity_raw * 1000, s.irregularity_new * 1000, s.to_beat))
 end
 
-local function draw_controls(ctx, S)
+-- El scroll manual suspende el seguimiento solo con el transporte en marcha o
+-- en pausa; detenido, un cambio del cursor siempre lleva la tabla a su fila.
+local function suspended(st)
+  return st.mode ~= "stop" and st.now < st.suspend_until
+end
+
+local function draw_controls(ctx, S, st)
   reaper.ImGui_Text(ctx, "Puntos sin ataque:")
   reaper.ImGui_SameLine(ctx)
   if reaper.ImGui_RadioButton(ctx, "Interpolar", S.policy == "interpolate") then
@@ -74,10 +85,29 @@ local function draw_controls(ctx, S)
     "Usar los beats internos, tocados o segun los ataques (apagado: un tempo por compas en toda la cancion)###inner_beats",
     on)
   if toggled then Preview.set_inner_beats(S, on) end
+
+  local follow_changed, follow = reaper.ImGui_Checkbox(ctx,
+    "Seguir la reproduccion###follow", st.follow)
+  if follow_changed then
+    st.follow = follow
+    if follow then st.suspend_until = 0 end
+  end
+  reaper.ImGui_SameLine(ctx)
+  local no_target = st.cur == nil or st.cur_visible ~= false
+  if no_target then reaper.ImGui_BeginDisabled(ctx) end
+  if ButtonStyle.button(ctx, "Ir a la reproduccion", "neutral", 150) then
+    st.force_scroll = true
+    st.suspend_until = 0
+  end
+  if no_target then reaper.ImGui_EndDisabled(ctx) end
+  if st.follow and suspended(st) then
+    reaper.ImGui_SameLine(ctx)
+    reaper.ImGui_TextColored(ctx, COLORS.dim, "scroll manual: el seguimiento espera")
+  end
 end
 
 local COLUMNS = {
-  { "#", 32 }, { "Cmp.Beat", 60 }, { "Tipo", 46 }, { "Tocado", 66 }, { "Nuevo", 66 },
+  { "", GUTTER_W }, { "#", 32 }, { "Cmp.Beat", 60 }, { "Tipo", 46 }, { "Tocado", 66 }, { "Nuevo", 66 },
   { "Desv. ms", 66 }, { "Estado", 84 }, { "Ref", 96 }, { "Ratio", 52 },
   { "Marcas", 190 }, { "Sin snap", 64 },
 }
@@ -102,6 +132,67 @@ local function mark_of(p)
   return nil
 end
 
+-- Posicion de referencia segun el transporte: reproduciendo o en pausa, la que
+-- se escucha; detenido, el cursor de edicion.
+local function read_transport(S, st)
+  st.now = reaper.time_precise()
+  local prev_mode = st.mode
+  local state = reaper.GetPlayState()
+  local t
+  if (state & 1) ~= 0 then
+    st.mode, t = "play", reaper.GetPlayPosition()
+  elseif (state & 2) ~= 0 then
+    st.mode, t = "pause", reaper.GetPlayPosition()
+  else
+    st.mode, t = "stop", reaper.GetCursorPosition()
+  end
+  if prev_mode == "stop" and st.mode ~= "stop" then
+    st.suspend_until = 0
+    st.last_cur = nil
+  end
+  st.cur = Preview.index_at(S, t)
+end
+
+-- Marca de la fila actual sobre el rect del ultimo item (el Selectable de la
+-- fila): franja y marco verdes reproduciendo, a media opacidad en pausa, y solo
+-- un marco gris con el transporte detenido. No toca el fondo ni el texto.
+local function draw_follow_mark(ctx, st)
+  local x1, y1 = reaper.ImGui_GetItemRectMin(ctx)
+  local x2, y2 = reaper.ImGui_GetItemRectMax(ctx)
+  local dl = reaper.ImGui_GetWindowDrawList(ctx)
+  if st.mode == "stop" then
+    reaper.ImGui_DrawList_AddRect(dl, x1, y1, x2, y2, COLORS.cursor)
+    return
+  end
+  local col = COLORS.play
+  if st.mode == "pause" then col = (col & 0xFFFFFF00) | 0x80 end
+  reaper.ImGui_DrawList_AddRectFilled(dl, x1, y1, x1 + STRIPE_W, y2, col)
+  reaper.ImGui_DrawList_AddRect(dl, x1, y1, x2, y2, col)
+end
+
+-- Hay que desplazar el body en este frame: a la fuerza, o con el seguimiento
+-- activo y sin suspension cuando cambio la fila actual.
+local function want_scroll(st)
+  if st.force_scroll then return st.cur ~= nil end
+  if not st.follow or suspended(st) then return false end
+  return st.cur ~= nil and st.cur ~= st.last_cur
+end
+
+-- Fila actual, justo despues de su Selectable: registra si esta a la vista y,
+-- si se pidio desplazar, la deja a band del borde superior del body. Sin
+-- fuerza, solo desplaza si la fila no esta en la parte superior (1 - band).
+local function track_cur_row(ctx, st)
+  local _, y1 = reaper.ImGui_GetItemRectMin(ctx)
+  local _, y2 = reaper.ImGui_GetItemRectMax(ctx)
+  local top, h = st.body_y, st.body_h
+  st.cur_visible = y1 >= top and y2 <= top + h
+  if not st.scroll_wanted then return end
+  local in_band = y1 >= top and y2 <= top + h * (1 - st.band)
+  if in_band and not st.force_scroll then return end
+  reaper.ImGui_SetScrollY(ctx, reaper.ImGui_GetScrollY(ctx) + (y1 - top) - h * st.band)
+  st.self_scrolled = true
+end
+
 -- Una fila. Tipo "beat*": beat sin tap propio, repartido entre dos downbeats.
 -- Devuelve true si se tildo o destildo "Sin snap".
 local function draw_row(ctx, S, st, k, p)
@@ -118,10 +209,18 @@ local function draw_row(ctx, S, st, k, p)
   end
 
   reaper.ImGui_TableSetColumnIndex(ctx, 0)
-  if reaper.ImGui_Selectable(ctx, tostring(k), st.selected == k, SELECT_FLAGS) then
+  if reaper.ImGui_Selectable(ctx, "##row", st.selected == k, SELECT_FLAGS) then
     st.selected = k
+    if st.mode == "stop" then st.clicked = k end
     Preview.go_to(S, k)
   end
+  if st.cur == k then
+    draw_follow_mark(ctx, st)
+    track_cur_row(ctx, st)
+  end
+
+  reaper.ImGui_TableSetColumnIndex(ctx, 1)
+  reaper.ImGui_Text(ctx, tostring(k))
 
   local cells = {
     string.format("%d.%d", p.bar, p.beat),
@@ -134,14 +233,14 @@ local function draw_row(ctx, S, st, k, p)
     p.ratio and string.format("x%.1f", p.ratio) or "-",
   }
   for i, text in ipairs(cells) do
-    reaper.ImGui_TableSetColumnIndex(ctx, i)
+    reaper.ImGui_TableSetColumnIndex(ctx, i + 1)
     reaper.ImGui_Text(ctx, text)
   end
 
-  reaper.ImGui_TableSetColumnIndex(ctx, 9)
+  reaper.ImGui_TableSetColumnIndex(ctx, 10)
   if mark then reaper.ImGui_TextColored(ctx, mark_col, mark) end
 
-  reaper.ImGui_TableSetColumnIndex(ctx, 10)
+  reaper.ImGui_TableSetColumnIndex(ctx, 11)
   if p.inert then reaper.ImGui_BeginDisabled(ctx) end
   local changed = reaper.ImGui_Checkbox(ctx, "##lock", p.locked == true)
   if p.inert then reaper.ImGui_EndDisabled(ctx) end
@@ -166,6 +265,18 @@ local function draw_table(ctx, S, st)
   local body_h = math.max(80, avail_h - FOOTER_H)
   local lock_k
   reaper.ImGui_BeginChild(ctx, "pts_body", 0, body_h, 0, reaper.ImGui_WindowFlags_NoNav())
+  local _, wy = reaper.ImGui_GetWindowPos(ctx)
+  local _, wh = reaper.ImGui_GetWindowSize(ctx)
+  st.body_y, st.body_h = wy, wh
+
+  local scroll = reaper.ImGui_GetScrollY(ctx)
+  if st.scroll_prev and not st.self_scrolled and math.abs(scroll - st.scroll_prev) > 0.5 then
+    st.suspend_until = st.now + st.suspend
+  end
+  st.scroll_prev = scroll
+  st.self_scrolled = false
+
+  st.scroll_wanted = want_scroll(st)
   if reaper.ImGui_BeginTable(ctx, "pts_rows", n, flags) then
     setup_columns(ctx)
     for k, p in ipairs(S.res.points) do
@@ -173,6 +284,12 @@ local function draw_table(ctx, S, st)
     end
     reaper.ImGui_EndTable(ctx)
   end
+  if reaper.ImGui_IsWindowHovered(ctx) and reaper.ImGui_GetMouseWheel(ctx) ~= 0 then
+    st.suspend_until = st.now + st.suspend
+  end
+  st.force_scroll = false
+  st.last_cur = st.clicked or st.cur
+  st.clicked = nil
   reaper.ImGui_EndChild(ctx)
 
   if lock_k then Preview.toggle_lock(S, lock_k) end
@@ -209,9 +326,10 @@ local function frame(ctx, S, st)
     local x, y = reaper.ImGui_GetWindowPos(ctx)
     local ww, hh = reaper.ImGui_GetWindowSize(ctx)
     S.window = { x = x, y = y, w = ww, h = hh }
+    read_transport(S, st)
     draw_summary(ctx, S)
     reaper.ImGui_Separator(ctx)
-    draw_controls(ctx, S)
+    draw_controls(ctx, S, st)
     reaper.ImGui_Separator(ctx)
     draw_table(ctx, S, st)
     action = draw_buttons(ctx, S)
@@ -227,7 +345,14 @@ end
 -- handlers.on_cancel() se llama al cancelar o cerrar la ventana.
 function M.run(S, handlers)
   local ctx = reaper.ImGui_CreateContext("Tempo taps - vista previa", 0)
-  local st = { focus_tick = EditorFocus.new(ctx, reaper.GetMainHwnd) }
+  local cfg = S.cfg
+  local st = {
+    focus_tick = EditorFocus.new(ctx, reaper.GetMainHwnd),
+    follow = cfg.follow_default and true or false,
+    band = cfg.follow_band,
+    suspend = cfg.follow_suspend,
+    suspend_until = 0,
+  }
 
   local function loop()
     local action = frame(ctx, S, st)
